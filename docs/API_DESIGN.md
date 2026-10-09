@@ -1,7 +1,7 @@
 # API, Komut ve HTTP Sözleşmesi
 
 **Aşama:** 4 — API, Event ve Hata Sözleşmeleri
-**Durum:** Kullanıcı incelemesini bekleyen normatif tasarım
+**Durum:** Onaylandı; sözleşme üretim ve API sınır altyapısı uygulandı
 **Tarih:** 2026-10-10
 **Bağlı sözleşmeler:** [`openapi-v1.yaml`](./openapi-v1.yaml), [`API_ERRORS.md`](./API_ERRORS.md), [`EVENT_CATALOG.md`](./EVENT_CATALOG.md), [`REALTIME_CONTRACT.md`](./REALTIME_CONTRACT.md)
 
@@ -9,7 +9,7 @@
 
 Bu belge browser ile API, API ile domain/application katmanı ve public istemci ile public projection arasındaki ağ sözleşmesini sabitler. HTTP handler iş kuralı taşımaz; kimlik doğrulama, input doğrulama, transaction çağrısı, DTO eşleme ve hata çevirisi yapar.
 
-Bu tur yalnız tasarımdır. Route, handler, runtime validator, auth veya domain kodu yazılmaz. Onaydan sonra ilk uygulama, sözleşme altyapısı ve yalnız ilgili aşamada gereken endpoint dilimidir; bütün endpoint'ler tek seferde sahte davranışla doldurulmaz.
+Bu sözleşmenin TypeScript tipleri, Fastify runtime route şemaları, drift kontrolü, merkezi problem mapper'ı ve request-ID sınırı uygulanmıştır. Ürün route'larının auth ve domain davranışları ilgili Aşama 5–15 dilimlerinde eklenecek; bütün endpoint'ler tek seferde sahte davranışla doldurulmayacaktır.
 
 ## 2. Ana Kararlar
 
@@ -24,12 +24,12 @@ Bu tur yalnız tasarımdır. Route, handler, runtime validator, auth veya domain
 
 `docs/openapi-v1.yaml` dış HTTP sözleşmesinin canonical, review edilebilir kaynağıdır. Uygulama sırasında:
 
-1. TypeScript request/response tipleri contract package içinde üretilir veya aynı şemadan türetilir.
+1. TypeScript request/response tipleri ve Fastify runtime şemaları `packages/contracts/src/generated/` altında aynı şemadan üretilir.
 2. Runtime request ve response doğrulaması route seviyesinde zorunludur.
-3. CI OpenAPI syntax/bundle, breaking-change ve örnek conformance kontrollerini çalıştırır.
+3. CI `pnpm contracts:check` ile syntax/reference, operationId, path parametresi, auth/CSRF, idempotency ve precondition kurallarını ve üretilmiş dosya drift'ini kontrol eder. Breaking-change karşılaştırması release hattı oluştuğunda ayrıca eklenecektir.
 4. Handler'ın döndürdüğü response şemaya uymuyorsa test/production dışı ortamda kesin hata oluşur.
 
-OpenAPI ile runtime şemaları iki bağımsız elle tutulan gerçek haline getirilemez. Uygulama aracı onay sonrası paket bakım durumu ve Fastify uyumu değerlendirilerek seçilir.
+OpenAPI ile runtime şemaları iki bağımsız elle tutulan gerçek haline getirilemez. Pinlenmiş `openapi-typescript` tipleri üretir; repository-owned generator aynı belgeden dereference edilmiş Fastify şemaları ve operasyon güvenlik metadata'sı üretir. Üretilmiş dosyalar elle düzenlenmez.
 
 ### 2.3 Sürümleme
 
@@ -380,11 +380,11 @@ Kesin sayısal timeout/byte limitleri ilgili uygulama aşamasında threat/load t
 
 ## 14. Test ve Kabul Kapısı
 
-Aşama 4 uygulamasının tamamlanması için:
+Aşama 4 sözleşme altyapısının tamamlanması için ilk dört madde doğrudan bu aşamada doğrulanır. Kalan davranış maddeleri ilgili route Aşama 5–15 içinde uygulandığında zorunlu kabul testine dönüşür; henüz route olmadan sahte başarı sayılmaz:
 
 - OpenAPI syntax ve reference çözümü CI'da geçmeli.
 - Her operationId benzersiz olmalı; auth, CSRF, idempotency ve If-Match gereksinimleri contract testinde doğrulanmalı.
-- Problem response bütün hata yollarında aynı şemaya uymalı.
+- Uygulanmış hata yollarındaki problem response aynı şemaya uymalı; sonraki her route kendi hata conformance testini eklemeli.
 - User A'nın User B kaynağı için `404` aldığı negatif testler bulunmalı.
 - Duplicate idempotency key aynı sonucu, farklı payload conflict'i üretmeli.
 - Eski ETag `412`, geçersiz state `409`, validation `422` olmalı.

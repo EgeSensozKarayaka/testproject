@@ -334,7 +334,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-039 — OpenAPI 3.1 tabanlı URI-major REST ve açık komut endpoint'leri
 
 - **Tarih:** 2026-10-10 02:57 +06:00
-- **Durum:** Proposed — Aşama 4 kullanıcı incelemesinde
+- **Durum:** Accepted — sözleşme ve üretim altyapısı uygulandı
 - **Bağlam:** Frontend, API ve worker uygulamalarının birbirinden bağımsız ilerleyebilmesi; uzun süren işlerin HTTP lifecycle'ına bağlanmaması ve sözleşme drift'inin engellenmesi gerekir.
 - **Karar:** Dış HTTP sözleşmesinin canonical kaynağı `docs/openapi-v1.yaml` olur. Private API `/api/v1`, public projection `/api/public/v1` altında kaynak yönelimli REST kullanır; pause/resume/manual-run/publish/rotate gibi durum geçişleri açık komut endpoint'leridir. Uzun işler `202` ile kalıcı makbuz döndürür.
 - **Alternatifler:** GraphQL; yalnız RPC endpoint'leri; kod-first ve belgelenmeyen route'lar; manuel run tamamlanana kadar request'i açık tutmak.
@@ -344,17 +344,17 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-040 — ETag precondition, kalıcı idempotency receipt ve opaque cursor
 
 - **Tarih:** 2026-10-10 02:57 +06:00
-- **Durum:** Proposed — Aşama 4 kullanıcı incelemesinde
+- **Durum:** Accepted — revision 7 receipt şeması uygulandı; endpoint kullanımı ilgili domain aşamalarında eklenecek
 - **Bağlam:** İki açık istemci aynı kaynağı değiştirebilir; ağ retry'ları create/command yan etkisini çoğaltabilir; büyüyen geçmişte offset pagination kararsız ve pahalıdır.
 - **Karar:** Mutable tekil kaynaklar güçlü `ETag: "rv-N"` döndürür ve mutation'lar `If-Match` ister. Retry edilebilir create/command'lar `Idempotency-Key` ile privacy-preserving subject+operation scope'unda kalıcı receipt kullanır. Listeler imzalı/opaque keyset cursor ile sayfalanır; response sayfa üst sınırı 100 ürün kotası değildir.
 - **Alternatifler:** Last-write-wins; yalnız in-memory dedupe; offset pagination; bütün işlemlerin doğal idempotent olduğu varsayımı.
 - **Gerekçe:** Sessiz veri kaybını, çift manual-run/mail/link rotation yan etkisini ve veri büyüdükçe pagination drift'ini önlemek.
-- **Sonuçlar:** Aşama 3 şemasında genel HTTP receipt tablosu bulunmadığı için onaydan sonra eski migration'lar değiştirilmeden yeni forward-only migration ile `infra.api_idempotency_records` eklenecektir. Receipt, domain sonucu ve outbox aynı kısa transaction'da commit edilir; ayrıca kalıcı `PROCESSING`/lease state'i yoktur. Secret taşımayan response bounded/sanitize JSON olarak; tek-seferlik publish/rotation URL'si ise yalnız dedicated application key ile şifreli ve 24 saatlik blob olarak replay edilir. Eski ETag `412`, eksik ETag `428`, anahtarın farklı payload ile tekrarı `409` üretir.
+- **Sonuçlar:** Eski migration'lar değiştirilmeden forward-only revision 7 ile `infra.api_idempotency_records` eklendi. Receipt, domain sonucu ve outbox aynı kısa transaction'da commit edilir; ayrıca kalıcı `PROCESSING`/lease state'i yoktur. Secret taşımayan response bounded/sanitize JSON olarak; tek-seferlik publish/rotation URL'si ise yalnız dedicated application key ile şifreli ve 24 saatlik blob olarak replay edilir. Eski ETag `412`, eksik ETag `428`, anahtarın farklı payload ile tekrarı `409` üretir. Anonymous receipt erişimi doğrudan tablo RLS'iyle açılmamıştır; Aşama 5 enumeration-safe auth akışında dar `security_api` fonksiyonuyla eklenecektir.
 
 ## D-041 — Tek problem-details zarfı ve görünmez sahiplik
 
 - **Tarih:** 2026-10-10 02:57 +06:00
-- **Durum:** Proposed — Aşama 4 kullanıcı incelemesinde
+- **Durum:** Accepted — merkezi mapper ve temel HTTP sınır testleri uygulandı
 - **Bağlam:** İstemcinin metne bağlı hata mantığı kurmaması, log korelasyonu yapabilmesi ve tenant/public token varlığının hata cevaplarından sızmaması gerekir.
 - **Karar:** Bütün dış hatalar RFC 9457 uyumlu `application/problem+json` zarfı, stabil `code`, `request_id`, `retryable` ve gerektiğinde JSON Pointer alan hataları kullanır. Başka owner'a ait kaynak var olmayanla aynı `404`; geçersiz/disable/rotate edilmiş public token da aynı generic `404` olur.
 - **Alternatifler:** Endpoint'e özel hata gövdeleri; database/exception mesajını geçirmek; cross-owner için `403`.
@@ -364,7 +364,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-042 — SSE yalnız kaybedilebilir hızlandırma; REST snapshot source of truth
 
 - **Tarih:** 2026-10-10 02:57 +06:00
-- **Durum:** Proposed — Aşama 4 kullanıcı incelemesinde
+- **Durum:** Accepted — dış sözleşme sabitlendi; runtime Aşama 13 kapsamındadır
 - **Bağlam:** İki istemci otomatik güncellenmeli ancak kalıcı browser event replay altyapısı ve WebSocket karmaşıklığı ürün ihtiyacı değildir. PostgreSQL notification ve API replica restart'larında mesaj kaçabilir.
 - **Karar:** Authenticated ve public SSE ayrı endpoint/projection kullanır. SSE event'i minimal invalidation/status bilgisidir; istemci stream'i önce açar, sonra REST snapshot alır, version ile buffer'ı uzlaştırır ve görünürken en geç 60 saniyede tekrar snapshot alır. `Last-Event-ID` tanısaldır, durable replay garantisi vermez.
 - **Alternatifler:** WebSocket; event logunu browser'a durable replay etmek; yalnız polling; internal event payload'ını doğrudan yayınlamak.
@@ -374,9 +374,19 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-043 — İç event'lerde transactional outbox ve at-least-once tüketim
 
 - **Tarih:** 2026-10-10 02:57 +06:00
-- **Durum:** Proposed — Aşama 4 kullanıcı incelemesinde
+- **Durum:** Accepted — envelope allowlist'i uygulandı; producer/consumer davranışı ilgili domain aşamalarındadır
 - **Bağlam:** Domain değişimi ile scheduler, notification, realtime ve predictor yan etkileri arasında dual-write boşluğu oluşmamalı; predictor veya e-posta arızası ana monitoring transaction'ını bloke etmemelidir.
 - **Karar:** Domain event'i değişiklikle aynı transaction'da version'lı ortak envelope ile outbox'a yazılır. Teslim at-least-once, sıralama yalnız aggregate başına ve consumer idempotency anahtarı `event_id`dir. `LISTEN/NOTIFY` yalnız uyandırma sinyalidir.
 - **Alternatifler:** Transaction sonrası doğrudan broker/HTTP çağrısı; exactly-once iddiası; global sıra; payload'a bütün aggregate/PII bilgisini gömmek.
 - **Gerekçe:** Crash aralığında event kaybını engellemek, izole retry/dead-letter sağlamak ve opsiyonel bileşenleri ana akıştan ayırmak.
 - **Sonuçlar:** Consumer receipt, retry/dead-letter ve schema-version davranışını uygular. Browser internal event'i görmez; owner/page-filtered dış projection kullanır.
+
+## D-044 — OpenAPI tek kaynaktan deterministik tip ve runtime şeması üretimi
+
+- **Tarih:** 2026-10-10 03:52 +06:00
+- **Durum:** Accepted — Aşama 4 uygulamasında doğrulandı
+- **Bağlam:** Elle tutulan OpenAPI, TypeScript DTO ve Fastify JSON Schema kopyaları zamanla ayrışabilir. Frontend'in tipleri ile backend'in runtime doğrulaması aynı dış sözleşmeden gelmelidir.
+- **Karar:** `docs/openapi-v1.yaml` tek canonical kaynak olarak kalır. Pinlenmiş `openapi-typescript` 7.13.0 TypeScript tiplerini, repository-owned generator ise local referansları çözülmüş Fastify request/response şemalarını ve operation güvenlik metadata'sını üretir. Üretilmiş dosyalar commit edilir; `pnpm contracts:check` yeniden üretimle byte-level drift'i, 57 benzersiz operation'ı, local referansları, path parametrelerini ve CSRF/idempotency/If-Match matrisini doğrular.
+- **Alternatifler:** DTO ve runtime şemalarını elle iki kez yazmak; kod-first OpenAPI; üretimi yalnız developer bilgisayarında çalıştırıp artifact'i commit etmemek; ilk günden kapsamlı API gateway/codegen platformu kurmak.
+- **Gerekçe:** Review edilebilir YAML sözleşmesini korurken frontend ve backend'in bağımsız geliştirilmesini sağlamak, gizli drift'i CI'da erken yakalamak ve gereksiz platform katmanı eklememek.
+- **Sonuçlar:** Generated dizini elle düzenlenmez ve lint'ten hariçtir; ancak format, TypeScript build/type-check ve drift kontrolünden geçer. OpenAPI'de bulunan fakat henüz domain aşaması gelmemiş route'lar çalışıyor sayılmaz. Uygulama sırasında saptanan health şeması farkı canonical sözleşmede çalışan `ok/unavailable + timestamp/version` modeliyle düzeltildi.

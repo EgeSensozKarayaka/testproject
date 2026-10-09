@@ -9,16 +9,16 @@ Bu sözlük başlangıç migration'ının normatif veri modelidir. Kolon adları
 
 ### 1.1 Tipler ve varsayılanlar
 
-| Kavram | PostgreSQL karşılığı    | Kural                                             |
-| ------ | ----------------------- | ------------------------------------------------- |
-| Kimlik | `uuid`                  | Aggregate/event için `DEFAULT uuidv7()`           |
-| Sahip  | `owner_id uuid`         | Private satırda `NOT NULL`; `auth.users(id)` kökü |
-| An     | `timestamptz`           | UTC; iş kuralı anları açık isimli                 |
-| Süre   | `integer` veya `bigint` | Milisaniye; negatif olamaz                        |
-| Sürüm  | `bigint`                | `>= 1`; atomik artar                              |
-| Durum  | `text`                  | İsimlendirilmiş `CHECK` ile kapalı küme           |
-| Digest | `bytea`                 | Ham secret/token tutulmaz                         |
-| JSON   | `jsonb`                 | Şema sürümlü, bounded ve canonical object         |
+| Kavram | PostgreSQL karşılığı    | Kural                                                      |
+| ------ | ----------------------- | ---------------------------------------------------------- |
+| Kimlik | `uuid`                  | Aggregate/event için `DEFAULT uuidv7()`                    |
+| Sahip  | `owner_id uuid`         | Private satırda normalde `NOT NULL`; `auth.users(id)` kökü |
+| An     | `timestamptz`           | UTC; iş kuralı anları açık isimli                          |
+| Süre   | `integer` veya `bigint` | Milisaniye; negatif olamaz                                 |
+| Sürüm  | `bigint`                | `>= 1`; atomik artar                                       |
+| Durum  | `text`                  | İsimlendirilmiş `CHECK` ile kapalı küme                    |
+| Digest | `bytea`                 | Ham secret/token tutulmaz                                  |
+| JSON   | `jsonb`                 | Şema sürümlü, bounded ve canonical object                  |
 
 `updated_at` otomatik trigger ile gizlice değiştirilmez; repository her mutation'da açıkça günceller. Optimistic update biçimi `WHERE id = ? AND resource_version = ?` olur ve aynı statement yeni sürümü döndürür.
 
@@ -102,6 +102,28 @@ Bir event'in bir hedef consumer'a dayanıklı teslim durumudur.
 | `completed_at`     | `timestamptz NULL` | Terminal an                                                |
 
 PK `(event_id, destination)`; lease alanları yalnız aktif durumlarda dolu olur. Realtime dispatch tamamlandıktan sonra event kaçırılsa bile istemci current state'i yeniden çeker.
+
+### 2.5 `infra.api_idempotency_records`
+
+Retry edilebilir HTTP create/command işlemlerinin bounded sonuç makbuzudur. Raw idempotency anahtarı, e-posta, parola veya token saklamaz.
+
+| Kolon                    | Tip           | Kural/anlam                                                          |
+| ------------------------ | ------------- | -------------------------------------------------------------------- |
+| `id`                     | `uuid`        | PK, UUIDv7                                                           |
+| `owner_id`               | `uuid NULL`   | Authenticated owner; anonymous akışta null                           |
+| `subject_digest`         | `bytea`       | 32-byte server-HMAC subject scope                                    |
+| `operation`              | `text`        | Stabil operation scope                                               |
+| `key_digest`             | `bytea`       | 32-byte server-HMAC idempotency key digest                           |
+| `request_hash`           | `bytea`       | 32-byte canonical method/path/body hash                              |
+| `response_status`        | `smallint`    | Yalnız `200..499`; `5xx` başarı olarak cache edilmez                 |
+| `response_headers`       | `jsonb`       | En fazla 2 KiB; yalnız `Location` ve `ETag`                          |
+| `response_body`          | `jsonb NULL`  | Secret içermeyen object response; en fazla 64 KiB                    |
+| `encrypted_response`     | `bytea NULL`  | Tek-seferlik link gibi secret-bearing replay için ciphertext         |
+| `encryption_key_version` | `text NULL`   | Ciphertext ile birlikte zorunlu key sürümü                           |
+| `created_at`             | `timestamptz` | Commit zamanı                                                        |
+| `expires_at`             | `timestamptz` | `created_at` sonrası, en fazla yedi gün; varsayılan politika 24 saat |
+
+`UNIQUE(subject_digest, operation, key_digest)` yarışmayı DB'de tekilleştirir. Authenticated kayıtlar FORCE RLS ile yalnız current owner'a görünür. Anonymous satırlar doğrudan API RLS erişimine kapalıdır; Aşama 5'te yalnız tam HMAC scope'u kabul eden dar `security_api` fonksiyonu kullanılacaktır.
 
 ## 3. `auth` Şeması
 

@@ -127,6 +127,7 @@ Bir rolün RLS policy'si olması tablo privilege'ı olmadığı sürece erişim 
 | Incident/segment       | R (RLS)                    | R/I/U                    | sınırlı R                | feature view             | –      | cleanup X           |
 | Recipient/policy       | R/I/U/D (RLS)              | –                        | R                        | –                        | –      | cleanup X           |
 | Intent/delivery        | R (RLS)                    | –                        | R/I/U                    | –                        | –      | cleanup X           |
+| Idempotency receipt    | R/I (owner RLS)            | –                        | –                        | –                        | –      | expired D           |
 | Outbox/dispatch        | –                          | ilgili destination R/I/U | ilgili destination R/I/U | ilgili destination R/I/U | –      | cleanup X           |
 | Public config          | R/I/U/D (RLS)              | snapshot refresh event   | –                        | –                        | –      | cleanup X           |
 | Public snapshot        | R/I/U/D (RLS/internal)     | refresh X                | –                        | –                        | X      | cleanup X           |

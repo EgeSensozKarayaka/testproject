@@ -2,7 +2,7 @@
 
 **Aşama:** 4 — API, Event ve Hata Sözleşmeleri
 
-**Durum:** Kullanıcı incelemesini bekleyen normatif tasarım
+**Durum:** Onaylandı; payload type allowlist'i uygulandı, SSE runtime Aşama 13 kapsamındadır
 
 **Tarih:** 2026-10-10
 

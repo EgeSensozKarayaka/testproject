@@ -159,3 +159,16 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - PostgreSQL migration/isolation işi testlere ulaşmadan `Initialize containers` aşamasındaki Docker pull hatasıyla sona erdi; GitHub anotasyonu pull denemelerinin yeniden denemelerden sonra da exit code 1 verdiğini gösterdi.
 - Full-stack smoke işi `Start full stack` aşamasında exit code 1 ile durdu ve bu nedenle Playwright raporu oluşmadı. Her iki container işinin aynı anda başlangıçta kesilmesi ortak Docker/registry problemiyle uyumludur, ancak ham log anonim görünümde erişilemediği için bu ikinci neden kesin sonuç olarak kaydedilmedi.
 - Bu başarısızlık Aşama 4 sözleşme belgelerinde doğrulanmış bir kusur göstermediğinden tahmine dayalı uygulama veya workflow değişikliği yapılmadı; CI yeniden çalıştırması açık doğrulama işi olarak bırakıldı.
+
+### 04:02 — Aşama 4 API sözleşme altyapısı uygulaması
+
+- Canonical `docs/openapi-v1.yaml` dosyasından TypeScript istemci tipleri ve Fastify runtime route şemaları deterministik olarak üretilir hale getirildi; 57 operation için local reference, path parametresi, CSRF, idempotency ve `If-Match` kuralları drift kontrolüne bağlandı.
+- RFC 9457 problem-details şemaları, domain event ve browser realtime envelope/allowlist sözleşmeleri ortak `@site-monitor/contracts` paketine eklendi.
+- API katmanına UUIDv7 request korelasyonu, güvenli instance üretimi, merkezi hata eşleme, 64 KiB body sınırı, validation/malformed JSON/404/405 davranışı ve credential destekli dar CORS yapılandırması uygulandı.
+- Daha önceki health DTO tasarımındaki `ok/degraded` ile çalışan servislerin `ok/unavailable` durumu arasındaki tutarsızlık canonical sözleşmede giderildi; health yanıtı `timestamp` ve `version` alanlarıyla runtime şemasına bağlandı.
+- HTTP idempotency replay kayıtları için revision 7 forward-only migration'ı eklendi. Owner kapsamı, HMAC digest'leri, header allowlist'i, bounded response gövdesi, 24 saatlik retention, encrypted one-time secret alanları ve FORCE RLS politikaları tanımlandı.
+- Gerçek PostgreSQL entegrasyon paketi revision 7 ve idempotency storage sınırları dahil **11/11**; Node unit/contract/API paketi **22/22** geçti.
+- Birleşik `pnpm run ci` kalite kapısı format, generated-contract drift, lint, strict typecheck, 22 unit test, 11 PostgreSQL integration test ve tüm production build'leriyle başarıyla tamamlandı.
+- `docker compose --profile app up --detach --build --wait` ile tüm imajlar temizden üretildi; migration işi `0` ile kapandı ve API, web, iki worker, PostgreSQL, Mailpit ile target simulator sağlıklı duruma geldi.
+- Rebuild edilen stack üzerinde Playwright web/API smoke ve iki bağımsız browser context senaryosu **2/2** geçti. Canlı HTTP kontrolleri health sözleşmesini, query bilgisinin problem `instance` alanından çıkarılmasını ve `Allow: GET, HEAD` başlıklı stabil `405` yanıtını doğruladı.
+- Docker bağımlılık indirmeleri registry bağlantısındaki tekrarlar nedeniyle yaklaşık dört dakika sürdü; retry mekanizmasıyla build başarıyla bitti ve uygulama kusuru gözlenmedi.

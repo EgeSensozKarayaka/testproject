@@ -201,6 +201,7 @@ Varsayılanlar deployment config ile uzatılabilir; minimum ürün gereksinimi o
 | Completed outbox/dispatch    |                 30 gün | Bounded batch                            |
 | Dead outbox/dispatch         |  Operatör çözene kadar | Otomatik silinmez                        |
 | Session/one-time token       | Expiry/revoke + 30 gün | Bounded batch                            |
+| API idempotency receipt      |     Varsayılan 24 saat | Expiry index'iyle bounded delete         |
 | Public snapshot              |         Yalnız current | Transactional replace/delete             |
 | Prediction score             |                 90 gün | Partition detach/drop                    |
 | Audit event                  |                400 gün | Partition; deployment policy override    |

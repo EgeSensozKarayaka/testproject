@@ -2,7 +2,7 @@
 
 **Aşama:** 4 — API, Event ve Hata Sözleşmeleri
 
-**Durum:** Kullanıcı incelemesini bekleyen normatif tasarım
+**Durum:** Onaylandı; merkezi mapper ve temel conformance testleri uygulandı
 
 **Tarih:** 2026-10-10
 

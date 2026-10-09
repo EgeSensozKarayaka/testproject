@@ -90,6 +90,15 @@ pnpm run ci
 
 `pnpm run ci`, format, lint, typecheck, unit/integration test ve build kapılarının yerel birleşimidir. `pnpm ci` yazılmamalıdır; pnpm bunu kendi temiz kurulum komutu olarak yorumlar.
 
+OpenAPI sözleşmesinden TypeScript tiplerini ve Fastify runtime şemalarını yeniden üretmek veya drift kontrolü yapmak için:
+
+```sh
+pnpm contracts:generate
+pnpm contracts:check
+```
+
+`docs/openapi-v1.yaml` canonical kaynaktır; `packages/contracts/src/generated/` altındaki dosyalar elle düzenlenmez.
+
 E2E testi, Playwright Chromium kurulduktan ve `app` profili ayaktayken çalışır:
 
 ```sh

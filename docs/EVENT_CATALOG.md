@@ -2,7 +2,7 @@
 
 **Aşama:** 4 — API, Event ve Hata Sözleşmeleri
 
-**Durum:** Kullanıcı incelemesini bekleyen normatif tasarım
+**Durum:** Onaylandı; ortak envelope/type allowlist'i uygulandı, producer'lar ilgili domain aşamalarında eklenecek
 
 **Tarih:** 2026-10-10
 

@@ -1,16 +1,16 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 03:26 +06:00
-**Genel durum:** Aşama 3 uygulaması tamamlandı; Aşama 4 API, event, SSE ve hata sözleşmesi tasarımı kullanıcı incelemesinde
+**Son güncelleme:** 2026-10-10 04:02 +06:00
+**Genel durum:** Aşama 4 sözleşme altyapısı tamamlandı; sıradaki çalışma Aşama 5 auth ve kullanıcı izolasyonu tasarımı
 
 ## Tamamlanan
 
 - Aşama 0 gereksinim/kabul kriterleri ve Aşama 1 domain/durum makinesi tasarımı
 - Aşama 2 polyglot monorepo, React/Fastify runtime temeli, opsiyonel Python predictor, Docker Compose ve CI
-- PostgreSQL 18.6 için altı sıralı, checksum'lı ve forward-only SQL migration
+- PostgreSQL 18.6 için yedi sıralı, checksum'lı ve forward-only SQL migration
 - Auth, check/group, maintenance, job/attempt/run, current state, health interval, incident, rollup, outbox, notification, public status, prediction ve audit şemaları
 - Aylık/yıllık partition'lar, default güvenlik partition'ları ve housekeeper helper fonksiyonları
-- Composite owner/check foreign key'leri, 29 private parent tabloda `ENABLE/FORCE RLS` ve dar servis rolleri
+- Composite owner/check foreign key'leri, 30 private parent tabloda `ENABLE/FORCE RLS` ve dar servis rolleri
 - Public snapshot/auth bootstrap için sınırlı `SECURITY DEFINER` fonksiyonları ve predictor için PII içermeyen security-barrier feature view
 - Advisory-lock, SHA-256 checksum ledger ve schema compatibility kontrollü TypeScript migration runner
 - Production korumalı reset, non-production idempotent demo seed'i ve CLI/root komutları
@@ -21,23 +21,31 @@
 - Mock geliştirmeye temel olacak ilk OpenAPI 3.1 sözleşmesi
 - Version'lı transactional domain event kataloğu ve private/public SSE sözleşmesi
 - Stabil kodlar, alan hataları, retry ve sahiplik gizleme semantiği içeren problem-details sözleşmesi
+- Canonical OpenAPI'den üretilen TypeScript request/response tipleri, Fastify runtime route şemaları ve operation güvenlik metadata'sı
+- CI'da 57 operation, local reference, path parametresi, CSRF, idempotency, If-Match ve generated-artifact drift kontrolü
+- UUIDv7 request korelasyonu, her response'ta `X-Request-Id` ve RFC 9457 merkezi error mapper
+- `404`/`405`, validation `422`, malformed JSON, retry/`Retry-After` ve public-token instance redaction temel conformance testleri
+- Forward-only revision 7 `infra.api_idempotency_records` migration'ı; bounded response, header allowlist, encrypted-secret alanları ve FORCE RLS
 
 ## Doğrulama Kanıtları
 
-- Veritabanı entegrasyon paketi: **10/10 test geçti**
-- Sıfırdan migration `1..6`, tekrar migration no-op ve değiştirilmiş migration checksum reddi doğrulandı
+- Veritabanı entegrasyon paketi: **11/11 test geçti**
+- Sıfırdan migration `1..7`, tekrar migration no-op ve değiştirilmiş migration checksum reddi doğrulandı
 - İki kullanıcı arasında SELECT/UPDATE izolasyonu, context temizliği ve çapraz-owner FK reddi doğrulandı
 - Public rolün yalnız allowlist snapshot fonksiyonuna eriştiği; predictor'ın ana sağlık tablosuna yazamadığı doğrulandı
 - Runtime pool'un `current_user=site_monitor_api` dar rolünde başladığı ve tipli Kysely sorgusunun RLS altında çalıştığı doğrulandı
 - Kritik indeksler, en az 32 başlangıç partition'ı, boş default run partition'ı ve schema owner'ın database `CREATE` yetkisinin olmaması doğrulandı
 - Local ana veritabanı revision 6'ya migrate edilip idempotent demo seed uygulandı
 - Mantıksal yedek ayrı `site_monitor_restore_test` veritabanına geri yüklendi; revision 6, altı ledger kaydı, demo kullanıcı/check ve 29 `FORCE RLS` tablo doğrulandı; geçici veritabanı/dump sonra silindi
-- `docker compose --profile app up --detach --build --wait` başarılı; migration işi `0` ile bitti ve API, web, iki worker, PostgreSQL, Mailpit ve target simulator sağlıklı başladı
-- `pnpm run ci` başarılı: format, lint, strict typecheck, 8 unit test, entegrasyon dosyası keşfi ve bütün production build'leri geçti
-- Gerçek PostgreSQL URL'siyle kök `pnpm test:integration` komutu 10/10 testi çalıştırdı; test yokken sessiz başarı veren eski glob filtresi kaldırıldı
+- `docker compose --profile app up --detach --build --wait` revision 7 ile temizden başarılı; migration işi `0` ile bitti ve API, web, iki worker, PostgreSQL, Mailpit ve target simulator sağlıklı başladı
+- `pnpm run ci` başarılı: format, generated-contract drift, lint, strict typecheck, 22 unit test, 11 gerçek PostgreSQL entegrasyon testi ve bütün production build'leri geçti
+- Gerçek PostgreSQL URL'siyle kök `pnpm test:integration` komutu 11/11 testi çalıştırdı; test yokken sessiz başarı veren eski glob filtresi kaldırıldı
 - Playwright E2E: web/API smoke ve iki bağımsız browser client senaryosu 2/2 geçti
 - Aşama 4 sözleşme doğrulaması: OpenAPI 3.1 YAML parse edildi; 40 path, 57 benzersiz operation, 68 schema ve 437 local `$ref` doğrulandı. Doküman endpoint kataloğu ve 38 zorunlu domain event'i sözleşmelerle bire bir karşılaştırıldı.
 - Aşama 4 commit'i için GitHub Actions çalıştırması `37993088278` içinde Node kalite, Python predictor kalite ve dependency audit işleri geçti.
+- `pnpm contracts:check` ile 57 OpenAPI operation'ının üretim artifact'leri ve güvenlik/precondition matrisi doğrulandı.
+- Revision 7 sıfırdan migration, tekrar migration, checksum, RLS ve idempotency storage sınırlarını içeren PostgreSQL entegrasyon paketi **11/11** geçti; local geliştirme veritabanı revision 7'ye taşındı.
+- Rebuild edilen stack üzerinde canlı health, güvenli `404` instance ve `Allow` başlıklı `405` problem yanıtları doğrulandı; Playwright smoke ve iki eşzamanlı istemci senaryosu yeniden **2/2** geçti.
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
@@ -49,13 +57,13 @@
 - SSE canlı güncelleme, authenticated frontend ve public durum sayfası
 - Predictor analiz algoritması/model lifecycle'ı
 - Production deployment, ayrı login wrapper secret'ları, managed backup/PITR ve production restore drill'i
-- Aşama 4 sözleşmelerinin runtime validator/type üretimi, handler uygulaması ve contract testleri
-- HTTP retry receipt'leri için planlanan `infra.api_idempotency_records` forward-only migration'ı
+- Authenticated/public ürün endpoint'lerinin domain handler'ları; OpenAPI yolları ilgili Aşama 5–15 içinde uygulanacaktır
+- Anonymous auth idempotency receipt erişimi için dar `security_api` fonksiyonu; Aşama 5 enumeration-safe akışıyla birlikte uygulanacaktır
 
 ## Bilinen Sınırlamalar
 
 - Mevcut ekran ve servisler hâlâ ürün akışları değil, çalışan runtime/health temelidir.
-- Aşama 4 belgeleri tasarımdır; OpenAPI'de görünen ürün endpoint'leri henüz çalışıyor olarak değerlendirilmemelidir.
+- Aşama 4 sözleşme ve sınır altyapısı çalışır; OpenAPI'de görünen ürün endpoint'lerinin çoğu henüz domain handler'ına sahip değildir ve çalışıyor olarak değerlendirilmemelidir.
 - Local Compose kolaylığı için tek PostgreSQL bootstrap login'i kullanır ve bağlantılar dar `NOLOGIN` service role geçer. Production'da servis başına ayrı login wrapper/secret zorunludur.
 - Demo seed parola veya aktif session oluşturmaz; auth aşamasında güvenli demo credential akışı ayrıca eklenecektir.
 - Partition bakım helper'ları hazırdır ancak otomatik periyodik housekeeper henüz yoktur.
@@ -67,4 +75,4 @@
 
 ## Sıradaki İş
 
-Kullanıcı Aşama 4 tasarımını okuyup onayladıktan sonra contract package/runtime doğrulama altyapısı, forward-only idempotency migration'ı, merkezi problem mapper ve mock/conformance testleri küçük commit'lerle uygulanacaktır. Aşama 5 auth uygulamasına bu sözleşme temeli doğrulanmadan geçilmeyecektir.
+Aşama 5 için önce `docs/AUTH_AND_OWNERSHIP.md` hazırlanacak ve kullanıcı incelemesine bırakılacaktır. Session rotation, parola hashleme, CSRF/origin, enumeration-safe doğrulama/reset akışları, rate limit ve RLS request context tasarımı onaylanmadan auth koduna başlanmayacaktır.

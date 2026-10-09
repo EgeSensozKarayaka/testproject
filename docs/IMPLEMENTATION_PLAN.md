@@ -149,7 +149,7 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 4 — API, Event ve Hata Sözleşmeleri
 
-**Durum:** Tasarım hazır — 2026-10-10 03:19 +06:00; kullanıcı incelemesini bekliyor
+**Durum:** Tamamlandı — tasarım onaylandı; sözleşme üretimi, API sınırı ve revision 7 migration doğrulandı
 
 **Amaç:** Frontend, API ve worker'ların uygulama öncesinde aynı sözleşmeler üzerinde anlaşmasını sağlamak.
 
@@ -600,4 +600,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 3 — Nihai Veritabanı ve Kalıcılık Mimarisi** tamamlanmıştır. Altı migration, idempotent seed, tipli erişim yüzeyi, RLS/rol sınırları, partition'lar, migration container'ı ve gerçek PostgreSQL entegrasyon paketi uygulandı. Sıfırdan migration ile ayrı veritabanına mantıksal restore doğrulandı.
 
-**Aktif çalışma Aşama 4 — API, Event ve Hata Sözleşmeleri**dir. `docs/API_DESIGN.md`, `docs/openapi-v1.yaml`, `docs/EVENT_CATALOG.md`, `docs/REALTIME_CONTRACT.md` ve `docs/API_ERRORS.md` taslakları tamamlandı ve kullanıcı incelemesini bekliyor. Bu turda route, auth, runtime validator, migration veya uygulama kodu yazılmadı. Onaydan sonra Aşama 4 uygulaması; contract toolchain, yeni forward-only idempotency migration'ı ve sözleşme/conformance testleriyle başlayacaktır.
+**Aşama 4 — API, Event ve Hata Sözleşmeleri** tamamlanmıştır. Canonical OpenAPI'den TypeScript tipleri ve Fastify runtime şemaları üretilir; CI drift ve güvenlik metadata'sını kontrol eder. Merkezi RFC 9457 mapper, UUIDv7 request korelasyonu ve revision 7 idempotency receipt şeması uygulanıp test edilmiştir. OpenAPI'deki ürün route'larının iş davranışı tamamlanmış sayılmaz; her route kendi Aşama 5–15 domain diliminde bu sözleşmeye bağlanacaktır.
+
+**Sıradaki çalışma Aşama 5 — Kimlik Doğrulama ve Kullanıcı İzolasyonu**dur. Koddan önce `docs/AUTH_AND_OWNERSHIP.md` ile session rotation, parola hashleme, CSRF/origin, enumeration-safe token akışları, rate limiting ve RLS request bağlamı kesinleştirilecektir.
