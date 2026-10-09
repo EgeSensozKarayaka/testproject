@@ -10,6 +10,8 @@ const PASSWORD_OPTIONS = {
   parallelism: 1,
   timeCost: 2,
 } as const;
+const ARGON2ID_ALGORITHM: ReturnType<typeof parseOptions>['algorithm'] = 2;
+const ARGON2_VERSION_19: ReturnType<typeof parseOptions>['version'] = 1;
 
 const passwordEstimator = new ZxcvbnFactory({
   dictionary: { ...common.dictionary, ...english.dictionary },
@@ -77,8 +79,8 @@ export class PasswordService {
   needsRehash(encoded: string): boolean {
     const parsed = parseOptions(encoded);
     return (
-      parsed.algorithm !== 2 || // @node-rs/argon2 Algorithm.Argon2id
-      parsed.version !== 1 || // @node-rs/argon2 Version.V0x13 (PHC v=19)
+      parsed.algorithm !== ARGON2ID_ALGORITHM ||
+      parsed.version !== ARGON2_VERSION_19 ||
       parsed.memoryCost < PASSWORD_OPTIONS.memoryCost ||
       parsed.timeCost < PASSWORD_OPTIONS.timeCost ||
       parsed.parallelism < PASSWORD_OPTIONS.parallelism ||
