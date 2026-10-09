@@ -1,7 +1,11 @@
 import cors from '@fastify/cors';
 import type { ServiceHealth } from '@site-monitor/contracts';
-import Fastify from 'fastify';
+import { openApiOperations } from '@site-monitor/contracts/openapi';
+import Fastify, { type FastifyBaseLogger } from 'fastify';
 import type { Logger } from 'pino';
+
+import { installProblemHandling } from './problem.js';
+import { requestIdFromHeader } from './request-id.js';
 
 export interface ApiApplicationOptions {
   allowedOrigin: string;
@@ -25,19 +29,37 @@ function healthPayload(
 }
 
 export function buildApiApplication(options: ApiApplicationOptions) {
-  const app = Fastify({ loggerInstance: options.logger });
+  const logger: FastifyBaseLogger = options.logger;
+  const app = Fastify({
+    bodyLimit: 64 * 1024,
+    genReqId: requestIdFromHeader,
+    loggerInstance: logger,
+  });
+
+  installProblemHandling(app);
+
+  app.addHook('onRequest', (request, reply, done) => {
+    reply.header('X-Request-Id', request.id);
+    done();
+  });
 
   void app.register(cors, {
     origin: options.allowedOrigin,
   });
 
-  app.get('/health/live', () => healthPayload(options.serviceName, options.version, 'ok'));
+  app.get('/health/live', { schema: openApiOperations.getLiveness.routeSchema }, () =>
+    healthPayload(options.serviceName, options.version, 'ok'),
+  );
 
-  app.get('/health/ready', async (_request, reply) => {
-    const ready = await options.readiness();
-    if (!ready) reply.code(503);
-    return healthPayload(options.serviceName, options.version, ready ? 'ok' : 'unavailable');
-  });
+  app.get(
+    '/health/ready',
+    { schema: openApiOperations.getReadiness.routeSchema },
+    async (_request, reply) => {
+      const ready = await options.readiness();
+      if (!ready) reply.code(503);
+      return healthPayload(options.serviceName, options.version, ready ? 'ok' : 'unavailable');
+    },
+  );
 
   return app;
 }
