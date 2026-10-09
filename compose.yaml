@@ -73,6 +73,25 @@ services:
     networks:
       - backend
 
+  migrate:
+    profiles: [app, prediction]
+    build:
+      context: .
+      dockerfile: infra/docker/database.Dockerfile
+    command: [node, dist/cli.js, migrate]
+    environment:
+      DATABASE_ROOT: /app/database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-site_monitor}:${POSTGRES_PASSWORD:-local_dev_only_change_me}@postgres:5432/${POSTGRES_DB:-site_monitor}
+      NODE_ENV: development
+      SERVICE_VERSION: 0.1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    init: true
+    restart: 'no'
+    networks:
+      - backend
+
   api:
     profiles: [app]
     build:
@@ -92,6 +111,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
@@ -123,6 +144,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
@@ -156,6 +179,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD
@@ -207,6 +232,7 @@ services:
       dockerfile: infra/docker/predictor.Dockerfile
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-site_monitor}:${POSTGRES_PASSWORD:-local_dev_only_change_me}@postgres:5432/${POSTGRES_DB:-site_monitor}
+      PGOPTIONS: -c role=site_monitor_predictor
       HOST: 0.0.0.0
       PORT: 8000
       SERVICE_NAME: predictor
@@ -216,6 +242,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         - CMD

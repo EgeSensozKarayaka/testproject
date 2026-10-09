@@ -13,6 +13,7 @@ const logger = createLogger({
 const database = createDatabasePool({
   applicationName: config.serviceName,
   connectionString: loadDatabaseUrl(),
+  databaseRole: 'site_monitor_api',
 });
 const app = buildApiApplication({
   allowedOrigin: process.env.WEB_ORIGIN ?? 'http://localhost:15173',

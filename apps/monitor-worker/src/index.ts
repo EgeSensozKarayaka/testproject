@@ -13,6 +13,7 @@ const logger = createLogger({
 const database = createDatabasePool({
   applicationName: config.serviceName,
   connectionString: loadDatabaseUrl(),
+  databaseRole: 'site_monitor_monitor',
   maxConnections: 2,
 });
 const app = Fastify({ loggerInstance: logger });
