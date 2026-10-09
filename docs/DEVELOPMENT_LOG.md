@@ -70,3 +70,9 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Repository-local Git kimliği `Ege <sensozegekarayaka@gmail.com>` olarak tamamlandı.
 - Global Git yapılandırması değiştirilmedi.
 
+### 23:22 — İlk GitHub teslimi
+
+- Gereksinim ve mimari belgeleri `docs: define project requirements and architecture` commit'iyle kaydedildi.
+- Git ve Docker altyapısı `chore: add local infrastructure compose` commit'iyle ayrı tutuldu.
+- Yerel `main` dalı GitHub `origin/main` dalına başarıyla gönderildi ve upstream bağlantısı kuruldu.
+

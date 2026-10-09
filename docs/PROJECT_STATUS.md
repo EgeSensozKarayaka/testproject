@@ -1,6 +1,6 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-09 23:21 +06:00  
+**Son güncelleme:** 2026-10-09 23:22 +06:00  
 **Genel durum:** Aşama 2 uygulaması başladı
 
 ## Tamamlanan
@@ -19,6 +19,7 @@
 - Yerel Git repository başlangıcı (`main`)
 - GitHub `origin` bağlantısı: `https://github.com/EgeSensozKarayaka/testproject.git`
 - Repository-local Git commit kimliği
+- Aşamalı ilk Git commit'leri ve GitHub `main` push'u
 - PostgreSQL 18.6 ve Mailpit 1.31.4 Compose altyapısı
 - Altyapı healthcheck ve bağlantı doğrulaması
 - Başlangıç `.gitignore`, `.gitattributes`, `.editorconfig`, `.env.example` ve `README.md`
@@ -36,7 +37,6 @@
 
 ## Henüz Yapılmayan
 
-- İlk commit ve GitHub push
 - Aşama 2 Node/Python workspace scaffold'u
 - Target simulator ve uygulama container'ları
 - CI pipeline'ı
@@ -55,5 +55,5 @@
 
 ## Sıradaki İş
 
-İlk dokümantasyon ve altyapı commit'leri oluşturulup mevcut GitHub `origin` repository'sine gönderilecektir. Ardından Node/Python workspace scaffold'u, target simulator, uygulama container temelleri ve CI kurulacaktır.
+Node/Python workspace scaffold'u, target simulator, uygulama container temelleri ve CI kurulacaktır.
 
