@@ -1,6 +1,9 @@
-const command = process.argv[2] ?? 'unknown';
+import { spawnSync } from 'node:child_process';
 
-console.error(
-  `Database command "${command}" is intentionally unavailable until the Phase 3 schema is approved.`,
+const command = process.argv[2] ?? 'unknown';
+const result = spawnSync(
+  process.execPath,
+  ['--import', 'tsx', 'packages/database/src/cli.ts', command],
+  { stdio: 'inherit' },
 );
-process.exitCode = 1;
+process.exitCode = result.status ?? 1;

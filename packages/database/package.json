@@ -11,12 +11,17 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "db:migrate": "tsx src/cli.ts migrate",
+    "db:seed": "tsx src/cli.ts seed",
+    "db:status": "tsx src/cli.ts status",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "kysely": "0.29.6",
     "pg": "8.23.1"
   },
   "devDependencies": {
-    "@types/pg": "8.23.1"
+    "@types/pg": "8.23.1",
+    "typescript": "6.0.3"
   }
 }
