@@ -195,4 +195,5 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Notification worker encrypted payload'ı yalnız claim sonrasında çözüp Mailpit SMTP'ye gönderir hale getirildi; retry/fencing sonucu dışındaki secret veriler loglanmadı.
 - React kayıt, giriş, parola sıfırlama, fragment tabanlı doğrulama ve authenticated temel ekranları uygulandı.
 - Yerel kapılar: 35/35 unit, 12/12 gerçek PostgreSQL integration, strict typecheck ve 3/3 Playwright geçti. Playwright tam akışı UI kaydı, Mailpit mesajı, doğrulama, giriş ve çıkışı doğruladı.
-- Docker'ın ilk Linux native dependency indirmesi yavaş sürdü fakat build ve servis health kontrolleri tamamlandı. Aşama 5 commit/push ve uzak CI sonucu bu kaydın sonraki maddesinde belirtilecektir.
+- Docker'ın ilk Linux native dependency indirmesi yavaş sürdü fakat revision 11 migration ve bütün servis health kontrolleri tamamlandı.
+- Aşama 5 altı anlamlı uygulama commit'i olarak `origin/main` dalına gönderildi. GitHub Actions koşusu [`38002790366`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38002790366) içinde Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin tamamı geçti.

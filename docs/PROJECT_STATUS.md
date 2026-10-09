@@ -1,6 +1,6 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 05:02 +06:00
+**Son güncelleme:** 2026-10-10 05:10 +06:00
 **Genel durum:** Aşama 5 kimlik doğrulama ve kullanıcı izolasyonu uygulandı; yerel kalite ve kabul kapıları geçti
 
 ## Tamamlanan
@@ -25,7 +25,7 @@
 - `pnpm typecheck`: ortak paketler, React, API, iki worker ve target simulator için strict TypeScript kontrolü geçti.
 - Playwright: auth frontend smoke, iki bağımsız browser context ve UI → Mailpit → verification → login → logout akışı **3/3 geçti**.
 - Canlı Compose akışında kayıt `202`, Mailpit teslimi, doğrulama `204`, login/session `200`, logout `204` ve logout sonrası session `401` doğrulandı.
-- Aşama 4 son GitHub Actions koşusu [`37996956618`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/37996956618) beş işin tamamında geçti. Aşama 5 uzak CI sonucu bu commit gönderildikten sonra bu belgeye eklenecektir.
+- Aşama 5 GitHub Actions koşusu [`38002790366`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38002790366) başarıyla tamamlandı: Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin beşi de geçti.
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
