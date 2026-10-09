@@ -97,3 +97,4 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Playwright Chromium CDN'i yerel ağda timeout verdi; aynı test paketi kurulu Microsoft Edge kanalıyla geçirildi. CI, Chromium kurulumunu sürdürür.
 - Migration, seed ve reset uygulaması Aşama 3 veritabanı tasarımı onaylanana kadar bilinçli olarak ertelendi.
 - İlk uzak CI koşusunda `setup-uv@v10` hareketli etiketi çözümlenemedi; resmi `v10.2.0` release'i doğrulanıp workflow tam sürüme pinlendi.
+- uv managed-Python kataloğunda `3.14.8` henüz bulunmadığı, GitHub'ın resmi Python toolcache'inde bulunduğu doğrulandı; CI tam sürümü `actions/setup-python@v7` ile kuracak şekilde düzeltildi.
