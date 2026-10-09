@@ -46,15 +46,51 @@ export interface PasswordCredentialTable extends OwnedRow {
 }
 
 export interface SessionTable extends OwnedRow {
+  absolute_expires_at: Timestamp;
   created_at: GeneratedTimestamp;
   expires_at: Timestamp;
   id: GeneratedUuid;
+  idle_expires_at: Timestamp;
   issued_password_version: number;
   last_seen_at: Timestamp | null;
   revoke_reason: string | null;
   revoked_at: Timestamp | null;
   rotated_from_session_id: string | null;
+  rotated_to_session_id: string | null;
+  rotation_grace_expires_at: Timestamp | null;
   token_digest: Buffer;
+  updated_at: GeneratedTimestamp;
+}
+
+export interface RateLimitCounterTable {
+  bucket_seconds: number;
+  bucket_start: Timestamp;
+  expires_at: Timestamp;
+  policy: string;
+  request_count: number;
+  scope_digest: Buffer;
+}
+
+export interface TransactionalEmailDeliveryTable extends OwnedRow {
+  attempt_count: number;
+  available_at: GeneratedTimestamp;
+  completed_at: Timestamp | null;
+  created_at: GeneratedTimestamp;
+  encrypted_payload: Buffer;
+  encryption_iv: Buffer;
+  encryption_key_version: string;
+  encryption_tag: Buffer;
+  fencing_token: GeneratedBigInt;
+  id: GeneratedUuid;
+  last_result_code: string | null;
+  lease_expires_at: Timestamp | null;
+  lease_owner: string | null;
+  max_attempts: number;
+  provider_message_id: string | null;
+  purpose: 'RESET_PASSWORD' | 'VERIFY_ACCOUNT_EMAIL';
+  recipient_address_snapshot: string;
+  state: 'DELIVERY_UNKNOWN' | 'FAILED' | 'PENDING' | 'PROCESSING' | 'RETRY_WAIT' | 'SENT';
+  updated_at: GeneratedTimestamp;
 }
 
 export interface OneTimeTokenTable extends OwnedRow {
@@ -498,6 +534,7 @@ export interface DatabaseSchema {
   'auth.password_credentials': PasswordCredentialTable;
   'auth.sessions': SessionTable;
   'auth.users': UserTable;
+  'auth.rate_limit_counters': RateLimitCounterTable;
   'infra.outbox_dispatches': OutboxDispatchTable;
   'infra.outbox_events': OutboxEventTable;
   'infra.api_idempotency_records': ApiIdempotencyRecordTable;
@@ -513,6 +550,7 @@ export interface DatabaseSchema {
   'monitoring.rollups_hour': RollupTable;
   'monitoring.rollups_minute': RollupTable;
   'notification.deliveries': NotificationDeliveryTable;
+  'notification.transactional_email_deliveries': TransactionalEmailDeliveryTable;
   'notification.intents': NotificationIntentTable;
   'notification.policies': NotificationPolicyTable;
   'notification.policy_recipients': PolicyRecipientTable;

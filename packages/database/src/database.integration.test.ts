@@ -26,7 +26,8 @@ function databaseUrl(adminUrl: string, databaseName: string): string {
 
 async function withRole<T extends QueryResultRow>(
   pool: Pool,
-  role: 'site_monitor_api' | 'site_monitor_predictor' | 'site_monitor_public',
+  role:
+    'site_monitor_api' | 'site_monitor_notifier' | 'site_monitor_predictor' | 'site_monitor_public',
   ownerId: string | null,
   query: (client: PoolClient) => Promise<T>,
 ): Promise<T> {
@@ -39,6 +40,26 @@ async function withRole<T extends QueryResultRow>(
     }
     const result = await query(client);
     await client.query('ROLLBACK');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function withRoleCommit<T extends QueryResultRow>(
+  pool: Pool,
+  role: 'site_monitor_api' | 'site_monitor_notifier',
+  query: (client: PoolClient) => Promise<T>,
+): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`SET LOCAL ROLE ${role}`);
+    const result = await query(client);
+    await client.query('COMMIT');
     return result;
   } catch (error) {
     await client.query('ROLLBACK');
@@ -78,7 +99,7 @@ databaseSuite('PostgreSQL persistence architecture', () => {
   it('migrates from zero, records checksums, and is idempotent', async () => {
     const first = await runMigrations(pool, { appBuild: 'integration-test' });
     expect(first.currentRevision).toBe(TARGET_SCHEMA_REVISION);
-    expect(first.applied).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(first.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
 
     const second = await runMigrations(pool, { appBuild: 'integration-test' });
     expect(second).toEqual({ applied: [], currentRevision: TARGET_SCHEMA_REVISION });
@@ -180,6 +201,120 @@ databaseSuite('PostgreSQL persistence architecture', () => {
     } finally {
       client.release();
     }
+  });
+
+  it('executes the least-privilege account, session, throttle, and email lifecycle', async () => {
+    const tokenDigest = Buffer.alloc(32, 41);
+    const sessionDigest = Buffer.alloc(32, 42);
+    const created = await withRoleCommit(pool, 'site_monitor_api', async (client) => {
+      const result = await client.query<{ created: boolean; owner_id: string }>(
+        `SELECT * FROM security_api.register_account(
+          $1,$2,$3,$4,$5,statement_timestamp() + interval '1 hour',$6,$7,$8,$9
+        )`,
+        [
+          'auth-flow@example.test',
+          'auth-flow@example.test',
+          'Auth Flow',
+          '$argon2id$v=19$m=19456,t=2,p=1$placeholder',
+          tokenDigest,
+          Buffer.from('encrypted'),
+          Buffer.alloc(12, 1),
+          Buffer.alloc(16, 2),
+          'test-v1',
+        ],
+      );
+      return result.rows[0]!;
+    });
+    expect(created.created).toBe(true);
+
+    const verified = await withRoleCommit(pool, 'site_monitor_api', async (client) => {
+      const result = await client.query<{ accepted: boolean }>(
+        'SELECT security_api.confirm_email_verification($1) AS accepted',
+        [tokenDigest],
+      );
+      return result.rows[0]!;
+    });
+    expect(verified.accepted).toBe(true);
+
+    const resolved = await withRoleCommit(pool, 'site_monitor_api', async (client) => {
+      await client.query(
+        `SELECT * FROM security_api.create_session(
+          $1,$2,statement_timestamp() + interval '7 days',statement_timestamp() + interval '24 hours'
+        )`,
+        [created.owner_id, sessionDigest],
+      );
+      const result = await client.query<{ owner_id: string; user_status: string }>(
+        'SELECT owner_id, user_status FROM security_api.resolve_session($1)',
+        [sessionDigest],
+      );
+      return result.rows[0]!;
+    });
+    expect(resolved).toEqual({ owner_id: created.owner_id, user_status: 'ACTIVE' });
+
+    const profile = await withRoleCommit(pool, 'site_monitor_api', async (client) => {
+      const result = await client.query<{ display_name: string; resource_version: string }>(
+        'SELECT display_name, resource_version FROM security_api.update_current_user_profile($1,$2,$3)',
+        [created.owner_id, 2, 'Updated Auth Flow'],
+      );
+      return result.rows[0]!;
+    });
+    expect(profile).toEqual({ display_name: 'Updated Auth Flow', resource_version: '3' });
+    const staleProfile = await withRoleCommit(pool, 'site_monitor_api', async (client) =>
+      client.query('SELECT * FROM security_api.update_current_user_profile($1,$2,$3)', [
+        created.owner_id,
+        2,
+        'Stale Update',
+      ]),
+    );
+    expect(staleProfile.rowCount).toBe(0);
+
+    const upgraded = await withRoleCommit(pool, 'site_monitor_api', async (client) => {
+      const result = await client.query<{ upgraded: boolean }>(
+        'SELECT security_api.upgrade_password_hash($1,$2,$3,$4) AS upgraded',
+        [
+          created.owner_id,
+          1,
+          '$argon2id$v=19$m=19456,t=2,p=1$placeholder',
+          '$argon2id$v=19$m=65536,t=3,p=1$upgraded',
+        ],
+      );
+      return result.rows[0]!;
+    });
+    expect(upgraded.upgraded).toBe(true);
+
+    const throttle = await withRoleCommit(pool, 'site_monitor_api', async (client) => {
+      await client.query(`SELECT * FROM security_api.consume_rate_limit($1,'test.policy',1,60)`, [
+        Buffer.alloc(32, 43),
+      ]);
+      const result = await client.query<{ allowed: boolean }>(
+        `SELECT allowed FROM security_api.consume_rate_limit($1,'test.policy',1,60)`,
+        [Buffer.alloc(32, 43)],
+      );
+      return result.rows[0]!;
+    });
+    expect(throttle.allowed).toBe(false);
+
+    const delivery = await withRoleCommit(pool, 'site_monitor_notifier', async (client) => {
+      const claimed = await client.query<{ delivery_id: string; fencing_token: string }>(
+        `SELECT delivery_id, fencing_token FROM security_api.claim_transactional_email('test-worker',60)`,
+      );
+      const row = claimed.rows[0]!;
+      const completed = await client.query<{ accepted: boolean }>(
+        `SELECT security_api.complete_transactional_email(
+          $1,'test-worker',$2,'SENT','smtp_accepted','message-id',30
+        ) AS accepted`,
+        [row.delivery_id, row.fencing_token],
+      );
+      return completed.rows[0]!;
+    });
+    expect(delivery.accepted).toBe(true);
+
+    await expect(
+      withRole(pool, 'site_monitor_api', null, async (client) => {
+        await client.query('SELECT id FROM notification.transactional_email_deliveries');
+        return {};
+      }),
+    ).rejects.toMatchObject({ code: '42501' });
   });
 
   it('blocks cross-owner foreign-key links and duplicate active jobs', async () => {
@@ -401,7 +536,7 @@ databaseSuite('PostgreSQL persistence architecture', () => {
       NODE_ENV: 'test',
     });
     expect(result.currentRevision).toBe(TARGET_SCHEMA_REVISION);
-    expect(result.applied).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(result.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     expect((await pool.query('SELECT id FROM auth.users')).rowCount).toBe(0);
   });
 });
