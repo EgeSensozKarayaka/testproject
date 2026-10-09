@@ -151,3 +151,11 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - HTTP idempotency tasarımı takılabilir PROCESSING lease'i yerine receipt + domain mutation + outbox'ın aynı kısa transaction'da commit edilmesine sadeleştirildi.
 - OpenAPI YAML parse edildi; 40 path, 57 benzersiz operation, 68 schema ve 437 local reference doğrulandı. Path parametreleri, schema required alanları ve authenticated unsafe operation CSRF parametreleri kontrol edildi.
 - API endpoint kataloğundaki 57 operation ile OpenAPI'deki 57 operation bire bir eşleşti; domain modelindeki 38 zorunlu event'in tamamı final event kataloğunda bulundu.
+
+### 03:26 — Aşama 4 CI sonucu ve dürüst durum kaydı
+
+- Aşama 4 tasarım commit'i `80045fc` olarak `origin/main` dalına gönderildi.
+- GitHub Actions çalıştırması `37993088278` içinde Node kalite, Python predictor kalite ve dependency audit işleri başarılı oldu.
+- PostgreSQL migration/isolation işi testlere ulaşmadan `Initialize containers` aşamasındaki Docker pull hatasıyla sona erdi; GitHub anotasyonu pull denemelerinin yeniden denemelerden sonra da exit code 1 verdiğini gösterdi.
+- Full-stack smoke işi `Start full stack` aşamasında exit code 1 ile durdu ve bu nedenle Playwright raporu oluşmadı. Her iki container işinin aynı anda başlangıçta kesilmesi ortak Docker/registry problemiyle uyumludur, ancak ham log anonim görünümde erişilemediği için bu ikinci neden kesin sonuç olarak kaydedilmedi.
+- Bu başarısızlık Aşama 4 sözleşme belgelerinde doğrulanmış bir kusur göstermediğinden tahmine dayalı uygulama veya workflow değişikliği yapılmadı; CI yeniden çalıştırması açık doğrulama işi olarak bırakıldı.

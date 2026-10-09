@@ -1,6 +1,6 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 03:19 +06:00
+**Son güncelleme:** 2026-10-10 03:26 +06:00
 **Genel durum:** Aşama 3 uygulaması tamamlandı; Aşama 4 API, event, SSE ve hata sözleşmesi tasarımı kullanıcı incelemesinde
 
 ## Tamamlanan
@@ -36,6 +36,8 @@
 - `pnpm run ci` başarılı: format, lint, strict typecheck, 8 unit test, entegrasyon dosyası keşfi ve bütün production build'leri geçti
 - Gerçek PostgreSQL URL'siyle kök `pnpm test:integration` komutu 10/10 testi çalıştırdı; test yokken sessiz başarı veren eski glob filtresi kaldırıldı
 - Playwright E2E: web/API smoke ve iki bağımsız browser client senaryosu 2/2 geçti
+- Aşama 4 sözleşme doğrulaması: OpenAPI 3.1 YAML parse edildi; 40 path, 57 benzersiz operation, 68 schema ve 437 local `$ref` doğrulandı. Doküman endpoint kataloğu ve 38 zorunlu domain event'i sözleşmelerle bire bir karşılaştırıldı.
+- Aşama 4 commit'i için GitHub Actions çalıştırması `37993088278` içinde Node kalite, Python predictor kalite ve dependency audit işleri geçti.
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
@@ -61,6 +63,7 @@
 - ESLint 9.39.5 erişilebilirlik eklentisi uyumluluğu nedeniyle pinlidir.
 - Playwright Chromium CDN'i yerel ağda timeout verdi; aynı E2E paketi kurulu Microsoft Edge ile daha önce geçti, CI Chromium kullanır.
 - Host `5432` ve `3000` başka projeler tarafından kullanıldığından PostgreSQL `15432`, API `13000`, web `15173` portundadır.
+- GitHub Actions çalıştırması `37993088278` tamamen yeşil değildir: PostgreSQL işi testlere ulaşmadan `Initialize containers` adımındaki Docker pull hatasıyla, full-stack smoke işi ise `Start full stack` adımında başarısız oldu. İlk hata açıkça CI/container altyapısı kaynaklıdır; ikinci hatanın aynı nedenden doğduğu yalnızca güçlü bir çıkarımdır çünkü anonim GitHub görünümü ham logu sunmamaktadır. Uygulama düzeltmesi için kanıt oluşmadığından bu turda kod değiştirilmemiştir; çalışma yeniden denenmelidir.
 
 ## Sıradaki İş
 
