@@ -10,7 +10,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@fastify/cookie": "11.1.3",
     "@fastify/cors": "11.3.1",
+    "@site-monitor/auth": "workspace:*",
     "@site-monitor/config": "workspace:*",
     "@site-monitor/contracts": "workspace:*",
     "@site-monitor/database": "workspace:*",

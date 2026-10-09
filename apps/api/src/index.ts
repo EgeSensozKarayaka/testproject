@@ -1,8 +1,9 @@
-import { loadDatabaseUrl, loadRuntimeConfig } from '@site-monitor/config';
+import { loadAuthRuntimeConfig, loadDatabaseUrl, loadRuntimeConfig } from '@site-monitor/config';
 import { createDatabasePool, isDatabaseReady } from '@site-monitor/database';
 import { createLogger } from '@site-monitor/observability';
 
 import { buildApiApplication } from './app.js';
+import { AuthService } from './auth-service.js';
 
 const config = loadRuntimeConfig({ defaultPort: 13_000, serviceName: 'api' });
 const logger = createLogger({
@@ -15,8 +16,19 @@ const database = createDatabasePool({
   connectionString: loadDatabaseUrl(),
   databaseRole: 'site_monitor_api',
 });
+const authConfig = loadAuthRuntimeConfig();
+const authService = await AuthService.create(database, {
+  csrfKey: { key: authConfig.csrfKey, version: authConfig.csrfKeyVersion },
+  emailEncryptionKey: {
+    key: authConfig.emailEncryptionKey,
+    version: authConfig.emailEncryptionKeyVersion,
+  },
+  rateLimitKey: authConfig.rateLimitKey,
+});
 const app = buildApiApplication({
   allowedOrigin: process.env.WEB_ORIGIN ?? 'http://localhost:15173',
+  authService,
+  cookieSecure: authConfig.cookieSecure,
   logger,
   readiness: async () => isDatabaseReady(database),
   serviceName: config.serviceName,

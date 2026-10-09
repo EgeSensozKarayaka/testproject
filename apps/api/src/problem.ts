@@ -16,6 +16,7 @@ const PROBLEM_TITLES: Record<ProblemCode, string> = {
   idempotency_key_reused: 'Idempotency key reused',
   internal_error: 'Internal server error',
   invalid_credentials: 'Invalid credentials',
+  invalid_or_expired_token: 'Invalid or expired token',
   invalid_cursor: 'Invalid cursor',
   invalid_precondition: 'Invalid precondition',
   invalid_request: 'Invalid request',
@@ -41,6 +42,7 @@ const PROBLEM_TITLES: Record<ProblemCode, string> = {
 export interface ApiProblemOptions {
   code: ProblemCode;
   detail: string;
+  etag?: string;
   issues?: ValidationIssue[];
   retryAfterSeconds?: number;
   retryable?: boolean;
@@ -50,6 +52,7 @@ export interface ApiProblemOptions {
 export class ApiProblemError extends Error {
   readonly code: ProblemCode;
   readonly issues: ValidationIssue[] | undefined;
+  readonly etag: string | undefined;
   readonly retryAfterSeconds: number | undefined;
   readonly retryable: boolean;
   readonly status: number;
@@ -58,6 +61,7 @@ export class ApiProblemError extends Error {
     super(options.detail);
     this.name = 'ApiProblemError';
     this.code = options.code;
+    this.etag = options.etag;
     this.issues = options.issues;
     this.retryAfterSeconds = options.retryAfterSeconds;
     this.retryable = options.retryable ?? false;
@@ -118,6 +122,18 @@ function normalizeError(error: unknown): ApiProblemError {
   }
   const fastifyError = error as FastifyError;
   if (fastifyError.validation) {
+    const missingIfMatch = fastifyError.validation.some(
+      (item) =>
+        item.keyword === 'required' &&
+        String(item.params?.missingProperty).toLowerCase() === 'if-match',
+    );
+    if (missingIfMatch) {
+      return new ApiProblemError({
+        code: 'precondition_required',
+        detail: 'A current If-Match resource version is required.',
+        status: 428,
+      });
+    }
     return new ApiProblemError({
       code: 'validation_failed',
       detail: 'One or more fields are invalid.',
@@ -125,7 +141,10 @@ function normalizeError(error: unknown): ApiProblemError {
       status: 422,
     });
   }
-  if (fastifyError.code === 'FST_ERR_CTP_INVALID_JSON_BODY') {
+  if (
+    fastifyError.code === 'FST_ERR_CTP_INVALID_JSON_BODY' ||
+    fastifyError.code === 'FST_ERR_CTP_EMPTY_JSON_BODY'
+  ) {
     return new ApiProblemError({
       code: 'malformed_json',
       detail: 'The request body is not valid JSON.',
@@ -218,6 +237,7 @@ export function installProblemHandling(app: FastifyInstance): void {
     if (error.retryAfterSeconds !== undefined) {
       reply.header('Retry-After', String(error.retryAfterSeconds));
     }
+    if (error.etag !== undefined) reply.header('ETag', error.etag);
     return reply
       .code(error.status)
       .type('application/problem+json')

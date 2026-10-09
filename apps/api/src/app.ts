@@ -1,4 +1,5 @@
 import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
 import type { ServiceHealth } from '@site-monitor/contracts';
 import { openApiOperations } from '@site-monitor/contracts/openapi';
 import Fastify, { type FastifyBaseLogger } from 'fastify';
@@ -6,9 +7,12 @@ import type { Logger } from 'pino';
 
 import { installProblemHandling } from './problem.js';
 import { requestIdFromHeader } from './request-id.js';
+import { registerAuthRoutes, type AuthServicePort } from './auth-routes.js';
 
 export interface ApiApplicationOptions {
   allowedOrigin: string;
+  authService?: AuthServicePort;
+  cookieSecure?: boolean;
   logger: Logger;
   readiness: () => Promise<boolean>;
   serviceName: string;
@@ -43,10 +47,19 @@ export function buildApiApplication(options: ApiApplicationOptions) {
     done();
   });
 
+  void app.register(cookie);
   void app.register(cors, {
     credentials: true,
     origin: options.allowedOrigin,
   });
+
+  if (options.authService) {
+    void app.register(registerAuthRoutes, {
+      allowedOrigin: options.allowedOrigin,
+      authService: options.authService,
+      cookieSecure: options.cookieSecure ?? false,
+    });
+  }
 
   app.get('/health/live', { schema: openApiOperations.getLiveness.routeSchema }, () =>
     healthPayload(options.serviceName, options.version, 'ok'),

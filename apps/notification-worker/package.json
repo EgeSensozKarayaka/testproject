@@ -10,10 +10,15 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@site-monitor/auth": "workspace:*",
     "@site-monitor/config": "workspace:*",
     "@site-monitor/contracts": "workspace:*",
     "@site-monitor/database": "workspace:*",
     "@site-monitor/observability": "workspace:*",
-    "fastify": "5.12.5"
+    "fastify": "5.12.5",
+    "nodemailer": "10.0.16"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "8.0.2"
   }
 }

@@ -106,6 +106,7 @@ services:
       SERVICE_NAME: api
       SERVICE_VERSION: 0.1.0
       WEB_ORIGIN: http://localhost:${WEB_PORT:-15173}
+      PUBLIC_WEB_URL: http://localhost:${WEB_PORT:-15173}
     ports:
       - '127.0.0.1:${API_PORT:-13000}:3000'
     depends_on:
@@ -176,6 +177,8 @@ services:
       SERVICE_VERSION: 0.1.0
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
+      PUBLIC_WEB_URL: http://localhost:${WEB_PORT:-15173}
+      AUTH_EMAIL_FROM: Site Monitor <no-reply@site-monitor.local>
     depends_on:
       postgres:
         condition: service_healthy
