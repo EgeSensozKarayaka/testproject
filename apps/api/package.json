@@ -1,0 +1,21 @@
+{
+  "name": "@site-monitor/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "11.3.1",
+    "@site-monitor/config": "workspace:*",
+    "@site-monitor/contracts": "workspace:*",
+    "@site-monitor/database": "workspace:*",
+    "@site-monitor/observability": "workspace:*",
+    "fastify": "5.12.5",
+    "pino": "10.4.0"
+  }
+}

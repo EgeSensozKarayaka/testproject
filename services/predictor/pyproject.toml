@@ -1,0 +1,43 @@
+[project]
+name = "site-monitor-predictor"
+version = "0.1.0"
+description = "Optional advisory risk predictor for Site Availability Monitor"
+requires-python = "==3.14.*"
+dependencies = [
+  "psycopg[binary]==3.3.6",
+]
+
+[dependency-groups]
+dev = [
+  "mypy>=1.18,<2",
+  "pytest>=8.4,<9",
+  "pytest-cov>=7,<8",
+  "ruff>=0.14,<0.15",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers"
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+mypy_path = "src"
+
+[tool.coverage.run]
+branch = true
+source = ["site_monitor_predictor"]
+
+[tool.coverage.report]
+fail_under = 70

@@ -1,0 +1,15 @@
+dist
+coverage
+node_modules
+playwright-report
+test-results
+pnpm-lock.yaml
+services/predictor/uv.lock
+
+# Existing architecture baselines retain their reviewed Markdown layout.
+docs/ACCEPTANCE_CRITERIA.md
+docs/ARCHITECTURE.md
+docs/DOMAIN_MODEL.md
+docs/GLOSSARY.md
+docs/REQUIREMENTS.md
+docs/STATE_MACHINES.md
