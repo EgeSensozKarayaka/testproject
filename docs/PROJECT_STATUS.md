@@ -1,6 +1,6 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 04:02 +06:00
+**Son güncelleme:** 2026-10-10 04:05 +06:00
 **Genel durum:** Aşama 4 sözleşme altyapısı tamamlandı; sıradaki çalışma Aşama 5 auth ve kullanıcı izolasyonu tasarımı
 
 ## Tamamlanan
@@ -46,6 +46,7 @@
 - `pnpm contracts:check` ile 57 OpenAPI operation'ının üretim artifact'leri ve güvenlik/precondition matrisi doğrulandı.
 - Revision 7 sıfırdan migration, tekrar migration, checksum, RLS ve idempotency storage sınırlarını içeren PostgreSQL entegrasyon paketi **11/11** geçti; local geliştirme veritabanı revision 7'ye taşındı.
 - Rebuild edilen stack üzerinde canlı health, güvenli `404` instance ve `Allow` başlıklı `405` problem yanıtları doğrulandı; Playwright smoke ve iki eşzamanlı istemci senaryosu yeniden **2/2** geçti.
+- GitHub Actions koşusu [`37996956618`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/37996956618) tamamen yeşil: Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin beşi de geçti.
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
@@ -71,7 +72,6 @@
 - ESLint 9.39.5 erişilebilirlik eklentisi uyumluluğu nedeniyle pinlidir.
 - Playwright Chromium CDN'i yerel ağda timeout verdi; aynı E2E paketi kurulu Microsoft Edge ile daha önce geçti, CI Chromium kullanır.
 - Host `5432` ve `3000` başka projeler tarafından kullanıldığından PostgreSQL `15432`, API `13000`, web `15173` portundadır.
-- GitHub Actions çalıştırması `37993088278` tamamen yeşil değildir: PostgreSQL işi testlere ulaşmadan `Initialize containers` adımındaki Docker pull hatasıyla, full-stack smoke işi ise `Start full stack` adımında başarısız oldu. İlk hata açıkça CI/container altyapısı kaynaklıdır; ikinci hatanın aynı nedenden doğduğu yalnızca güçlü bir çıkarımdır çünkü anonim GitHub görünümü ham logu sunmamaktadır. Uygulama düzeltmesi için kanıt oluşmadığından bu turda kod değiştirilmemiştir; çalışma yeniden denenmelidir.
 
 ## Sıradaki İş
 
