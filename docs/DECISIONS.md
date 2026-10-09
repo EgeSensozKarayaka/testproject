@@ -394,7 +394,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-045 — Stateful opaque session cookie ve katmanlı CSRF savunması
 
 - **Tarih:** 2026-10-10 04:15 +06:00
-- **Durum:** Proposed — Aşama 5 kullanıcı incelemesinde
+- **Durum:** Accepted — Aşama 5 uygulamasında doğrulandı
 - **Bağlam:** Browser oturumu revoke/rotation, parola resetinde bütün session'ları kapatma, iki eşzamanlı istemci ve tenant bağlamına güvenli kimlik üretme gerektirir. Cookie authentication tek başına CSRF riski taşır.
 - **Karar:** JWT/localStorage yerine PostgreSQL'de yalnız SHA-256 digest'i tutulan 256-bit opaque session token ve `HttpOnly; Secure; SameSite=Strict` cookie kullanılacaktır. Absolute/idle expiry, periyodik rotation ve kısa parallel-request grace server-side uygulanır. Unsafe isteklerde session-bound HMAC CSRF token; bütün browser auth POST'larında exact Origin, Fetch Metadata, JSON-only ve dar credentialed CORS birlikte zorunludur.
 - **Alternatifler:** Stateless JWT refresh token; browser storage bearer token; yalnız SameSite; yalnız CSRF token; framework stateless secure-session cookie'si.
@@ -404,7 +404,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-046 — Argon2id, 15 karakter tabanı ve bounded hash kapasitesi
 
 - **Tarih:** 2026-10-10 04:15 +06:00
-- **Durum:** Proposed — Aşama 5 kullanıcı incelemesinde
+- **Durum:** Accepted — Aşama 5 uygulamasında doğrulandı
 - **Bağlam:** Parola saklama offline saldırıya dirençli olmalı; pahalı doğrulama ise event loop'u veya API belleğini abuse altında tüketmemelidir. Kullanıcı enumeration timing farkı da oluşmamalıdır.
 - **Karar:** PHC encoded Argon2id için başlangıç tabanı `m=19456 KiB,t=2,p=1`, 16-byte salt ve 32-byte output'tur; production benchmark ile yalnız yukarı yönlü ayarlanır. Parola minimum 15 code point, maksimum 128; composition/periyodik rotation yoktur. Pinlenmiş `zxcvbn-ts` common/English sözlükleriyle offline değerlendirilen 0–2 skorları reddedilir. Async hash/verify instance başına bounded concurrency/queue ile çalışır; bilinmeyen kullanıcı aynı maliyetli dummy hash yolunu kullanır.
 - **Alternatifler:** bcrypt/PBKDF2; hızlı SHA-256; yalnız uzunluk; sync hash; sınırsız paralel hash; provider'a bağlı online breach sorgusu.
@@ -414,19 +414,29 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-047 — Auth mutation'larında dar DB fonksiyonları ve PostgreSQL rate limit
 
 - **Tarih:** 2026-10-10 04:15 +06:00
-- **Durum:** Proposed — Aşama 5 kullanıcı incelemesinde
+- **Durum:** Accepted — Aşama 5 uygulamasında doğrulandı
 - **Bağlam:** API rolünün auth tablolarına genel erişimi privilege sınırını zayıflatır. Process-memory rate limit birden fazla replica arasında tutarlı değildir; yalnız Redis eklemek ise mevcut v1 mimarisine yeni zorunlu dependency getirir.
 - **Karar:** Register, challenge issue/consume, session create/resolve/rotate/revoke ve password reset işlemleri fixed-search-path security-definer fonksiyonlarla atomik yürütülür. API auth tablolarında geniş DML almaz. Auth rate limit sayaçları raw e-posta/IP yerine HMAC subject ile PostgreSQL'de atomik fixed-window olarak tutulur; minute + hour/day pencereleri birlikte uygulanır.
 - **Alternatifler:** API'ye auth schema CRUD yetkisi; yalnız uygulama transaction'ı; process-memory limiter; ilk günden Redis; rate limit'i yalnız edge'e bırakmak.
 - **Gerekçe:** Least privilege ve transaction atomikliğini korumak, iki API replica'sında aynı abuse sınırını elde etmek ve v1 operasyon yüzeyini sade tutmak.
-- **Sonuçlar:** Forward-only revision 8 yeni sayaç, fonksiyon, RLS/GRANT ve anonim idempotency yüzeyini ekler. Rate-limit storage hatasında auth mutation fail-closed olur; yüksek hacimli DDoS için yine production edge/WAF gerekir.
+- **Sonuçlar:** Forward-only revision 8 session/sayaç/fonksiyon temelini, revision 10 anonim idempotency yüzeyini, revision 11 profil ve rehash sınırını ekledi. Rate-limit storage hatasında auth mutation fail-closed olur; yüksek hacimli DDoS için yine production edge/WAF gerekir.
 
 ## D-048 — Auth e-postaları için ayrı, encrypted durable delivery kuyruğu
 
 - **Tarih:** 2026-10-10 04:15 +06:00
-- **Durum:** Proposed — Aşama 5 kullanıcı incelemesinde
+- **Durum:** Accepted — Aşama 5 uygulamasında doğrulandı
 - **Bağlam:** Verification/reset e-postası request transaction'ında SMTP'ye bağlanırsa provider arızası kayıt/reset akışını bloke eder; yalnız token digest'i saklamak ise process crash sonrasında linki tekrar üretmeye yetmez. Incident notification tabloları auth challenge semantiğine sahip değildir.
 - **Karar:** `notification.transactional_email_deliveries`, one-time challenge'a bağlı ayrı durable queue olacaktır. Raw token yalnız AES-256-GCM encrypted, version'lı ve kısa ömürlü template payload içinde saklanır. Notification worker dar claim/complete yüzeyiyle gönderir; bounded retry, fencing ve `DELIVERY_UNKNOWN` semantiği kullanır.
 - **Alternatifler:** API'den senkron SMTP; raw token'ı outbox JSON'una yazmak; incident delivery tablolarını zorla yeniden kullanmak; commit sonrası fire-and-forget çağrı.
 - **Gerekçe:** SMTP'yi auth/monitoring arıza alanından ayırmak, crash sonrasında teslimi sürdürebilmek ve secret'ı log/event/veritabanında plaintext bırakmamak.
 - **Sonuçlar:** Mailpit aynı adapter'ın local uygulamasıdır. Encryption key version'lı secret store key ring'inden gelir; expired challenge payload'ı bounded retention ile silinir. E-posta gönderim hatası daha önce kabul edilmiş generic `202` response'unu değiştirmez.
+
+## D-049 — Uygulanmış auth migration'larında forward-fix ve profil sınırı
+
+- **Tarih:** 2026-10-10 04:53 +06:00
+- **Durum:** Accepted — migration ve temiz veritabanı testinde doğrulandı
+- **Bağlam:** Revision 8 yerel veritabanına uygulandıktan sonra sıfırdan entegrasyon testi notifier rolünün `security_api` schema `USAGE` yetkisinin eksik olduğunu gösterdi. Ayrıca anonymous receipt ve `/me` profil mutation yüzeylerinin ayrı dar fonksiyonları gerekiyordu.
+- **Karar:** Uygulanmış revision 8 checksum geçmişi değiştirilmeyecek. Grant düzeltmesi revision 9, anonymous idempotency revision 10, optimistic profile mutation ve yarış güvenli password rehash revision 11 olarak ileri migration'larla eklenecek.
+- **Alternatifler:** Revision 8'i sessizce yeniden yazmak; notifier'a geniş schema/table yetkisi vermek; profile update için auth tablosuna genel DML açmak.
+- **Gerekçe:** Migration ledger güvenini ve least-privilege sınırını korurken temiz kurulum ile mevcut kurulumun aynı son duruma ulaşmasını sağlamak.
+- **Sonuçlar:** Schema head 11'dir. API ve notifier yalnız allowlist security-definer fonksiyonlarını çağırır; sıfırdan ve mevcut veritabanı upgrade yolları aynı entegrasyon paketinde doğrulanır.

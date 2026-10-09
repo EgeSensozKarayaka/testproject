@@ -2,7 +2,7 @@
 
 Çok kullanıcılı ve kullanıcı bazlı sahiplik izolasyonuna sahip site erişilebilirlik izleme ürünü. Repository; React web uygulaması, Node.js API ve worker süreçleri, PostgreSQL, Mailpit, deterministik hedef simülatörü ve ana sistemden bağımsız opsiyonel Python predictor için çalışır bir geliştirme temeli içerir.
 
-Ürün domain akışları henüz uygulanmamıştır. Aşama 3 sonunda runtime/kalite temeline ek olarak nihai PostgreSQL şeması, migration runner, RLS/rol sınırları, partition'lar, demo seed'i ve gerçek veritabanı entegrasyon testleri çalışır durumdadır.
+Aşama 5 sonunda güvenli hesap kaydı, Mailpit e-posta doğrulaması, giriş/çıkış, server-side session, parola sıfırlama, profil okuma/güncelleme ve kullanıcı sahiplik izolasyonu çalışır durumdadır. Check ve monitoring domain akışları sonraki aşamalarda uygulanacaktır.
 
 ## Ön koşullar
 
@@ -30,6 +30,15 @@ Başlangıçtan sonra:
 | Hedef simülatörü | <http://localhost:4010/ok>            | Başarı, hata, gecikme ve hang senaryoları |
 | Mailpit          | <http://localhost:8025>               | Yakalanan geliştirme e-postaları          |
 | PostgreSQL       | `localhost:15432`                     | Host araçları için database bağlantısı    |
+
+### Yerel auth doğrulaması
+
+1. <http://localhost:15173> adresinde yeni hesap oluşturun.
+2. <http://localhost:8025> üzerindeki Mailpit mesajından doğrulama bağlantısını açın.
+3. Hesabınızla giriş yapın; güvenli çalışma alanını gördükten sonra çıkış yapın.
+4. İsterseniz “Parolamı unuttum” akışıyla ikinci Mailpit bağlantısını doğrulayın.
+
+Kayıt ve reset istekleri hesap varlığını açıklamayan aynı genel yanıtı döndürür. Yerel geliştirmede cookie HTTPS olmadığı için `Secure=false`; production yapılandırması güvenli anahtarlar ve HTTPS/Secure cookie olmadan başlamaz.
 
 Durumu ve logları görmek için:
 
@@ -149,7 +158,7 @@ Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ile
 ## Repository yapısı
 
 - `apps/` — web, API, monitor worker, notification worker ve target simulator
-- `packages/` — domain, contract, config, database, observability ve ortak adapter sınırları
+- `packages/` — auth, domain, contract, config, database, observability ve ortak adapter sınırları
 - `database/` — immutable SQL migration'lar ve development seed'i
 - `services/predictor/` — bağımsız Python ortamı
 - `infra/docker/` — production-benzeri multi-stage image tanımları
@@ -158,8 +167,8 @@ Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ile
 
 ## Dürüst durum
 
-Aşama 3 tamamlanmıştır: kilitli monorepo ve runtime temeline ek olarak altı SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, 29 `FORCE RLS` tablo, dar servis rolleri, başlangıç partition'ları ve ayrı migration container'ı çalışır durumdadır.
+Aşama 0–5 tamamlanmıştır. On bir immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
 
-Gerçek kayıt/giriş, check CRUD, scheduler, HTTP probe motoru, incident geçişleri, bakım reconciliation, e-posta gönderimi, history sorguları, SSE, ürün frontend'i ve tahmin algoritması henüz yoktur. Şema bu alanları taşır; iş kuralları sonraki aşamalarda uygulanacaktır. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
+Check/group CRUD, scheduler, HTTP probe motoru, incident geçişleri, bakım reconciliation, incident bildirimleri, history sorguları, SSE, ürün dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran auth temelini kanıtlar; nihai monitoring paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
 
 Güncel kapsam ve kanıtlar için [proje durumu](docs/PROJECT_STATUS.md), ayrıntılı araç zinciri için [geliştirme ortamı mimarisi](docs/DEVELOPMENT_ENVIRONMENT.md) belgelerine bakın.

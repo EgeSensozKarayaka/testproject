@@ -1,7 +1,7 @@
 # Kimlik Doğrulama ve Kullanıcı İzolasyonu Mimarisi
 
 **Aşama:** 5 — Kimlik Doğrulama ve Kullanıcı İzolasyonu  
-**Durum:** Kullanıcı incelemesini bekleyen normatif tasarım  
+**Durum:** Uygulandı ve yerel kalite kapılarıyla doğrulandı
 **Tarih:** 2026-10-10  
 **Bağlı belgeler:** [`API_DESIGN.md`](./API_DESIGN.md), [`API_ERRORS.md`](./API_ERRORS.md), [`DATABASE.md`](./DATABASE.md), [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md), [`DATABASE_SECURITY.md`](./DATABASE_SECURITY.md), [`openapi-v1.yaml`](./openapi-v1.yaml)
 
@@ -11,7 +11,7 @@ Bu belge kayıt, e-posta doğrulama, giriş, session doğrulama/rotation, çık�
 
 V1 modeli gerçek çok kullanıcılıdır fakat organizasyon/workspace içermez. Her private aggregate doğrudan tek bir kullanıcıya aittir. Organizasyon üyeliği daha sonra eklenecekse ayrı domain, yetki ve veri migration kararı olacaktır; Aşama 5'e gizlice eklenmez.
 
-Bu tur tasarımdır. Yeni dependency, migration, route veya auth kodu yazılmaz. Onaydan sonra uygulama küçük commit'lere bölünür ve bu belgedeki test kapıları geçmeden Aşama 6'ya geçilmez.
+Bu tasarım `packages/auth`, API auth/account route'ları, notification worker, React auth ekranları ve forward-only revision 8–11 migration zinciriyle uygulanmıştır. Migration 9, temiz veritabanı testinde bulunan notifier schema `USAGE` grant'ini; migration 10 anonymous idempotency sınırını; migration 11 profil mutation ve güvenli Argon2 rehash yüzeyini geçmiş migration'ları değiştirmeden tamamlar.
 
 ## 2. Güvenlik invariant'ları
 

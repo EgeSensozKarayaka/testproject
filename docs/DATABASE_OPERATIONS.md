@@ -224,6 +224,10 @@ Migration'lar `database/migrations/` altında değişmez, sıralı SQL dosyalar�
 000005_security_and_access.sql
 000006_partitions_and_housekeeping.sql
 000007_api_idempotency_records.sql
+000008_auth_and_ownership.sql
+000009_transactional_email_grants.sql
+000010_anonymous_idempotency_boundary.sql
+000011_account_profile_boundary.sql
 ```
 
 Repository-owned TypeScript runner `pg` ile:

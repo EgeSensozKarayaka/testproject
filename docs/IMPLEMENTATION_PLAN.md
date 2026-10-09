@@ -179,7 +179,7 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 5 — Kimlik Doğrulama ve Kullanıcı İzolasyonu
 
-**Durum:** Tasarım hazır — 2026-10-10 04:15 +06:00; kullanıcı incelemesini bekliyor
+**Durum:** Tamamlandı — tasarım, uygulama ve yerel kabul kapıları doğrulandı
 
 **Amaç:** Diğer bütün kullanıcı kaynaklarından önce güvenli kimlik ve sahiplik temelini kurmak.
 
@@ -604,4 +604,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 4 — API, Event ve Hata Sözleşmeleri** tamamlanmıştır. Canonical OpenAPI'den TypeScript tipleri ve Fastify runtime şemaları üretilir; CI drift ve güvenlik metadata'sını kontrol eder. Merkezi RFC 9457 mapper, UUIDv7 request korelasyonu ve revision 7 idempotency receipt şeması uygulanıp test edilmiştir. OpenAPI'deki ürün route'larının iş davranışı tamamlanmış sayılmaz; her route kendi Aşama 5–15 domain diliminde bu sözleşmeye bağlanacaktır.
 
-**Aktif çalışma Aşama 5 — Kimlik Doğrulama ve Kullanıcı İzolasyonu**dur. `docs/AUTH_AND_OWNERSHIP.md` içinde session rotation, Argon2id/parola politikası, CSRF/origin, enumeration-safe token akışları, PostgreSQL rate limiting, durable auth e-postası ve RLS request bağlamı tasarlandı; kullanıcı incelemesini bekliyor. Onaydan önce auth dependency, migration, route veya UI kodu yazılmayacaktır.
+**Aşama 5 — Kimlik Doğrulama ve Kullanıcı İzolasyonu** tamamlanmıştır. Opaque session, Argon2id/parola politikası, CSRF/origin, enumeration-safe token akışları, PostgreSQL rate limiting, encrypted durable auth e-postası, profil ETag'i ve RLS sahiplik sınırı revision 8–11 ile uygulanmıştır. Unit, PostgreSQL integration, Mailpit ve Playwright kabul akışları geçmiştir.
+
+**Sıradaki çalışma Aşama 6 — Kontrol ve Grup Yönetimi tasarımı**dır. Kodlamadan önce `docs/CHECKS_AND_GROUPS.md` içinde CRUD, validation, ETag/idempotency, quota ve sahiplik davranışları nihai hale getirilecektir.

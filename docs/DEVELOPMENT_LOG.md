@@ -185,3 +185,14 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Verification/reset linklerinin SMTP arızasında kaybolmaması için encrypted payload taşıyan, incident bildirimlerinden ayrı durable transactional e-posta kuyruğu planlandı.
 - Revision 8 şema/fonksiyon kapsamı, OpenAPI değişiklikleri, secret/key rotation, audit/metric allowlist'i, negatif güvenlik test matrisi ve on bir adımlı uygulama sırası `docs/AUTH_AND_OWNERSHIP.md` içinde kullanıcı incelemesine bırakıldı.
 - Bu turda dependency, migration, route, frontend veya runtime kodu değiştirilmedi.
+
+### 04:53 — Aşama 5 kimlik doğrulama uygulaması ve yerel kabul
+
+- Canonical OpenAPI kayıt `display_name`, 15 karakter parola tabanı, generic token hatası, idempotent logout ve account profile sözleşmesiyle güncellendi; 57 operation'ın TypeScript ve Fastify artifact'leri yeniden üretildi.
+- `packages/auth` içinde e-posta/display-name normalizasyonu, zxcvbn parola politikası, bounded Argon2id, 256-bit opaque token, SHA-256 digest, session-bound HMAC CSRF ve version'lı AES-256-GCM e-posta payload primitive'leri eklendi.
+- Revision 8 session expiry/rotation, auth rate limit, durable transactional e-posta ve atomik account/session fonksiyonlarını ekledi. Temiz veritabanında bulunan notifier schema `USAGE` eksikliği revision 9 ile; anonymous idempotency revision 10 ile; profil ETag ve güvenli rehash sınırı revision 11 ile geçmiş migration'lar değiştirilmeden düzeltildi.
+- Fastify'da enumeration-safe register/challenge, login/session/logout/reset/verification ve `GET/PATCH /me` route'ları; exact origin/fetch metadata, JSON-only, CSRF, cookie ve `If-Match` korumaları uygulandı.
+- Notification worker encrypted payload'ı yalnız claim sonrasında çözüp Mailpit SMTP'ye gönderir hale getirildi; retry/fencing sonucu dışındaki secret veriler loglanmadı.
+- React kayıt, giriş, parola sıfırlama, fragment tabanlı doğrulama ve authenticated temel ekranları uygulandı.
+- Yerel kapılar: 35/35 unit, 12/12 gerçek PostgreSQL integration, strict typecheck ve 3/3 Playwright geçti. Playwright tam akışı UI kaydı, Mailpit mesajı, doğrulama, giriş ve çıkışı doğruladı.
+- Docker'ın ilk Linux native dependency indirmesi yavaş sürdü fakat build ve servis health kontrolleri tamamlandı. Aşama 5 commit/push ve uzak CI sonucu bu kaydın sonraki maddesinde belirtilecektir.
