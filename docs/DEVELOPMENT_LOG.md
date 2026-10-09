@@ -126,3 +126,28 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Local restore provası production RPO/RTO/PITR hedeflerinin sağlandığı şeklinde yorumlanmadı; bu hedefler gerçek production altyapısı ve sağlayıcı drill'i kurulana kadar açık sınırlamadır.
 - Birleşik kalite kapısında entegrasyon komutunun Vitest 5'te glob'u düz filtre sayıp dosyayı atladığı fark edildi. Script platform bağımsız dosya keşfi yapacak şekilde düzeltildi; kök komut gerçek PostgreSQL ile 10/10 testi çalıştırdı.
 - Son `pnpm run ci` format, lint, strict typecheck, 8 unit test, entegrasyon dosyası keşfi ve bütün build'lerle geçti. Ayaktaki stack üzerinde Playwright web/API ve iki eşzamanlı client senaryoları 2/2 geçti.
+
+### 02:57 — Aşama 4 API, event ve hata sözleşmesi tasarımı
+
+- Private `/api/v1`, public `/api/public/v1` kaynakları ve açık command endpoint'leri için normatif API tasarımı hazırlandı.
+- OpenAPI 3.1 başlangıç sözleşmesinde auth, account, dashboard, check/group, incident, maintenance, notification, public page, public snapshot ve SSE yolları ile temel DTO'lar tanımlandı.
+- Mutable kaynaklarda `ETag`/`If-Match`, retry edilen create/command'larda `Idempotency-Key` ve büyüyen listelerde opaque keyset cursor yaklaşımı kesin tasarım önerisi oldu.
+- Aşama 3 şemasında genel HTTP idempotency receipt'i bulunmadığı saptandı; geçmiş migration'ları değiştirmeden Aşama 4 uygulamasında yeni forward-only `infra.api_idempotency_records` migration'ı planlandı.
+- RFC 9457 uyumlu problem-details zarfı, stabil hata kodları, JSON Pointer alan hataları, retry semantiği ve cross-owner/public-token varlığını gizleyen `404` davranışı tanımlandı.
+- İç domain event'leri için version'lı minimal envelope, transactional outbox, aggregate başına sıra, at-least-once teslim, consumer idempotency ve PII/token minimizasyonu belirlendi.
+- Browser SSE akışı internal event bus'tan ayrıldı; private/public allowlist projection, stream-first snapshot uzlaştırması, 15 saniye heartbeat, 60 saniye REST reconciliation, bounded backpressure ve polling fallback tasarlandı.
+- Public SSE'nin private kimlik veya yapılandırma taşımaması için yalnız `status_page.updated` invalidation event'i yayınlaması seçildi.
+- Güçlü ETag'in response gövdesindeki her değişimi temsil etmesi için check/group configuration DTO'ları canlı status projection'ından ayrıldı; liste/dashboard bileşiminde config ve status sürümleri ayrı tutuldu.
+- SSE'de check configuration `resource_version` ile current-status `state_version` aynı sıra ekseninde karşılaştırılmayacak biçimde `check` ve `check_status` resource type'larına ayrıldı.
+- Publish/link rotation idempotency replay'ının tek-seferlik public token'ı plaintext saklamadan çalışması için 24 saatlik application-layer encrypted response receipt'i tasarlandı.
+- Bu turda uygulama kodu, dependency, migration veya mevcut veritabanı şeması değiştirilmedi; belgeler kullanıcı incelemesine bırakıldı.
+
+### 03:19 — Aşama 4 çapraz sözleşme incelemesi
+
+- OpenAPI ile Aşama 3 veritabanı/durum makineleri çapraz okunarak freshness adları, expected substring sınırı, incident status/observation ayrımı ve maintenance effective-state enum'u eşitlendi.
+- Check/group configuration sürümleri canlı status projection sürümlerinden ayrıldı; güçlü ETag ve SSE event sıralamasının farklı version eksenlerini yanlış karşılaştırması engellendi.
+- Public component izinleri mevcut şemadaki `show_url`, `show_response_time` ve `show_incident_history` alanlarıyla eşlendi; izin verilmeyen alanların public JSON'dan tamamen çıkarılması kararlaştırıldı.
+- Outbox destination kataloğu uygulanmış `REALTIME`, `NOTIFICATION`, `PREDICTION`, `AUDIT` constraint'iyle uyumlu hale getirildi; scheduler/job ve history source-of-truth sınırları açıklandı.
+- HTTP idempotency tasarımı takılabilir PROCESSING lease'i yerine receipt + domain mutation + outbox'ın aynı kısa transaction'da commit edilmesine sadeleştirildi.
+- OpenAPI YAML parse edildi; 40 path, 57 benzersiz operation, 68 schema ve 437 local reference doğrulandı. Path parametreleri, schema required alanları ve authenticated unsafe operation CSRF parametreleri kontrol edildi.
+- API endpoint kataloğundaki 57 operation ile OpenAPI'deki 57 operation bire bir eşleşti; domain modelindeki 38 zorunlu event'in tamamı final event kataloğunda bulundu.

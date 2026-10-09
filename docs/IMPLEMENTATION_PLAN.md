@@ -149,6 +149,8 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 4 — API, Event ve Hata Sözleşmeleri
 
+**Durum:** Tasarım hazır — 2026-10-10 03:19 +06:00; kullanıcı incelemesini bekliyor
+
 **Amaç:** Frontend, API ve worker'ların uygulama öncesinde aynı sözleşmeler üzerinde anlaşmasını sağlamak.
 
 **Tasarım çıktıları:**
@@ -598,4 +600,4 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 3 — Nihai Veritabanı ve Kalıcılık Mimarisi** tamamlanmıştır. Altı migration, idempotent seed, tipli erişim yüzeyi, RLS/rol sınırları, partition'lar, migration container'ı ve gerçek PostgreSQL entegrasyon paketi uygulandı. Sıfırdan migration ile ayrı veritabanına mantıksal restore doğrulandı.
 
-**Aktif sıradaki çalışma Aşama 4 — API, Event ve Hata Sözleşmeleri**dir. Önce `docs/API_DESIGN.md`, OpenAPI başlangıç sözleşmesi, domain event/SSE kataloğu ve problem-details hata biçimi planlanacak; kullanıcı incelemesinden sonra uygulamaya geçilecektir.
+**Aktif çalışma Aşama 4 — API, Event ve Hata Sözleşmeleri**dir. `docs/API_DESIGN.md`, `docs/openapi-v1.yaml`, `docs/EVENT_CATALOG.md`, `docs/REALTIME_CONTRACT.md` ve `docs/API_ERRORS.md` taslakları tamamlandı ve kullanıcı incelemesini bekliyor. Bu turda route, auth, runtime validator, migration veya uygulama kodu yazılmadı. Onaydan sonra Aşama 4 uygulaması; contract toolchain, yeni forward-only idempotency migration'ı ve sözleşme/conformance testleriyle başlayacaktır.

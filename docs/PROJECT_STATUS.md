@@ -1,7 +1,7 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 02:24 +06:00
-**Genel durum:** Aşama 3 veritabanı ve kalıcılık temeli tamamlandı; sıradaki iş Aşama 4 API, event ve hata sözleşmeleridir
+**Son güncelleme:** 2026-10-10 03:19 +06:00
+**Genel durum:** Aşama 3 uygulaması tamamlandı; Aşama 4 API, event, SSE ve hata sözleşmesi tasarımı kullanıcı incelemesinde
 
 ## Tamamlanan
 
@@ -17,6 +17,10 @@
 - Kysely tabanlı şema-tipli sorgu yüzeyi; `pg` transaction-local kullanıcı bağlamı
 - Uygulamalardan önce çalışan ayrı, non-root migration container'ı ve schema-aware readiness
 - Gerçek PostgreSQL kullanan migration, RLS, privilege, constraint, partition ve reset entegrasyon paketi
+- Aşama 4 için private/public REST kaynakları, komut endpoint'leri, pagination, concurrency ve idempotency kurallarını tanımlayan API tasarımı
+- Mock geliştirmeye temel olacak ilk OpenAPI 3.1 sözleşmesi
+- Version'lı transactional domain event kataloğu ve private/public SSE sözleşmesi
+- Stabil kodlar, alan hataları, retry ve sahiplik gizleme semantiği içeren problem-details sözleşmesi
 
 ## Doğrulama Kanıtları
 
@@ -43,10 +47,13 @@
 - SSE canlı güncelleme, authenticated frontend ve public durum sayfası
 - Predictor analiz algoritması/model lifecycle'ı
 - Production deployment, ayrı login wrapper secret'ları, managed backup/PITR ve production restore drill'i
+- Aşama 4 sözleşmelerinin runtime validator/type üretimi, handler uygulaması ve contract testleri
+- HTTP retry receipt'leri için planlanan `infra.api_idempotency_records` forward-only migration'ı
 
 ## Bilinen Sınırlamalar
 
 - Mevcut ekran ve servisler hâlâ ürün akışları değil, çalışan runtime/health temelidir.
+- Aşama 4 belgeleri tasarımdır; OpenAPI'de görünen ürün endpoint'leri henüz çalışıyor olarak değerlendirilmemelidir.
 - Local Compose kolaylığı için tek PostgreSQL bootstrap login'i kullanır ve bağlantılar dar `NOLOGIN` service role geçer. Production'da servis başına ayrı login wrapper/secret zorunludur.
 - Demo seed parola veya aktif session oluşturmaz; auth aşamasında güvenli demo credential akışı ayrıca eklenecektir.
 - Partition bakım helper'ları hazırdır ancak otomatik periyodik housekeeper henüz yoktur.
@@ -57,4 +64,4 @@
 
 ## Sıradaki İş
 
-Aşama 4'te kod yazmadan önce `docs/API_DESIGN.md`, ilk OpenAPI sözleşmesi, domain event/SSE kataloğu ve problem-details hata formatı hazırlanıp kullanıcı incelemesine sunulacaktır.
+Kullanıcı Aşama 4 tasarımını okuyup onayladıktan sonra contract package/runtime doğrulama altyapısı, forward-only idempotency migration'ı, merkezi problem mapper ve mock/conformance testleri küçük commit'lerle uygulanacaktır. Aşama 5 auth uygulamasına bu sözleşme temeli doğrulanmadan geçilmeyecektir.

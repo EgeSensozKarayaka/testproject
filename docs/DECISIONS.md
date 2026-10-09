@@ -330,3 +330,53 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Her runtime rolünü doğrudan LOGIN yapmak; bütün servislerde tek geniş login; local ortamda her rol için ayrı secret zorunluluğu.
 - **Gerekçe:** Yetki matrisi ile credential yaşam döngüsünü ayırmak, production secret rotasyonunu kolaylaştırmak ve local kurulumu tek komutlu tutarken SQL'in gerçek dar rol altında çalışmasını test etmek.
 - **Sonuçlar:** Local `session_user` bootstrap hesabıdır ancak `current_user` dar service rolüdür. Entegrasyon testi bunu ve rolün private tablolardaki kısıtlarını doğrular. Production deployment login wrapper oluşturma işi altyapı runbook'unun sorumluluğudur.
+
+## D-039 — OpenAPI 3.1 tabanlı URI-major REST ve açık komut endpoint'leri
+
+- **Tarih:** 2026-10-10 02:57 +06:00
+- **Durum:** Proposed — Aşama 4 kullanıcı incelemesinde
+- **Bağlam:** Frontend, API ve worker uygulamalarının birbirinden bağımsız ilerleyebilmesi; uzun süren işlerin HTTP lifecycle'ına bağlanmaması ve sözleşme drift'inin engellenmesi gerekir.
+- **Karar:** Dış HTTP sözleşmesinin canonical kaynağı `docs/openapi-v1.yaml` olur. Private API `/api/v1`, public projection `/api/public/v1` altında kaynak yönelimli REST kullanır; pause/resume/manual-run/publish/rotate gibi durum geçişleri açık komut endpoint'leridir. Uzun işler `202` ile kalıcı makbuz döndürür.
+- **Alternatifler:** GraphQL; yalnız RPC endpoint'leri; kod-first ve belgelenmeyen route'lar; manuel run tamamlanana kadar request'i açık tutmak.
+- **Gerekçe:** Review edilebilir ve mock üretilebilir tek sözleşme sağlamak; cache/status/idempotency semantiğini HTTP ile açık ifade etmek; UI'ı worker gecikmesinden ayırmak.
+- **Sonuçlar:** Runtime request/response validator ve TypeScript tipleri bu kaynaktan türetilecek veya CI conformance ile tek gerçek olarak korunacaktır. Breaking dış değişim yeni URI major version gerektirir.
+
+## D-040 — ETag precondition, kalıcı idempotency receipt ve opaque cursor
+
+- **Tarih:** 2026-10-10 02:57 +06:00
+- **Durum:** Proposed — Aşama 4 kullanıcı incelemesinde
+- **Bağlam:** İki açık istemci aynı kaynağı değiştirebilir; ağ retry'ları create/command yan etkisini çoğaltabilir; büyüyen geçmişte offset pagination kararsız ve pahalıdır.
+- **Karar:** Mutable tekil kaynaklar güçlü `ETag: "rv-N"` döndürür ve mutation'lar `If-Match` ister. Retry edilebilir create/command'lar `Idempotency-Key` ile privacy-preserving subject+operation scope'unda kalıcı receipt kullanır. Listeler imzalı/opaque keyset cursor ile sayfalanır; response sayfa üst sınırı 100 ürün kotası değildir.
+- **Alternatifler:** Last-write-wins; yalnız in-memory dedupe; offset pagination; bütün işlemlerin doğal idempotent olduğu varsayımı.
+- **Gerekçe:** Sessiz veri kaybını, çift manual-run/mail/link rotation yan etkisini ve veri büyüdükçe pagination drift'ini önlemek.
+- **Sonuçlar:** Aşama 3 şemasında genel HTTP receipt tablosu bulunmadığı için onaydan sonra eski migration'lar değiştirilmeden yeni forward-only migration ile `infra.api_idempotency_records` eklenecektir. Receipt, domain sonucu ve outbox aynı kısa transaction'da commit edilir; ayrıca kalıcı `PROCESSING`/lease state'i yoktur. Secret taşımayan response bounded/sanitize JSON olarak; tek-seferlik publish/rotation URL'si ise yalnız dedicated application key ile şifreli ve 24 saatlik blob olarak replay edilir. Eski ETag `412`, eksik ETag `428`, anahtarın farklı payload ile tekrarı `409` üretir.
+
+## D-041 — Tek problem-details zarfı ve görünmez sahiplik
+
+- **Tarih:** 2026-10-10 02:57 +06:00
+- **Durum:** Proposed — Aşama 4 kullanıcı incelemesinde
+- **Bağlam:** İstemcinin metne bağlı hata mantığı kurmaması, log korelasyonu yapabilmesi ve tenant/public token varlığının hata cevaplarından sızmaması gerekir.
+- **Karar:** Bütün dış hatalar RFC 9457 uyumlu `application/problem+json` zarfı, stabil `code`, `request_id`, `retryable` ve gerektiğinde JSON Pointer alan hataları kullanır. Başka owner'a ait kaynak var olmayanla aynı `404`; geçersiz/disable/rotate edilmiş public token da aynı generic `404` olur.
+- **Alternatifler:** Endpoint'e özel hata gövdeleri; database/exception mesajını geçirmek; cross-owner için `403`.
+- **Gerekçe:** Frontend davranışını deterministik ve test edilebilir kılmak; enumeration ve iç altyapı sızıntısını azaltmak.
+- **Sonuçlar:** Central error mapper zorunludur. Stack/SQL/secret/PII yalnız redakte edilmiş server loguna gider; her response `X-Request-Id` taşır.
+
+## D-042 — SSE yalnız kaybedilebilir hızlandırma; REST snapshot source of truth
+
+- **Tarih:** 2026-10-10 02:57 +06:00
+- **Durum:** Proposed — Aşama 4 kullanıcı incelemesinde
+- **Bağlam:** İki istemci otomatik güncellenmeli ancak kalıcı browser event replay altyapısı ve WebSocket karmaşıklığı ürün ihtiyacı değildir. PostgreSQL notification ve API replica restart'larında mesaj kaçabilir.
+- **Karar:** Authenticated ve public SSE ayrı endpoint/projection kullanır. SSE event'i minimal invalidation/status bilgisidir; istemci stream'i önce açar, sonra REST snapshot alır, version ile buffer'ı uzlaştırır ve görünürken en geç 60 saniyede tekrar snapshot alır. `Last-Event-ID` tanısaldır, durable replay garantisi vermez.
+- **Alternatifler:** WebSocket; event logunu browser'a durable replay etmek; yalnız polling; internal event payload'ını doğrudan yayınlamak.
+- **Gerekçe:** Düşük operasyonel maliyetle hızlı güncelleme sağlarken doğruluğu kaybedilebilir sinyale bağlamamak ve private/public allowlist sınırını korumak.
+- **Sonuçlar:** Heartbeat, bounded buffer, coalescing, `resync.required`, polling fallback ve proxy buffering ayarları sözleşmenin parçasıdır. Public SSE yalnız `status_page.updated` invalidation'ı taşır.
+
+## D-043 — İç event'lerde transactional outbox ve at-least-once tüketim
+
+- **Tarih:** 2026-10-10 02:57 +06:00
+- **Durum:** Proposed — Aşama 4 kullanıcı incelemesinde
+- **Bağlam:** Domain değişimi ile scheduler, notification, realtime ve predictor yan etkileri arasında dual-write boşluğu oluşmamalı; predictor veya e-posta arızası ana monitoring transaction'ını bloke etmemelidir.
+- **Karar:** Domain event'i değişiklikle aynı transaction'da version'lı ortak envelope ile outbox'a yazılır. Teslim at-least-once, sıralama yalnız aggregate başına ve consumer idempotency anahtarı `event_id`dir. `LISTEN/NOTIFY` yalnız uyandırma sinyalidir.
+- **Alternatifler:** Transaction sonrası doğrudan broker/HTTP çağrısı; exactly-once iddiası; global sıra; payload'a bütün aggregate/PII bilgisini gömmek.
+- **Gerekçe:** Crash aralığında event kaybını engellemek, izole retry/dead-letter sağlamak ve opsiyonel bileşenleri ana akıştan ayırmak.
+- **Sonuçlar:** Consumer receipt, retry/dead-letter ve schema-version davranışını uygular. Browser internal event'i görmez; owner/page-filtered dış projection kullanır.
