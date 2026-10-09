@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-site_monitor}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_dev_only_change_me}
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-15432}:5432"
+      - '127.0.0.1:${POSTGRES_PORT:-15432}:5432'
     volumes:
       - postgres-data:/var/lib/postgresql
     healthcheck:
@@ -28,10 +28,10 @@ services:
   mailpit:
     image: axllent/mailpit:v1.31.4
     environment:
-      MP_MAX_MESSAGES: "5000"
+      MP_MAX_MESSAGES: '5000'
     ports:
-      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
-      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+      - '127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025'
+      - '127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025'
     healthcheck:
       test:
         - CMD
@@ -45,6 +45,194 @@ services:
     networks:
       - backend
 
+  target-simulator:
+    build:
+      context: .
+      dockerfile: infra/docker/node.Dockerfile
+      args:
+        APP: target-simulator
+    environment:
+      NODE_ENV: development
+      PORT: 4010
+      SERVICE_NAME: target-simulator
+      SERVICE_VERSION: 0.1.0
+    ports:
+      - '127.0.0.1:${TARGET_SIMULATOR_PORT:-4010}:4010'
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://localhost:4010/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    init: true
+    restart: unless-stopped
+    networks:
+      - backend
+
+  api:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: infra/docker/node.Dockerfile
+      args:
+        APP: api
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-site_monitor}:${POSTGRES_PASSWORD:-local_dev_only_change_me}@postgres:5432/${POSTGRES_DB:-site_monitor}
+      NODE_ENV: development
+      PORT: 3000
+      SERVICE_NAME: api
+      SERVICE_VERSION: 0.1.0
+      WEB_ORIGIN: http://localhost:${WEB_PORT:-15173}
+    ports:
+      - '127.0.0.1:${API_PORT:-13000}:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://localhost:3000/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    init: true
+    restart: unless-stopped
+    networks:
+      - backend
+
+  monitor-worker:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: infra/docker/node.Dockerfile
+      args:
+        APP: monitor-worker
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-site_monitor}:${POSTGRES_PASSWORD:-local_dev_only_change_me}@postgres:5432/${POSTGRES_DB:-site_monitor}
+      NODE_ENV: development
+      PORT: 3011
+      SERVICE_NAME: monitor-worker
+      SERVICE_VERSION: 0.1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://localhost:3011/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    init: true
+    restart: unless-stopped
+    networks:
+      - backend
+
+  notification-worker:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: infra/docker/node.Dockerfile
+      args:
+        APP: notification-worker
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-site_monitor}:${POSTGRES_PASSWORD:-local_dev_only_change_me}@postgres:5432/${POSTGRES_DB:-site_monitor}
+      NODE_ENV: development
+      PORT: 3012
+      SERVICE_NAME: notification-worker
+      SERVICE_VERSION: 0.1.0
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://localhost:3012/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    init: true
+    restart: unless-stopped
+    networks:
+      - backend
+
+  web:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        VITE_PUBLIC_API_BASE_URL: http://localhost:${API_PORT:-13000}
+    environment:
+      PORT: 8080
+    ports:
+      - '127.0.0.1:${WEB_PORT:-15173}:8080'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://localhost:8080/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    init: true
+    restart: unless-stopped
+    networks:
+      - backend
+
+  predictor:
+    profiles: [prediction]
+    build:
+      context: .
+      dockerfile: infra/docker/predictor.Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-site_monitor}:${POSTGRES_PASSWORD:-local_dev_only_change_me}@postgres:5432/${POSTGRES_DB:-site_monitor}
+      HOST: 0.0.0.0
+      PORT: 8000
+      SERVICE_NAME: predictor
+      SERVICE_VERSION: 0.1.0
+    ports:
+      - '127.0.0.1:${PREDICTOR_PORT:-18000}:8000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=3)
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    init: true
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: '1.0'
+    networks:
+      - backend
+
 volumes:
   postgres-data:
     name: site-monitor-postgres-data
@@ -52,4 +240,3 @@ volumes:
 networks:
   backend:
     name: site-monitor-backend
-
