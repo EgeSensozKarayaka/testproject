@@ -70,6 +70,18 @@ function publicSafeInstance(url: string): string {
   return path.replace(/^(\/api\/public\/v1\/status-pages\/)[^/]+/, '$1{redacted}');
 }
 
+function routeMatcher(url: string): RegExp {
+  const pattern = url
+    .split('/')
+    .map((segment) => {
+      if (segment === '*') return '.*';
+      if (segment.startsWith(':')) return '[^/]+';
+      return segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    })
+    .join('/');
+  return new RegExp(`^${pattern}/?$`);
+}
+
 function validationIssues(error: FastifyError): ValidationIssue[] {
   return (error.validation ?? [])
     .map((item) => {
@@ -162,12 +174,33 @@ export function createProblemDetails(
 }
 
 export function installProblemHandling(app: FastifyInstance): void {
-  app.setNotFoundHandler((request, reply) => {
-    const error = new ApiProblemError({
-      code: 'resource_not_found',
-      detail: 'The requested resource was not found.',
-      status: 404,
+  const registeredRoutes: { matcher: RegExp; methods: Set<string> }[] = [];
+  app.addHook('onRoute', (route) => {
+    const methods = Array.isArray(route.method) ? route.method : [route.method];
+    registeredRoutes.push({
+      matcher: routeMatcher(route.url),
+      methods: new Set(methods.map((method) => method.toUpperCase())),
     });
+  });
+
+  app.setNotFoundHandler((request, reply) => {
+    const requestPath = (request.raw.url ?? request.url).split('?', 1)[0] || '/';
+    const allowedMethods = new Set(
+      registeredRoutes
+        .filter((route) => route.matcher.test(requestPath))
+        .flatMap((route) => [...route.methods]),
+    );
+    // CORS installs a wildcard OPTIONS route; it must not make every unknown path look real.
+    allowedMethods.delete('OPTIONS');
+    const methodNotAllowed = allowedMethods.size > 0;
+    const error = new ApiProblemError({
+      code: methodNotAllowed ? 'method_not_allowed' : 'resource_not_found',
+      detail: methodNotAllowed
+        ? 'The requested method is not supported for this resource.'
+        : 'The requested resource was not found.',
+      status: methodNotAllowed ? 405 : 404,
+    });
+    if (methodNotAllowed) reply.header('Allow', [...allowedMethods].sort().join(', '));
     return reply
       .code(error.status)
       .type('application/problem+json')

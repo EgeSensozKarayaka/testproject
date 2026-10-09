@@ -44,6 +44,7 @@ export function buildApiApplication(options: ApiApplicationOptions) {
   });
 
   void app.register(cors, {
+    credentials: true,
     origin: options.allowedOrigin,
   });
 

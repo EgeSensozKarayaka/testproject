@@ -77,6 +77,15 @@ describe('API health contract', () => {
     expect(JSON.stringify(body)).not.toContain('secret');
   });
 
+  it('distinguishes unsupported methods from missing resources', async () => {
+    const app = createApplication(() => Promise.resolve(true));
+    const response = await app.inject({ method: 'POST', url: '/health/live' });
+
+    expect(response.statusCode).toBe(405);
+    expect(response.headers.allow).toContain('GET');
+    expect(response.json()).toMatchObject({ code: 'method_not_allowed', status: 405 });
+  });
+
   it('maps explicit retryable application problems and Retry-After', async () => {
     const app = createApplication(() => Promise.resolve(true));
     app.get('/test/retry', () => {
@@ -135,6 +144,20 @@ describe('API health contract', () => {
       ),
     );
     expect(response.body).not.toContain(secretValue);
+  });
+
+  it('maps malformed JSON to the stable problem code', async () => {
+    const app = createApplication(() => Promise.resolve(true));
+    app.post('/test/json', () => ({ accepted: true }));
+    const response = await app.inject({
+      headers: { 'content-type': 'application/json' },
+      method: 'POST',
+      payload: '{"name":',
+      url: '/test/json',
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: 'malformed_json', status: 400 });
   });
 
   it('redacts public tokens in problem instances', async () => {
