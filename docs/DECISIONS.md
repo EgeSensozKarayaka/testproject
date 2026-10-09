@@ -390,3 +390,43 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** DTO ve runtime şemalarını elle iki kez yazmak; kod-first OpenAPI; üretimi yalnız developer bilgisayarında çalıştırıp artifact'i commit etmemek; ilk günden kapsamlı API gateway/codegen platformu kurmak.
 - **Gerekçe:** Review edilebilir YAML sözleşmesini korurken frontend ve backend'in bağımsız geliştirilmesini sağlamak, gizli drift'i CI'da erken yakalamak ve gereksiz platform katmanı eklememek.
 - **Sonuçlar:** Generated dizini elle düzenlenmez ve lint'ten hariçtir; ancak format, TypeScript build/type-check ve drift kontrolünden geçer. OpenAPI'de bulunan fakat henüz domain aşaması gelmemiş route'lar çalışıyor sayılmaz. Uygulama sırasında saptanan health şeması farkı canonical sözleşmede çalışan `ok/unavailable + timestamp/version` modeliyle düzeltildi.
+
+## D-045 — Stateful opaque session cookie ve katmanlı CSRF savunması
+
+- **Tarih:** 2026-10-10 04:15 +06:00
+- **Durum:** Proposed — Aşama 5 kullanıcı incelemesinde
+- **Bağlam:** Browser oturumu revoke/rotation, parola resetinde bütün session'ları kapatma, iki eşzamanlı istemci ve tenant bağlamına güvenli kimlik üretme gerektirir. Cookie authentication tek başına CSRF riski taşır.
+- **Karar:** JWT/localStorage yerine PostgreSQL'de yalnız SHA-256 digest'i tutulan 256-bit opaque session token ve `HttpOnly; Secure; SameSite=Strict` cookie kullanılacaktır. Absolute/idle expiry, periyodik rotation ve kısa parallel-request grace server-side uygulanır. Unsafe isteklerde session-bound HMAC CSRF token; bütün browser auth POST'larında exact Origin, Fetch Metadata, JSON-only ve dar credentialed CORS birlikte zorunludur.
+- **Alternatifler:** Stateless JWT refresh token; browser storage bearer token; yalnız SameSite; yalnız CSRF token; framework stateless secure-session cookie'si.
+- **Gerekçe:** Anında revoke ve parola-version invalidation sağlamak, XSS'te token okunmasını zorlaştırmak ve CSRF savunmasını tek header/cookie davranışına bağlamamak.
+- **Sonuçlar:** Session lookup dar security-definer fonksiyondur. Local geliştirme dışında HTTPS/Secure cookie zorunludur. Logout idempotent `204`, reset bütün session'ları revoke eder; iki browser bağımsız session taşıyabilir.
+
+## D-046 — Argon2id, 15 karakter tabanı ve bounded hash kapasitesi
+
+- **Tarih:** 2026-10-10 04:15 +06:00
+- **Durum:** Proposed — Aşama 5 kullanıcı incelemesinde
+- **Bağlam:** Parola saklama offline saldırıya dirençli olmalı; pahalı doğrulama ise event loop'u veya API belleğini abuse altında tüketmemelidir. Kullanıcı enumeration timing farkı da oluşmamalıdır.
+- **Karar:** PHC encoded Argon2id için başlangıç tabanı `m=19456 KiB,t=2,p=1`, 16-byte salt ve 32-byte output'tur; production benchmark ile yalnız yukarı yönlü ayarlanır. Parola minimum 15 code point, maksimum 128; composition/periyodik rotation yoktur. Pinlenmiş `zxcvbn-ts` common/English sözlükleriyle offline değerlendirilen 0–2 skorları reddedilir. Async hash/verify instance başına bounded concurrency/queue ile çalışır; bilinmeyen kullanıcı aynı maliyetli dummy hash yolunu kullanır.
+- **Alternatifler:** bcrypt/PBKDF2; hızlı SHA-256; yalnız uzunluk; sync hash; sınırsız paralel hash; provider'a bağlı online breach sorgusu.
+- **Gerekçe:** Güncel OWASP/NIST tabanlarıyla güçlü offline direnç, parola yöneticisi uyumu ve kontrollü kaynak tüketimi sağlamak.
+- **Sonuçlar:** OpenAPI parola alt sınırı 12'den 15'e çıkarılır. İlk uygulama tercihi pinlenmiş `@node-rs/argon2`, `@zxcvbn-ts/core`, `@zxcvbn-ts/language-common` ve `@zxcvbn-ts/language-en` olur; package/platform/supply-chain doğrulaması dependency eklenirken kayda alınır. V1 pepper kullanmaz; KMS pepper ayrı threat model gerektirir.
+
+## D-047 — Auth mutation'larında dar DB fonksiyonları ve PostgreSQL rate limit
+
+- **Tarih:** 2026-10-10 04:15 +06:00
+- **Durum:** Proposed — Aşama 5 kullanıcı incelemesinde
+- **Bağlam:** API rolünün auth tablolarına genel erişimi privilege sınırını zayıflatır. Process-memory rate limit birden fazla replica arasında tutarlı değildir; yalnız Redis eklemek ise mevcut v1 mimarisine yeni zorunlu dependency getirir.
+- **Karar:** Register, challenge issue/consume, session create/resolve/rotate/revoke ve password reset işlemleri fixed-search-path security-definer fonksiyonlarla atomik yürütülür. API auth tablolarında geniş DML almaz. Auth rate limit sayaçları raw e-posta/IP yerine HMAC subject ile PostgreSQL'de atomik fixed-window olarak tutulur; minute + hour/day pencereleri birlikte uygulanır.
+- **Alternatifler:** API'ye auth schema CRUD yetkisi; yalnız uygulama transaction'ı; process-memory limiter; ilk günden Redis; rate limit'i yalnız edge'e bırakmak.
+- **Gerekçe:** Least privilege ve transaction atomikliğini korumak, iki API replica'sında aynı abuse sınırını elde etmek ve v1 operasyon yüzeyini sade tutmak.
+- **Sonuçlar:** Forward-only revision 8 yeni sayaç, fonksiyon, RLS/GRANT ve anonim idempotency yüzeyini ekler. Rate-limit storage hatasında auth mutation fail-closed olur; yüksek hacimli DDoS için yine production edge/WAF gerekir.
+
+## D-048 — Auth e-postaları için ayrı, encrypted durable delivery kuyruğu
+
+- **Tarih:** 2026-10-10 04:15 +06:00
+- **Durum:** Proposed — Aşama 5 kullanıcı incelemesinde
+- **Bağlam:** Verification/reset e-postası request transaction'ında SMTP'ye bağlanırsa provider arızası kayıt/reset akışını bloke eder; yalnız token digest'i saklamak ise process crash sonrasında linki tekrar üretmeye yetmez. Incident notification tabloları auth challenge semantiğine sahip değildir.
+- **Karar:** `notification.transactional_email_deliveries`, one-time challenge'a bağlı ayrı durable queue olacaktır. Raw token yalnız AES-256-GCM encrypted, version'lı ve kısa ömürlü template payload içinde saklanır. Notification worker dar claim/complete yüzeyiyle gönderir; bounded retry, fencing ve `DELIVERY_UNKNOWN` semantiği kullanır.
+- **Alternatifler:** API'den senkron SMTP; raw token'ı outbox JSON'una yazmak; incident delivery tablolarını zorla yeniden kullanmak; commit sonrası fire-and-forget çağrı.
+- **Gerekçe:** SMTP'yi auth/monitoring arıza alanından ayırmak, crash sonrasında teslimi sürdürebilmek ve secret'ı log/event/veritabanında plaintext bırakmamak.
+- **Sonuçlar:** Mailpit aynı adapter'ın local uygulamasıdır. Encryption key version'lı secret store key ring'inden gelir; expired challenge payload'ı bounded retention ile silinir. E-posta gönderim hatası daha önce kabul edilmiş generic `202` response'unu değiştirmez.

@@ -1,7 +1,7 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 04:05 +06:00
-**Genel durum:** Aşama 4 sözleşme altyapısı tamamlandı; sıradaki çalışma Aşama 5 auth ve kullanıcı izolasyonu tasarımı
+**Son güncelleme:** 2026-10-10 04:15 +06:00
+**Genel durum:** Aşama 5 auth ve kullanıcı izolasyonu tasarımı hazır; kullanıcı incelemesini bekliyor
 
 ## Tamamlanan
 
@@ -26,6 +26,7 @@
 - UUIDv7 request korelasyonu, her response'ta `X-Request-Id` ve RFC 9457 merkezi error mapper
 - `404`/`405`, validation `422`, malformed JSON, retry/`Retry-After` ve public-token instance redaction temel conformance testleri
 - Forward-only revision 7 `infra.api_idempotency_records` migration'ı; bounded response, header allowlist, encrypted-secret alanları ve FORCE RLS
+- Aşama 5 için opaque server-side session, Argon2id, CSRF/origin, enumeration-safe auth, dağıtık rate limit, durable auth e-postası ve RLS request bağlamı tasarımı
 
 ## Doğrulama Kanıtları
 
@@ -75,4 +76,4 @@
 
 ## Sıradaki İş
 
-Aşama 5 için önce `docs/AUTH_AND_OWNERSHIP.md` hazırlanacak ve kullanıcı incelemesine bırakılacaktır. Session rotation, parola hashleme, CSRF/origin, enumeration-safe doğrulama/reset akışları, rate limit ve RLS request context tasarımı onaylanmadan auth koduna başlanmayacaktır.
+Kullanıcı `docs/AUTH_AND_OWNERSHIP.md` tasarımını inceledikten sonra Aşama 5 uygulaması OpenAPI auth düzeltmeleri, `packages/auth`, forward-only revision 8 migration'ı ve güvenlik testleriyle başlayacaktır. Onaydan önce auth kodu yazılmayacaktır.

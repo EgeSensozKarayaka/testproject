@@ -173,3 +173,15 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Rebuild edilen stack üzerinde Playwright web/API smoke ve iki bağımsız browser context senaryosu **2/2** geçti. Canlı HTTP kontrolleri health sözleşmesini, query bilgisinin problem `instance` alanından çıkarılmasını ve `Allow: GET, HEAD` başlıklı stabil `405` yanıtını doğruladı.
 - Docker bağımlılık indirmeleri registry bağlantısındaki tekrarlar nedeniyle yaklaşık dört dakika sürdü; retry mekanizmasıyla build başarıyla bitti ve uygulama kusuru gözlenmedi.
 - Beş uygulama commit'i `origin/main` dalına gönderildi. GitHub Actions koşusu [`37996956618`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/37996956618) içinde Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin tamamı geçti; önceki geçici container pull sorunu tekrarlanmadı.
+
+### 04:15 — Aşama 5 kimlik ve sahiplik izolasyonu tasarımı
+
+- Mevcut OpenAPI, auth tabloları, FORCE RLS politikaları, security-definer bootstrap fonksiyonları ve API rol grant'leri birlikte incelendi.
+- `display_name` alanının veritabanında zorunlu fakat register sözleşmesinde bulunmaması, logout'un `401` ile idempotent açıklamasının çelişmesi ve token tüketiminin hesap mutation'ından ayrı bırakılması uygulama öncesi giderilecek sözleşme boşlukları olarak kaydedildi.
+- JWT/browser storage yerine digest'i DB'de tutulan 256-bit opaque session; absolute/idle expiry, rotation/grace, password-version invalidation ve HttpOnly/Secure/SameSite cookie modeli seçildi.
+- CSRF token'a ek olarak exact Origin, Fetch Metadata, JSON-only body, explicit credentialed CORS ve trusted-proxy sınırı tanımlandı.
+- Parola tabanı güncel NIST/OWASP yönlendirmesiyle 15 karaktere çıkarıldı; Argon2id minimum parametreleri, bounded async concurrency, dummy hash ve rehash davranışı kesinleştirildi.
+- Çok replica'da tutarlı auth abuse kontrolü için raw PII taşımayan PostgreSQL sayaçları; auth tablolarına geniş DML yerine dar atomik security-definer komutları tasarlandı.
+- Verification/reset linklerinin SMTP arızasında kaybolmaması için encrypted payload taşıyan, incident bildirimlerinden ayrı durable transactional e-posta kuyruğu planlandı.
+- Revision 8 şema/fonksiyon kapsamı, OpenAPI değişiklikleri, secret/key rotation, audit/metric allowlist'i, negatif güvenlik test matrisi ve on bir adımlı uygulama sırası `docs/AUTH_AND_OWNERSHIP.md` içinde kullanıcı incelemesine bırakıldı.
+- Bu turda dependency, migration, route, frontend veya runtime kodu değiştirilmedi.

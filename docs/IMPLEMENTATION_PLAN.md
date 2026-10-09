@@ -179,6 +179,8 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 5 — Kimlik Doğrulama ve Kullanıcı İzolasyonu
 
+**Durum:** Tasarım hazır — 2026-10-10 04:15 +06:00; kullanıcı incelemesini bekliyor
+
 **Amaç:** Diğer bütün kullanıcı kaynaklarından önce güvenli kimlik ve sahiplik temelini kurmak.
 
 **Tasarım çıktısı:**
@@ -602,4 +604,4 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 4 — API, Event ve Hata Sözleşmeleri** tamamlanmıştır. Canonical OpenAPI'den TypeScript tipleri ve Fastify runtime şemaları üretilir; CI drift ve güvenlik metadata'sını kontrol eder. Merkezi RFC 9457 mapper, UUIDv7 request korelasyonu ve revision 7 idempotency receipt şeması uygulanıp test edilmiştir. OpenAPI'deki ürün route'larının iş davranışı tamamlanmış sayılmaz; her route kendi Aşama 5–15 domain diliminde bu sözleşmeye bağlanacaktır.
 
-**Sıradaki çalışma Aşama 5 — Kimlik Doğrulama ve Kullanıcı İzolasyonu**dur. Koddan önce `docs/AUTH_AND_OWNERSHIP.md` ile session rotation, parola hashleme, CSRF/origin, enumeration-safe token akışları, rate limiting ve RLS request bağlamı kesinleştirilecektir.
+**Aktif çalışma Aşama 5 — Kimlik Doğrulama ve Kullanıcı İzolasyonu**dur. `docs/AUTH_AND_OWNERSHIP.md` içinde session rotation, Argon2id/parola politikası, CSRF/origin, enumeration-safe token akışları, PostgreSQL rate limiting, durable auth e-postası ve RLS request bağlamı tasarlandı; kullanıcı incelemesini bekliyor. Onaydan önce auth dependency, migration, route veya UI kodu yazılmayacaktır.
