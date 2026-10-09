@@ -1,0 +1,67 @@
+import { z } from 'zod';
+
+import { decimalVersionSchema } from './http.js';
+
+export const domainEventTypeSchema = z.enum([
+  'user.created',
+  'user.disabled',
+  'check.created',
+  'check.metadata_changed',
+  'check.probe_configuration_changed',
+  'check.schedule_changed',
+  'check.paused',
+  'check.resumed',
+  'check.group_changed',
+  'check.deleted',
+  'group.created',
+  'group.changed',
+  'group.deleted',
+  'check.manual_run_requested',
+  'check.job_available',
+  'check.run_recorded',
+  'check.observation_accepted',
+  'check.observation_rejected',
+  'check.health_changed',
+  'check.freshness_changed',
+  'incident.opened',
+  'incident.observation_suspended',
+  'incident.observation_resumed',
+  'incident.closed',
+  'maintenance.created',
+  'maintenance.changed',
+  'maintenance.cancelled',
+  'maintenance.reconciliation_requested',
+  'notification.recipient_created',
+  'notification.recipient_verified',
+  'notification.recipient_disabled',
+  'notification.policy_changed',
+  'notification.intent_created',
+  'notification.delivery_scheduled',
+  'notification.delivery_sent',
+  'notification.delivery_failed',
+  'public_page.published',
+  'public_page.changed',
+  'public_page.link_rotated',
+  'public_page.disabled',
+  'prediction.requested',
+  'prediction.updated',
+  'prediction.expired',
+]);
+
+export const domainEventEnvelopeSchema = z.strictObject({
+  aggregate_id: z.uuid(),
+  aggregate_type: z.string().min(1),
+  aggregate_version: decimalVersionSchema.nullable(),
+  causation_id: z.uuid().nullable(),
+  correlation_id: z.uuid(),
+  event_id: z.uuid(),
+  event_type: domainEventTypeSchema,
+  occurred_at: z.iso.datetime({ offset: true }),
+  owner_id: z.uuid().nullable(),
+  payload: z.record(z.string(), z.json()),
+  recorded_at: z.iso.datetime({ offset: true }),
+  schema_version: z.number().int().positive(),
+});
+
+export type DomainEventEnvelope = z.infer<typeof domainEventEnvelopeSchema>;
+export type DomainEventType = z.infer<typeof domainEventTypeSchema>;

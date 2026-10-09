@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+export * from './events.js';
+export * from './http.js';
+export * from './realtime.js';
+
 export const serviceHealthSchema = z.object({
   service: z.string().min(1),
   status: z.enum(['ok', 'unavailable']),

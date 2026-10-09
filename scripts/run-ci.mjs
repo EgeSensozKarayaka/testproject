@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 
 const commands = [
   ['pnpm', ['format:check']],
+  ['pnpm', ['contracts:check']],
   ['pnpm', ['lint']],
   ['pnpm', ['typecheck']],
   ['pnpm', ['test']],

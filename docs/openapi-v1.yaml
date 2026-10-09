@@ -1374,13 +1374,19 @@ components:
     ServiceHealth:
       type: object
       additionalProperties: false
-      required: [service, status]
+      required: [service, status, timestamp, version]
       properties:
         service:
           type: string
         status:
           type: string
-          enum: [ok, degraded]
+          enum: [ok, unavailable]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          minLength: 1
     AcceptedResponse:
       type: object
       additionalProperties: false
