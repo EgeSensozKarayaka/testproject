@@ -1,6 +1,6 @@
 # Veritabanı Operasyon, Sorgu ve Süreklilik Planı
 
-**Durum:** İnceleme bekleyen Aşama 3 tasarımı  
+**Durum:** Uygulandı; migration, sıfırdan kurulum ve mantıksal restore provası doğrulandı
 **Bağlı belgeler:** [`DATABASE.md`](./DATABASE.md), [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md), [`DATABASE_SECURITY.md`](./DATABASE_SECURITY.md)
 
 ## 1. Operasyon Hedefleri
@@ -216,10 +216,12 @@ Retention değişimi geçmişte zaten silinmiş veriyi geri getirmez. UI/API, ku
 Migration'lar `database/migrations/` altında değişmez, sıralı SQL dosyalarıdır:
 
 ```text
-000001_create_roles_and_schemas.sql
-000002_create_auth_and_core.sql
-000003_create_monitoring.sql
-...
+000001_bootstrap_roles_and_schemas.sql
+000002_auth_and_core.sql
+000003_monitoring.sql
+000004_messaging_public_prediction_audit.sql
+000005_security_and_access.sql
+000006_partitions_and_housekeeping.sql
 ```
 
 Repository-owned TypeScript runner `pg` ile:
@@ -233,7 +235,7 @@ Repository-owned TypeScript runner `pg` ile:
 
 Transaction dışında çalışması zorunlu `CREATE INDEX CONCURRENTLY` gibi migration'lar açık metadata/header ile işaretlenir, idempotent precondition/postcondition taşır ve tek başına review edilir. Aynı dosyada transaction'lı DDL ile karıştırılmaz.
 
-`db:migrate` production-safe ileri hareket komutudur. `db:reset` yalnız local/test database adını allowlist ile doğruladıktan sonra çalışır; production URL üzerinde kesinlikle çalışmaz. `db:seed` yalnız açık `APP_ENV=development|test` ve seed flag'iyle etkinleşir.
+`db:migrate` production-safe ileri hareket komutudur. `db:reset` yalnız `NODE_ENV != production`, `ALLOW_DATABASE_RESET=true`, local host ve allowlist'e uyan database adı birlikte doğrulandıktan sonra çalışır; production URL üzerinde kesinlikle çalışmaz. `db:seed` yalnız `NODE_ENV=development|test` ortamında çalışır.
 
 ### 6.2 Forward-only ve expand/contract
 

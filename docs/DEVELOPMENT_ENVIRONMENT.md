@@ -374,7 +374,7 @@ Kurallar:
 
 ## 15. Veritabanı Geliştirme Akışı
 
-Aşama 3 kesin şemayı belirleyecektir. Repository temeli şu sözleşmeyi hazırlar:
+Aşama 3 kesin şemayı uygulamıştır. Repository şu sözleşmeyi uygular:
 
 - Migration'lar tek, ileri yönlü ve sıralıdır.
 - Uygulama startup'ı otomatik destructive migration çalıştırmaz.
@@ -587,4 +587,4 @@ Aşama 2, 2026-10-10 tarihinde uygulandı ve yerel ortamda doğrulandı:
 - Playwright, web/API entegrasyonunu ve iki bağımsız browser context'ini doğruladı.
 - Predictor image'ı ayrı profile ile çalıştı; durdurulduğunda ana API sağlıklı kalmaya devam etti.
 - Predictor Ruff/mypy/pytest kapıları geçti ve `%70` zorunlu coverage eşiğinin üzerinde `%84.95` sağladı.
-- Aşama 3 şeması henüz tasarlanmadığı için `migrate` servisi ve gerçek database komutları bilinçli olarak eklenmedi; placeholder komutlar açıklayıcı hatayla durur.
+- Aşama 3'te ayrı non-root `migrate` servisi, gerçek `db:migrate|seed|reset|status` komutları ve schema-aware readiness eklendi. `app`/`prediction` servisleri migration işi başarıyla tamamlanmadan başlamaz.

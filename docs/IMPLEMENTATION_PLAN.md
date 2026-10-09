@@ -111,6 +111,8 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 3 — Nihai Veritabanı ve Kalıcılık Mimarisi
 
+**Durum:** 2026-10-10 tarihinde tasarlandı, uygulandı ve doğrulandı.
+
 **Amaç:** Bütün ana ve opsiyonel bileşenleri destekleyen v1 veritabanı mimarisini uygulamadan önce kesinleştirmek.
 
 **Tasarım çıktıları:**
@@ -594,4 +596,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 2 — Repository, Araç Zinciri ve Yerel Geliştirme Temeli** tamamlanmıştır. Workspace scaffold'u, kilitli bağımlılıklar, minimal runtime'lar, container profilleri, CI ve yerel kalite/E2E kanıtları `docs/DEVELOPMENT_ENVIRONMENT.md` ve `docs/PROJECT_STATUS.md` içinde kayıtlıdır.
 
-**Aşama 3 — Nihai Veritabanı ve Kalıcılık Mimarisi** tasarım seti `docs/DATABASE*.md` dosyalarında hazırlanmış ve kullanıcı incelemesine sunulmuştur. Şema, RLS/rol modeli, indeksler, partition/rollup/retention ve migration/restore yaklaşımı kabul edilmeden migration koduna başlanmayacaktır. Sonraki prompt'ta kullanıcı onayı alınırsa Aşama 3 uygulama kapsamına geçilecektir.
+**Aşama 3 — Nihai Veritabanı ve Kalıcılık Mimarisi** tamamlanmıştır. Altı migration, idempotent seed, tipli erişim yüzeyi, RLS/rol sınırları, partition'lar, migration container'ı ve gerçek PostgreSQL entegrasyon paketi uygulandı. Sıfırdan migration ile ayrı veritabanına mantıksal restore doğrulandı.
+
+**Aktif sıradaki çalışma Aşama 4 — API, Event ve Hata Sözleşmeleri**dir. Önce `docs/API_DESIGN.md`, OpenAPI başlangıç sözleşmesi, domain event/SSE kataloğu ve problem-details hata biçimi planlanacak; kullanıcı incelemesinden sonra uygulamaya geçilecektir.

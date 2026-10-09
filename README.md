@@ -2,7 +2,7 @@
 
 Çok kullanıcılı ve kullanıcı bazlı sahiplik izolasyonuna sahip site erişilebilirlik izleme ürünü. Repository; React web uygulaması, Node.js API ve worker süreçleri, PostgreSQL, Mailpit, deterministik hedef simülatörü ve ana sistemden bağımsız opsiyonel Python predictor için çalışır bir geliştirme temeli içerir.
 
-Ürün domain özellikleri henüz uygulanmamıştır. Mevcut kod Aşama 2'nin runtime, kalite, container ve CI temelidir; sıradaki çalışma nihai veritabanı tasarımıdır.
+Ürün domain akışları henüz uygulanmamıştır. Aşama 3 sonunda runtime/kalite temeline ek olarak nihai PostgreSQL şeması, migration runner, RLS/rol sınırları, partition'lar, demo seed'i ve gerçek veritabanı entegrasyon testleri çalışır durumdadır.
 
 ## Ön koşullar
 
@@ -18,6 +18,8 @@ Python kurulumu yalnız container tabanlı akışta zorunlu değildir.
 ```sh
 docker compose --profile app up --detach --build --wait
 ```
+
+Bu akış PostgreSQL sağlıklı olduktan sonra tek-seferlik `migrate` işini çalıştırır; API ve worker'lar yalnız migration başarıyla tamamlanırsa başlar. İlk demo verisini eklemek isterseniz stack başladıktan sonra `pnpm db:seed` çalıştırın.
 
 Başlangıçtan sonra:
 
@@ -51,6 +53,8 @@ docker compose --profile app down
 ```sh
 pnpm install --frozen-lockfile
 pnpm dev:infra
+pnpm db:migrate
+pnpm db:seed
 ```
 
 Ardından web, API ve iki zorunlu worker'ı hot reload ile çalıştırın:
@@ -102,6 +106,29 @@ pnpm test:e2e
 
 Predictor kalite kapıları CI'da pinli Python/uv ile Ruff, mypy, pytest ve coverage olarak çalışır.
 
+## Veritabanı komutları
+
+```sh
+pnpm db:migrate  # Bekleyen forward-only migration'ları uygular; tekrar çalıştırılabilir
+pnpm db:seed     # Yalnız development/test ortamında idempotent demo verisi
+```
+
+Durum görmek için package komutu kullanılabilir:
+
+```sh
+pnpm --filter @site-monitor/database db:status
+```
+
+`db:reset` şemaları silip yeniden kurar ve kasıtlı olarak çift korumalıdır. Yalnız local/test database adı ve `ALLOW_DATABASE_RESET=true` ile çalışır; production ortamını reddeder. PowerShell örneği:
+
+```powershell
+$env:ALLOW_DATABASE_RESET = 'true'
+pnpm db:reset
+Remove-Item Env:ALLOW_DATABASE_RESET
+```
+
+Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ileri migration olarak eklenir. Local varsayılan bağlantı `.env.example` içinde belgelenmiştir; credential veya bağlantı URL'si loglanmaz.
+
 ## Hedef simülatörü
 
 - `/ok` — başarılı hızlı cevap
@@ -114,6 +141,7 @@ Predictor kalite kapıları CI'da pinli Python/uv ile Ruff, mypy, pytest ve cove
 
 - `apps/` — web, API, monitor worker, notification worker ve target simulator
 - `packages/` — domain, contract, config, database, observability ve ortak adapter sınırları
+- `database/` — immutable SQL migration'lar ve development seed'i
 - `services/predictor/` — bağımsız Python ortamı
 - `infra/docker/` — production-benzeri multi-stage image tanımları
 - `docs/` — gereksinimler, mimari, kararlar, durum ve geliştirme günlüğü
@@ -121,8 +149,8 @@ Predictor kalite kapıları CI'da pinli Python/uv ile Ruff, mypy, pytest ve cove
 
 ## Dürüst durum
 
-Aşama 2 tamamlanmıştır: kilitli monorepo, strict TypeScript, minimal runtime'lar, health/readiness, container profilleri, Python izolasyonu, otomatik testler ve GitHub Actions temeli çalışır durumdadır.
+Aşama 3 tamamlanmıştır: kilitli monorepo ve runtime temeline ek olarak altı SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, 29 `FORCE RLS` tablo, dar servis rolleri, başlangıç partition'ları ve ayrı migration container'ı çalışır durumdadır.
 
-Henüz veritabanı şeması/migration, kimlik doğrulama, check CRUD, scheduler, gerçek HTTP probe motoru, incident, bakım, e-posta outbox, SSE, geçmiş rollup ve tahmin algoritması yoktur. `db:*` komutları Aşama 3 şeması onaylanana kadar bilinçli olarak hata verir.
+Gerçek kayıt/giriş, check CRUD, scheduler, HTTP probe motoru, incident geçişleri, bakım reconciliation, e-posta gönderimi, history sorguları, SSE, ürün frontend'i ve tahmin algoritması henüz yoktur. Şema bu alanları taşır; iş kuralları sonraki aşamalarda uygulanacaktır. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
 
 Güncel kapsam ve kanıtlar için [proje durumu](docs/PROJECT_STATUS.md), ayrıntılı araç zinciri için [geliştirme ortamı mimarisi](docs/DEVELOPMENT_ENVIRONMENT.md) belgelerine bakın.

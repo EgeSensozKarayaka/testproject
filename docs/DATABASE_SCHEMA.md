@@ -1,6 +1,6 @@
 # Veritabanı Şema ve Kolon Sözlüğü
 
-**Durum:** İnceleme bekleyen Aşama 3 tasarımı  
+**Durum:** Uygulandı ve migration entegrasyon testleriyle doğrulandı
 **Bağlı belge:** [`DATABASE.md`](./DATABASE.md)
 
 Bu sözlük başlangıç migration'ının normatif veri modelidir. Kolon adlarında küçük uygulama ayrıntıları implementation sırasında değişebilir; sahiplik, bütünlük, durum ve zaman semantiği ancak yeni karar kaydıyla değiştirilebilir.
@@ -249,7 +249,7 @@ Check başına tek hızlı dashboard projection'ıdır.
 | `state_version`                      | `bigint`           | Her görünür projection değişiminde artar    |
 | `updated_at`                         | `timestamptz`      | Son projection yazımı                       |
 
-Candidate run çiftinin iki kolonu birlikte null/dolu olur; aynı kural last accepted run için de geçerlidir. Foreign key gerçekte satırdaki `owner_id` ile birlikte `(owner_id, run_finished_at, run_id)` üçlüsünü kullanır. `freshness_state` kalıcı projection'dır, fakat okuma katmanı `fresh_until <= now()` ise reconciler gecikse dahi effective STALE döndürür.
+Candidate run çiftinin iki kolonu birlikte null/dolu olur; aynı kural last accepted run için de geçerlidir. Foreign key gerçekte satırdaki `owner_id` ve `check_id` ile birlikte `(owner_id, check_id, run_finished_at, run_id)` dörtlüsünü kullanır. `freshness_state` kalıcı projection'dır, fakat okuma katmanı `fresh_until <= now()` ise reconciler gecikse dahi effective STALE döndürür.
 
 ### 5.2 `monitoring.check_jobs`
 
@@ -319,7 +319,7 @@ Her tamamlanmış probe için immutable gözlem/diagnostic kaydıdır. Response 
 | `rejection_reason`                                            | `text NULL`          | Generation/fence/pause/delete sebebi                   |
 | `recorded_at`                                                 | `timestamptz`        | DB insert anı                                          |
 
-PK `(owner_id,finished_at,id)` olur. Run satırı full lineage foreign key'leriyle doğru check/job/attempt zincirine bağlanır. Run'a sonraki referanslar child satırın `owner_id` değeriyle birlikte `(owner_id,run_finished_at,run_id)` üçlü FK'sini taşır. Diagnostic manual run `accepted_for_state=false` olur. Outcome FAIL job'ın teknik olarak başarısız olduğu anlamına gelmez; probe sonucu başarıyla kaydedilmiş COMPLETED job'dır.
+PK `(owner_id,check_id,finished_at,id)` olur. Run satırı full lineage foreign key'leriyle doğru check/job/attempt zincirine bağlanır. Run'a sonraki referanslar `(owner_id,check_id,run_finished_at,run_id)` dört kolonlu FK'sini taşır. Diagnostic manual run `accepted_for_state=false` olur. Outcome FAIL job'ın teknik olarak başarısız olduğu anlamına gelmez; probe sonucu başarıyla kaydedilmiş COMPLETED job'dır.
 
 ### 5.5 `monitoring.open_health_intervals`
 
@@ -607,19 +607,19 @@ Append-only'dir; runtime role update/delete yapamaz. Parola, token, response bod
 
 ## 10. Cross-table Bütünlük Matrisi
 
-| Kural                                                 | Koruma                                                                       |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Farklı owner kaynağı bağlanamaz                       | Her tenant relation için composite FK                                        |
-| Bir check aynı anda ikinci job'a başlayamaz           | `check_jobs` active-state partial unique index                               |
-| Bir check'in tek açık incident'ı vardır               | `incidents(check_id) WHERE status='OPEN'` unique partial index               |
-| Bir incident'ın tek açık observed segment'i vardır    | `incident_segments(incident_id) WHERE ended_at IS NULL` unique partial index |
-| Bir check'in tek açık health interval'i vardır        | `open_health_intervals.check_id` PK                                          |
-| Run referansı doğru owner ve partition satırına gider | `(owner_id,run_finished_at,run_id)` composite FK                             |
-| Maintenance tam bir hedefe aittir                     | `num_nonnulls(check_id,group_id)=1` CHECK + iki composite FK                 |
-| Aynı incident geçişi tekrar mail üretmez              | Intent ve delivery unique anahtarları                                        |
-| Public token rotation eski linki keser                | Unique digest + snapshot'ı aynı transaction'da değiştirme                    |
-| Stale worker current state yazamaz                    | Generation + fencing compare, locked acceptance transaction                  |
-| Account kesintisi DOWN sayılmaz                       | UNKNOWN interval + rollup denominator kuralı                                 |
+| Kural                                                        | Koruma                                                                       |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| Farklı owner kaynağı bağlanamaz                              | Her tenant relation için composite FK                                        |
+| Bir check aynı anda ikinci job'a başlayamaz                  | `check_jobs` active-state partial unique index                               |
+| Bir check'in tek açık incident'ı vardır                      | `incidents(check_id) WHERE status='OPEN'` unique partial index               |
+| Bir incident'ın tek açık observed segment'i vardır           | `incident_segments(incident_id) WHERE ended_at IS NULL` unique partial index |
+| Bir check'in tek açık health interval'i vardır               | `open_health_intervals.check_id` PK                                          |
+| Run referansı doğru owner, check ve partition satırına gider | `(owner_id,check_id,run_finished_at,run_id)` composite FK                    |
+| Maintenance tam bir hedefe aittir                            | `num_nonnulls(check_id,group_id)=1` CHECK + iki composite FK                 |
+| Aynı incident geçişi tekrar mail üretmez                     | Intent ve delivery unique anahtarları                                        |
+| Public token rotation eski linki keser                       | Unique digest + snapshot'ı aynı transaction'da değiştirme                    |
+| Stale worker current state yazamaz                           | Generation + fencing compare, locked acceptance transaction                  |
+| Account kesintisi DOWN sayılmaz                              | UNKNOWN interval + rollup denominator kuralı                                 |
 
 Foreign key'ler veri hatasını engeller fakat yetkilendirme amacıyla kullanıcıya constraint ayrıntısı döndürülmez. API bu hataları genel `not found/conflict` contract'ına map eder.
 

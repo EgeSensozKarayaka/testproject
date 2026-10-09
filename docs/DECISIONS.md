@@ -278,7 +278,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-033 — SQL-first PostgreSQL şeması ve tipli Kysely erişimi
 
 - **Tarih:** 2026-10-10 01:13 +06:00
-- **Durum:** Proposed — kullanıcı incelemesi bekliyor
+- **Durum:** Accepted — Aşama 3 migration setinde uygulandı
 - **Bağlam:** RLS, roller, partition, partial index ve online constraint gibi PostgreSQL'e özgü yetenekler v1 veri bütünlüğünün merkezindedir.
 - **Karar:** Migration'lar sürümlü ve checksum'lı düz SQL olacaktır. Uygulama sorguları `pg` transaction altyapısı üzerinde Kysely ile tipli yazılacaktır; ORM schema auto-sync kullanılmayacaktır.
 - **Alternatifler:** Tam ORM migration üretimi; yalnız string tabanlı raw SQL repository; harici migration binary'si.
@@ -288,7 +288,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-034 — UUIDv7, doğrudan owner ve üç katmanlı tenant izolasyonu
 
 - **Tarih:** 2026-10-10 01:13 +06:00
-- **Durum:** Proposed — kullanıcı incelemesi bekliyor
+- **Durum:** Accepted — Aşama 3 migration setinde uygulandı
 - **Karar:** Aggregate/event kimlikleri PostgreSQL 18 `uuidv7()` kullanır. Her private satır doğrudan `owner_id` taşır; composite owner foreign key, API authorization ve FORCE RLS birlikte uygulanır. Runtime rolleri tablo sahibi veya BYPASSRLS olmaz.
 - **Alternatifler:** Sequence kimlik; yalnız API filtresi; owner'ı join zincirinden türetmek; bütün servislerde tek geniş DB rolü.
 - **Gerekçe:** Global kimlik ve iyi index locality sağlamak, hatalı join/filter durumunda çapraz kullanıcı erişimini veritabanında da reddetmek ve servis arıza alanlarını yetkiyle sınırlamak.
@@ -297,7 +297,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-035 — Current projection, immutable run ve açık interval ayrımı
 
 - **Tarih:** 2026-10-10 01:13 +06:00
-- **Durum:** Proposed — kullanıcı incelemesi bekliyor
+- **Durum:** Accepted — kalıcılık yapısı uygulandı; domain geçiş kodu sonraki aşamalardadır
 - **Karar:** Dashboard check başına tek current-state projection'ı okur; her probe sonucu immutable run olarak yazılır. Tek açık/provisional availability aralığı ayrı `open_health_intervals` tablosunda, kapanmış geçmiş aylık partition'larda tutulur.
 - **Alternatifler:** Dashboard'u ham run'lardan türetmek; current state ve run'ı tek tabloda tutmak; açık ve kapalı aralıkları tek partitioned tabloda saklamak.
 - **Gerekçe:** Dashboard latency'sini geçmiş hacminden ayırmak, rejected/stale gözlemleri kaybetmemek ve partition sınırları arasında “check başına tek açık interval” invariant'ını PK ile korumak.
@@ -306,17 +306,27 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-036 — Aylık raw partition, minute/hour rollup ve coverage ayrımı
 
 - **Tarih:** 2026-10-10 01:13 +06:00
-- **Durum:** Proposed — kullanıcı incelemesi bekliyor
+- **Durum:** Accepted — partition ve rollup tabloları uygulandı
 - **Karar:** Raw runs ve yoğun zaman serileri UTC zamanına göre partition edilir; 24 saat/7 gün için minute, ay için hour rollup kullanılır. Availability yalnız UP+DOWN süresinden, coverage ise gözlemlenmiş sürenin istek aralığına oranından hesaplanır.
 - **Alternatifler:** Bütün geçmişi tek tabloda tutmak; aylık sorguda raw run scan etmek; UNKNOWN süreyi DOWN kabul etmek; ilk günden ayrı time-series database kullanmak.
 - **Gerekçe:** Check sayısını sabit 50 ile sınırlamadan retention ve sorgu maliyetini yönetmek, ay görünümünü bounded tutmak ve veri boşluğunu yanlış downtime'a çevirmemek.
-- **Sonuçlar:** Partitioned primary key zaman kolonunu içerir; run primary key'i ve referansları `(owner_id,finished_at,run_id)` üçlüsünü taşır. Default partition yalnız güvenlik ağıdır ve satır düşerse alarm üretir.
+- **Sonuçlar:** Partitioned primary key zaman kolonunu içerir; tam lineage için run primary key'i ve referansları `(owner_id,check_id,finished_at,run_id)` dörtlüsünü taşır. Default partition yalnız güvenlik ağıdır ve satır düşerse alarm üretir.
 
 ## D-037 — Forward-only migration ve doğrulanmış PITR/restore hedefi
 
 - **Tarih:** 2026-10-10 01:13 +06:00
-- **Durum:** Proposed — kullanıcı incelemesi bekliyor
+- **Durum:** Accepted — migration runner ve local restore provası uygulandı
 - **Karar:** Production şema değişimleri expand/backfill/verify/switch/contract ve forward-fix yaklaşımıyla yapılır. İlk production süreklilik hedefi managed PostgreSQL üzerinde RPO ≤5 dakika, RTO ≤60 dakika, 14 günlük PITR ve en az üç aylık restore drill'dir.
 - **Alternatifler:** Otomatik down migration; yalnız günlük dump; restore testi olmadan backup başarı bildirimi.
 - **Gerekçe:** Veri kaybeden geri dönüşleri ve uzun kilitleri önlemek; yedeğin varlığını değil uygulama invariant'larıyla geri yüklenebilirliğini kanıtlamak.
-- **Sonuçlar:** Startup migration çalıştırmaz. Şema uyumsuzluğu readiness'i düşürür. Hedefler gerçek production altyapısı kurulup restore drill geçmeden sağlanmış sayılmaz.
+- **Sonuçlar:** Runtime prosesleri migration çalıştırmaz; ayrı Compose/dağıtım işi önce tamamlanır. Şema uyumsuzluğu readiness'i düşürür. Local mantıksal restore provası başarılıdır; production RPO/RTO/PITR hedefleri gerçek production altyapısı kurulup sağlayıcı restore drill'i geçmeden sağlanmış sayılmaz.
+
+## D-038 — NOLOGIN yetki rolleri ve deployment login wrapper'ları
+
+- **Tarih:** 2026-10-10 02:24 +06:00
+- **Durum:** Accepted — migration ve runtime pool yapılandırmasında uygulandı
+- **Bağlam:** Servis yetkileri ile secret taşıyan login kimliklerini aynı rol yapmak rol rotasyonunu zorlaştırır. Local Compose'un tek bootstrap PostgreSQL hesabı ise geliştirme kolaylığı için korunmalıdır.
+- **Karar:** Migration bütün schema/service rollerini `NOLOGIN`, `NOBYPASSRLS` yetki grubu olarak oluşturur. Local runtime connection başlangıcında ilgili dar role geçer. Production, her servis için yalnız gerekli role üye ayrı login wrapper ve ayrı secret sağlar; uygulama superuser ile bağlanmaz.
+- **Alternatifler:** Her runtime rolünü doğrudan LOGIN yapmak; bütün servislerde tek geniş login; local ortamda her rol için ayrı secret zorunluluğu.
+- **Gerekçe:** Yetki matrisi ile credential yaşam döngüsünü ayırmak, production secret rotasyonunu kolaylaştırmak ve local kurulumu tek komutlu tutarken SQL'in gerçek dar rol altında çalışmasını test etmek.
+- **Sonuçlar:** Local `session_user` bootstrap hesabıdır ancak `current_user` dar service rolüdür. Entegrasyon testi bunu ve rolün private tablolardaki kısıtlarını doğrular. Production deployment login wrapper oluşturma işi altyapı runbook'unun sorumluluğudur.

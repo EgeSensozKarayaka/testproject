@@ -1,11 +1,11 @@
 # Veritabanı ve Kalıcılık Mimarisi
 
 **Aşama:** 3 — Nihai Veritabanı ve Kalıcılık Mimarisi  
-**Durum:** İnceleme ve kullanıcı onayı bekliyor  
+**Durum:** Uygulandı ve yerel PostgreSQL üzerinde doğrulandı
 **Tarih:** 2026-10-10  
 **Hedef platform:** PostgreSQL 18.6
 
-> Bu belge ve bağlı belgeler tasarım sözleşmesidir. Bu aşamada migration, seed veya uygulama kodu yazılmamıştır. Uygulama ancak tasarım onayından sonra başlayacaktır.
+> Bu belge ve bağlı belgeler normatif tasarım sözleşmesidir. Tasarım 2026-10-10 tarihinde onaylanmış; altı forward-only migration, idempotent demo seed'i, tipli erişim katmanı ve entegrasyon testleriyle uygulanmıştır.
 
 ## 1. Belge Seti
 
@@ -13,6 +13,7 @@
 - [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md): tablo/kolon sözlüğü ve bütünlük kısıtları
 - [`DATABASE_SECURITY.md`](./DATABASE_SECURITY.md): RLS, roller, yetkiler ve güvenli erişim akışları
 - [`DATABASE_OPERATIONS.md`](./DATABASE_OPERATIONS.md): indeks/sorgu, partition, rollup, retention, migration, backup ve restore planı
+- [`DATABASE_RESTORE_TEST.md`](./DATABASE_RESTORE_TEST.md): local mantıksal geri yükleme prova kaydı ve sınırları
 
 Çelişki halinde sıralama `REQUIREMENTS.md` → `DOMAIN_MODEL.md`/`STATE_MACHINES.md` → bu belge seti → uygulama biçimindedir. Uygulamanın belgeye uymadığı durumda belge sessizce değiştirilmez; karar günlüğüyle birlikte revize edilir.
 
@@ -90,7 +91,7 @@ Projection güncellemesi, onu doğuran domain yazımı ve outbox event'iyle ayn�
 
 ### 3.8 Büyük geçmiş tabloları zamanla bölünür
 
-`monitoring.check_runs`, `monitoring.health_intervals`, minute/hour rollup, prediction score ve audit event tabloları zaman kolonuna göre declarative range partition kullanır. PostgreSQL partitioned tabloda primary/unique constraint'in partition kolonunu da içermesini istediği için run primary key'i `(owner_id, finished_at, id)` olur. Run'a referans veren tenant satırı kendi `owner_id` değeriyle birlikte aynı zaman+kimlik locator'ını taşır; böylece partition gereksinimi sahiplik bütünlüğünü zayıflatmaz.
+`monitoring.check_runs`, `monitoring.health_intervals`, minute/hour rollup, prediction score ve audit event tabloları zaman kolonuna göre declarative range partition kullanır. PostgreSQL partitioned tabloda primary/unique constraint'in partition kolonunu da içermesini istediği için run primary key'i `(owner_id, check_id, finished_at, id)` olur. `check_id` anahtara bilinçli olarak eklenmiştir: bütün run referansları aynı tenant ve check lineage'ını veritabanı seviyesinde kanıtlar. Child kayıtlar aynı dört kolonlu locator'ı taşır; böylece partition gereksinimi sahiplik bütünlüğünü zayıflatmaz.
 
 ### 3.9 JSONB sınırlandırılmıştır
 
@@ -218,9 +219,9 @@ Tasarım `50 check` ürün kotasına bağlı değildir. Ortalama probe başlatma
 
 Ürün kotası varsa abuse/cost kontrolü olarak ayrıca tanımlanır; scheduler doğruluğunun veya şema kapasitesinin gizli sınırı olmaz.
 
-## 10. Onay Kapısı
+## 10. Uygulama ve Doğrulama Sonucu
 
-Migration uygulamasına geçmeden önce aşağıdaki konular kullanıcı tarafından kabul edilmiş olmalıdır:
+Aşağıdaki tasarım başlıkları kabul edilip uygulandı:
 
 - Tablo sınırları ve kolon sözlüğü
 - Kullanıcı sahipliği ve RLS modeli
@@ -230,7 +231,7 @@ Migration uygulamasına geçmeden önce aşağıdaki konular kullanıcı tarafı
 - Varsayılan retention, RPO/RTO ve restore doğrulama hedefleri
 - SQL-first forward-only migration yaklaşımı
 
-Onay sonrasındaki ilk kod işi migration runner, roller/şemalar ve `000001` başlangıç migration'ı olacaktır. Bu belge onayı kendi başına Aşama 3'ün uygulama tamamlandığı anlamına gelmez.
+Repository-owned runner advisory lock, SHA-256 checksum ledger ve şema uyumluluk kaydı kullanır. `migrate` Compose işi uygulamalardan önce tamamlanır; uygulama prosesleri kendi başlarına migration çalıştırmaz. Gerçek PostgreSQL entegrasyon paketi sıfırdan kurulum, tekrar çalıştırma, checksum drift, RLS izolasyonu, çapraz-sahip FK reddi, rol sınırları, partition/indeksler ve reset guard'larını doğrular. Ayrı bir veritabanına mantıksal yedek geri yüklenmiş; revision, migration ledger, demo kayıtları ve 29 `FORCE RLS` tablo doğrulandıktan sonra test veritabanı kaldırılmıştır.
 
 ## 11. PostgreSQL Referansları
 

@@ -110,3 +110,19 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Kritik query/indeksler, scheduler lease/fencing akışı, retention, forward-only migration, seed/test database, backup/PITR ve restore drill planlandı.
 - PostgreSQL 18 UUIDv7, partition constraint, RLS ve transaction-local setting davranışları resmi PostgreSQL belgeleriyle doğrulandı.
 - Bu turda migration, seed, şema SQL'i, dependency veya uygulama kodu yazılmadı; tasarım kullanıcı incelemesine bırakıldı.
+
+### 02:24 — Aşama 3 veritabanı ve kalıcılık uygulaması
+
+- Kullanıcı onayı sonrasında altı forward-only SQL migration ile rol/şema bootstrap'ı, auth/core, monitoring, messaging/public/prediction/audit, RLS/privilege ve başlangıç partition'ları uygulandı.
+- Migration runner'a advisory lock, SHA-256 checksum ledger, transaction sınırı, schema compatibility ve idempotent no-op davranışı eklendi.
+- `db:migrate`, non-production `db:seed`, açık onay ve hedef allowlist'i gerektiren `db:reset` ile `db:status` komutları gerçek uygulamaya bağlandı.
+- Run anahtarı, ilk tasarımdaki üçlü locator yerine check lineage'ını da veritabanında koruyan `(owner_id,check_id,finished_at,id)` biçiminde güçlendirildi; tasarım belgeleri buna göre güncellendi.
+- Geniş database `CREATE` yetkisi verme girişimi güvenlik incelemesinde reddedildi; schema owner'ın database CREATE yetkisi olmadan objeler migrator tarafından oluşturulup sahipliği devredildi.
+- 29 private parent tabloda `ENABLE/FORCE RLS`, composite owner/check foreign key'leri, dar `SECURITY DEFINER` fonksiyonları ve PII içermeyen predictor feature view oluşturuldu.
+- Kysely 0.29.6 ile şema-tipli sorgu yüzeyi ve transaction-local kullanıcı bağlam helper'ı eklendi. Readiness artık varsayılan olarak tam revision 6 ve doğru compatibility epoch gerektiriyor.
+- Gerçek PostgreSQL entegrasyon paketi 10 testle sıfırdan migration, idempotency, checksum drift, seed, RLS context temizliği, çapraz-owner reddi, rol sınırları, indeks/partition ve reset guard davranışlarını doğruladı.
+- Ayrı migration Docker image'ı ve Compose one-shot işi eklendi; API/worker/predictor süreçleri başarılı migration'a bağlandı. Tam `app` profili yeniden build edilip bütün healthcheck'lerle sağlıklı başladı.
+- Ana local veritabanının mantıksal yedeği ayrı `site_monitor_restore_test` veritabanına başarıyla geri yüklendi. Revision 6, altı ledger kaydı, demo kullanıcı/check ve 29 `FORCE RLS` tablo doğrulandı; yalnız geçici test veritabanı ve dump dosyası ardından silindi.
+- Local restore provası production RPO/RTO/PITR hedeflerinin sağlandığı şeklinde yorumlanmadı; bu hedefler gerçek production altyapısı ve sağlayıcı drill'i kurulana kadar açık sınırlamadır.
+- Birleşik kalite kapısında entegrasyon komutunun Vitest 5'te glob'u düz filtre sayıp dosyayı atladığı fark edildi. Script platform bağımsız dosya keşfi yapacak şekilde düzeltildi; kök komut gerçek PostgreSQL ile 10/10 testi çalıştırdı.
+- Son `pnpm run ci` format, lint, strict typecheck, 8 unit test, entegrasyon dosyası keşfi ve bütün build'lerle geçti. Ayaktaki stack üzerinde Playwright web/API ve iki eşzamanlı client senaryoları 2/2 geçti.

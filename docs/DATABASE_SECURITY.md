@@ -1,6 +1,6 @@
 # Veritabanı Güvenliği, RLS ve Rol Mimarisi
 
-**Durum:** İnceleme bekleyen Aşama 3 tasarımı  
+**Durum:** Uygulandı; rol/privilege ve negatif RLS entegrasyon testleriyle doğrulandı
 **Bağlı belge:** [`DATABASE.md`](./DATABASE.md)
 
 ## 1. Güvenlik Hedefi
@@ -21,18 +21,18 @@ RLS, authentication yerine geçmez. Authentication session token'ını kullanıc
 
 ## 2. PostgreSQL Rolleri
 
-Gerçek kullanıcı hesapları PostgreSQL login rolü değildir. Aşağıdaki service rolleri deployment secret'larıyla bağlanır.
+Gerçek kullanıcı hesapları PostgreSQL login rolü değildir. Migration aşağıdaki yetki rollerini `NOLOGIN` ve `NOBYPASSRLS` olarak kurar. Local Compose tek bootstrap login'inden bağlantı açıp bağlantı başlangıcında dar role `SET ROLE` eder. Production deployment her servis için yalnız ilgili `NOLOGIN` role üyeliği olan ayrı bir login wrapper ve ayrı secret oluşturmalıdır; superuser bağlantısı runtime'da kullanılamaz.
 
 | Rol                         |             Login |                BYPASSRLS | Amaç                                                                 | Özellikle sahip olmadığı yetki                           |
 | --------------------------- | ----------------: | -----------------------: | -------------------------------------------------------------------- | -------------------------------------------------------- |
 | `site_monitor_schema_owner` |             Hayır |                    Hayır | Şema/objelerin sahibi; yalnız migrator `SET ROLE` eder               | Runtime login, normal trafik                             |
-| `site_monitor_migrator`     |              Evet |                    Hayır | Advisory lock alıp migration uygular; geçici olarak owner role geçer | Uygulama trafiği                                         |
-| `site_monitor_api`          |              Evet |                    Hayır | Auth bootstrap fonksiyonları ve user-context RLS altında CRUD        | DDL, worker claim, raw backup                            |
-| `site_monitor_monitor`      |              Evet |                    Hayır | Scheduler, probe job/attempt/run, state, incident, rollup            | Credential/session, notification delivery, public secret |
-| `site_monitor_notifier`     |              Evet |                    Hayır | Intent/delivery claim, policy/recipient ve maintenance okuma         | Password/session, check config yazma, health yazma       |
-| `site_monitor_predictor`    |              Evet |                    Hayır | Güvenli feature view okuma, analysis job/score yazma                 | Raw URL, PII, current health/incident yazma              |
-| `site_monitor_public`       |              Evet |                    Hayır | Yalnız digest tabanlı public snapshot fonksiyonu                     | Private tablo SELECT dahil her şey                       |
-| `site_monitor_housekeeper`  |              Evet |                    Hayır | Partition/retention/rebuild için dar procedure'ler                   | Genel DDL ve auth verisi                                 |
+| `site_monitor_migrator`     |             Hayır |                    Hayır | Advisory lock alıp migration uygular; login wrapper owner role geçer | Uygulama trafiği                                         |
+| `site_monitor_api`          |             Hayır |                    Hayır | Auth bootstrap fonksiyonları ve user-context RLS altında CRUD        | DDL, worker claim, raw backup                            |
+| `site_monitor_monitor`      |             Hayır |                    Hayır | Scheduler, probe job/attempt/run, state, incident, rollup            | Credential/session, notification delivery, public secret |
+| `site_monitor_notifier`     |             Hayır |                    Hayır | Intent/delivery claim, policy/recipient ve maintenance okuma         | Password/session, check config yazma, health yazma       |
+| `site_monitor_predictor`    |             Hayır |                    Hayır | Güvenli feature view okuma, analysis job/score yazma                 | Raw URL, PII, current health/incident yazma              |
+| `site_monitor_public`       |             Hayır |                    Hayır | Yalnız digest tabanlı public snapshot fonksiyonu                     | Private tablo SELECT dahil her şey                       |
+| `site_monitor_housekeeper`  |             Hayır |                    Hayır | Partition/retention/rebuild için dar procedure'ler                   | Genel DDL ve auth verisi                                 |
 | `site_monitor_backup`       | Deployment'a özel | Gerekirse ayrı kontrollü | Mantıksal backup/restore görevi; normal runtime dışında              | Uygulama trafiği                                         |
 
 Kurallar:
