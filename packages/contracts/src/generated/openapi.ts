@@ -40,6 +40,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** @description Creates a pending account and queues a verification email. The same 202 response is returned when the address is already registered. Requires an exact trusted Origin (or same-origin Referer fallback), Fetch Metadata validation, and application/json. */
     post: operations['register'];
     delete?: never;
     options?: never;
@@ -56,6 +57,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** @description Creates an opaque server-side session. Unknown accounts, invalid passwords, pending verification, and disabled accounts all return the same invalid_credentials response. */
     post: operations['login'];
     delete?: never;
     options?: never;
@@ -72,6 +74,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** @description Idempotently clears the browser cookie. A valid presented session is revoked after CSRF validation; an absent or invalid session still returns 204. */
     post: operations['logout'];
     delete?: never;
     options?: never;
@@ -104,6 +107,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** @description Queues a verification email when eligible and always returns the same accepted response. The endpoint applies anonymous origin, media-type, idempotency, and rate-limit controls. */
     post: operations['requestEmailVerification'];
     delete?: never;
     options?: never;
@@ -120,6 +124,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** @description Consumes a single-use verification token. Invalid, expired, or already-consumed tokens return invalid_or_expired_token without revealing token state. */
     post: operations['confirmEmailVerification'];
     delete?: never;
     options?: never;
@@ -136,6 +141,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** @description Queues a reset email when eligible and always returns the same accepted response. The endpoint applies anonymous origin, media-type, idempotency, and rate-limit controls. */
     post: operations['requestPasswordReset'];
     delete?: never;
     options?: never;
@@ -152,6 +158,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
+    /** @description Consumes a single-use reset token, changes the password, and revokes every session. An invalid, expired, or consumed token returns invalid_or_expired_token. */
     post: operations['confirmPasswordReset'];
     delete?: never;
     options?: never;
@@ -172,6 +179,7 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
+    /** @description Requires a valid session, matching session-bound CSRF token, and current strong ETag. */
     patch: operations['updateMe'];
     trace?: never;
   };
@@ -700,8 +708,13 @@ export interface components {
       /** Format: email */
       email: string;
       password: string;
+      display_name: string;
     };
-    LoginRequest: components['schemas']['RegisterRequest'];
+    LoginRequest: {
+      /** Format: email */
+      email: string;
+      password: string;
+    };
     EmailRequest: {
       /** Format: email */
       email: string;
@@ -717,18 +730,18 @@ export interface components {
       id: components['schemas']['Uuid'];
       /** Format: email */
       email: string;
-      display_name: string | null;
+      display_name: string;
       email_verified: boolean;
       resource_version: components['schemas']['ResourceVersion'];
       created_at: components['schemas']['Instant'];
     };
     UserPatch: {
-      display_name?: string | null;
+      display_name?: string;
     };
     SessionView: {
       user: components['schemas']['User'];
       expires_at: components['schemas']['Instant'];
-      /** @description Bootstrap value; never logged */
+      /** @description Session-bound bootstrap value; never logged or persisted by the client */
       csrf_token: string;
     };
     /** @enum {string} */
@@ -1378,7 +1391,6 @@ export interface operations {
         };
         content?: never;
       };
-      401: components['responses']['AuthenticationProblem'];
       403: components['responses']['CsrfProblem'];
     };
   };
@@ -1535,7 +1547,10 @@ export interface operations {
           'application/json': components['schemas']['User'];
         };
       };
+      401: components['responses']['AuthenticationProblem'];
+      403: components['responses']['CsrfProblem'];
       412: components['responses']['PreconditionFailed'];
+      422: components['responses']['ValidationProblem'];
       428: components['responses']['PreconditionRequired'];
     };
   };

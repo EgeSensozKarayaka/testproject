@@ -46,3 +46,98 @@ export function loadDatabaseUrl(environment: NodeJS.ProcessEnv = process.env): s
     })
     .parse(environment.DATABASE_URL);
 }
+
+export interface AuthRuntimeConfig {
+  cookieSecure: boolean;
+  csrfKey: Buffer;
+  csrfKeyVersion: string;
+  emailEncryptionKey: Buffer;
+  emailEncryptionKeyVersion: string;
+  publicWebUrl: string;
+  rateLimitKey: Buffer;
+}
+
+function secretKey(
+  environment: NodeJS.ProcessEnv,
+  name: string,
+  nodeEnvironment: z.infer<typeof runtimeEnvironmentSchema>,
+  localFallback: string,
+): Buffer {
+  const encoded = environment[name];
+  if (!encoded) {
+    if (nodeEnvironment === 'production') throw new Error(`${name} is required in production`);
+    return Buffer.from(localFallback, 'base64');
+  }
+  const key = Buffer.from(encoded, 'base64');
+  if (key.length !== 32) throw new Error(`${name} must be a base64-encoded 32-byte key`);
+  return key;
+}
+
+export function loadAuthRuntimeConfig(
+  environment: NodeJS.ProcessEnv = process.env,
+): AuthRuntimeConfig {
+  const nodeEnvironment = runtimeEnvironmentSchema
+    .default('development')
+    .parse(environment.NODE_ENV);
+  const localKeys = {
+    csrf: 'ERERERERERERERERERERERERERERERERERERERERERE=',
+    email: 'IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=',
+    rate: 'MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM=',
+  } as const;
+  const parsed = z
+    .object({
+      AUTH_CSRF_KEY_VERSION: z.string().min(1).default('local-v1'),
+      AUTH_EMAIL_KEY_VERSION: z.string().min(1).default('local-v1'),
+      PUBLIC_WEB_URL: z.string().url().default('http://localhost:15173'),
+    })
+    .parse(environment);
+  return {
+    cookieSecure: nodeEnvironment === 'production',
+    csrfKey: secretKey(environment, 'AUTH_CSRF_KEY_BASE64', nodeEnvironment, localKeys.csrf),
+    csrfKeyVersion: parsed.AUTH_CSRF_KEY_VERSION,
+    emailEncryptionKey: secretKey(
+      environment,
+      'AUTH_EMAIL_KEY_BASE64',
+      nodeEnvironment,
+      localKeys.email,
+    ),
+    emailEncryptionKeyVersion: parsed.AUTH_EMAIL_KEY_VERSION,
+    publicWebUrl: parsed.PUBLIC_WEB_URL,
+    rateLimitKey: secretKey(
+      environment,
+      'AUTH_RATE_LIMIT_KEY_BASE64',
+      nodeEnvironment,
+      localKeys.rate,
+    ),
+  };
+}
+
+export interface TransactionalEmailConfig {
+  fromAddress: string;
+  pollIntervalMs: number;
+  smtpHost: string;
+  smtpPort: number;
+}
+
+export function loadTransactionalEmailConfig(
+  environment: NodeJS.ProcessEnv = process.env,
+): TransactionalEmailConfig {
+  const parsed = z
+    .object({
+      AUTH_EMAIL_FROM: z
+        .string()
+        .min(3)
+        .includes('@')
+        .default('Site Monitor <no-reply@site-monitor.local>'),
+      AUTH_EMAIL_POLL_INTERVAL_MS: z.coerce.number().int().min(100).max(60_000).default(1_000),
+      SMTP_HOST: z.string().min(1).default('127.0.0.1'),
+      SMTP_PORT: z.coerce.number().int().min(1).max(65_535).default(1025),
+    })
+    .parse(environment);
+  return {
+    fromAddress: parsed.AUTH_EMAIL_FROM,
+    pollIntervalMs: parsed.AUTH_EMAIL_POLL_INTERVAL_MS,
+    smtpHost: parsed.SMTP_HOST,
+    smtpPort: parsed.SMTP_PORT,
+  };
+}

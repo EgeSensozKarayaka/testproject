@@ -7,6 +7,7 @@ export const problemCodeSchema = z.enum([
   'invalid_precondition',
   'authentication_required',
   'invalid_credentials',
+  'invalid_or_expired_token',
   'csrf_failed',
   'operation_forbidden',
   'resource_not_found',

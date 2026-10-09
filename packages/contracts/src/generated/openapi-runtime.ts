@@ -114,7 +114,7 @@ export const openApiOperations = {
       body: {
         type: 'object',
         additionalProperties: false,
-        required: ['email', 'password'],
+        required: ['email', 'password', 'display_name'],
         properties: {
           email: {
             type: 'string',
@@ -123,8 +123,13 @@ export const openApiOperations = {
           },
           password: {
             type: 'string',
-            minLength: 12,
+            minLength: 15,
             maxLength: 128,
+          },
+          display_name: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 120,
           },
         },
       },
@@ -301,7 +306,7 @@ export const openApiOperations = {
           },
           password: {
             type: 'string',
-            minLength: 12,
+            minLength: 1,
             maxLength: 128,
           },
         },
@@ -333,7 +338,8 @@ export const openApiOperations = {
                   format: 'email',
                 },
                 display_name: {
-                  type: ['string', 'null'],
+                  type: 'string',
+                  minLength: 1,
                   maxLength: 120,
                 },
                 email_verified: {
@@ -355,7 +361,7 @@ export const openApiOperations = {
             },
             csrf_token: {
               type: 'string',
-              description: 'Bootstrap value; never logged',
+              description: 'Session-bound bootstrap value; never logged or persisted by the client',
             },
           },
         },
@@ -520,75 +526,6 @@ export const openApiOperations = {
         required: ['X-CSRF-Token'],
       },
       response: {
-        '401': {
-          type: 'object',
-          additionalProperties: false,
-          required: [
-            'type',
-            'title',
-            'status',
-            'detail',
-            'instance',
-            'code',
-            'request_id',
-            'retryable',
-          ],
-          properties: {
-            type: {
-              type: 'string',
-              format: 'uri',
-            },
-            title: {
-              type: 'string',
-            },
-            status: {
-              type: 'integer',
-              minimum: 400,
-              maximum: 599,
-            },
-            detail: {
-              type: 'string',
-            },
-            instance: {
-              type: 'string',
-            },
-            code: {
-              type: 'string',
-              pattern: '^[a-z][a-z0-9_]*$',
-            },
-            request_id: {
-              type: 'string',
-              format: 'uuid',
-            },
-            retryable: {
-              type: 'boolean',
-            },
-            retry_after_seconds: {
-              type: 'integer',
-              minimum: 0,
-            },
-            errors: {
-              type: 'array',
-              items: {
-                type: 'object',
-                additionalProperties: false,
-                required: ['pointer', 'code', 'message'],
-                properties: {
-                  pointer: {
-                    type: 'string',
-                  },
-                  code: {
-                    type: 'string',
-                    pattern: '^[a-z][a-z0-9_]*$',
-                  },
-                  message: {
-                    type: 'string',
-                  },
-                },
-              },
-            },
-          },
-        },
         '403': {
           type: 'object',
           additionalProperties: false,
@@ -696,7 +633,8 @@ export const openApiOperations = {
                   format: 'email',
                 },
                 display_name: {
-                  type: ['string', 'null'],
+                  type: 'string',
+                  minLength: 1,
                   maxLength: 120,
                 },
                 email_verified: {
@@ -718,7 +656,7 @@ export const openApiOperations = {
             },
             csrf_token: {
               type: 'string',
-              description: 'Bootstrap value; never logged',
+              description: 'Session-bound bootstrap value; never logged or persisted by the client',
             },
           },
         },
@@ -1139,7 +1077,7 @@ export const openApiOperations = {
           },
           password: {
             type: 'string',
-            minLength: 12,
+            minLength: 15,
             maxLength: 128,
           },
         },
@@ -1247,7 +1185,8 @@ export const openApiOperations = {
               format: 'email',
             },
             display_name: {
-              type: ['string', 'null'],
+              type: 'string',
+              minLength: 1,
               maxLength: 120,
             },
             email_verified: {
@@ -1364,7 +1303,8 @@ export const openApiOperations = {
         minProperties: 1,
         properties: {
           display_name: {
-            type: ['string', 'null'],
+            type: 'string',
+            minLength: 1,
             maxLength: 120,
           },
         },
@@ -1391,7 +1331,8 @@ export const openApiOperations = {
               format: 'email',
             },
             display_name: {
-              type: ['string', 'null'],
+              type: 'string',
+              minLength: 1,
               maxLength: 120,
             },
             email_verified: {
@@ -1407,7 +1348,214 @@ export const openApiOperations = {
             },
           },
         },
+        '401': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '403': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
         '412': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '422': {
           type: 'object',
           additionalProperties: false,
           required: [
