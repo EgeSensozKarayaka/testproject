@@ -1,7 +1,7 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 00:50 +06:00
-**Genel durum:** Aşama 2 tamamlandı; Aşama 3 tasarımı sırada
+**Son güncelleme:** 2026-10-10 01:13 +06:00
+**Genel durum:** Aşama 2 tamamlandı; Aşama 3 veritabanı tasarımı kullanıcı incelemesinde
 
 ## Tamamlanan
 
@@ -20,6 +20,8 @@
 - GitHub Actions üzerinde Node, Python, full-stack E2E ve dependency-audit işleri
 - Kökten çalışan platform bağımsız geliştirme ve kalite komutları
 - Aşama 3'e kadar bilinçli biçimde kapalı database migration/seed/reset komutları
+- Aşama 3 için ana veritabanı mimarisi, ER modeli ve eksiksiz tablo/kolon sözlüğü
+- İndeks/sorgu, partition, rollup, retention, RLS/rol, migration, backup ve restore tasarımı
 
 ## Doğrulama Kanıtları
 
@@ -57,4 +59,4 @@
 
 ## Sıradaki İş
 
-**Aşama 3 — Nihai Veritabanı ve Kalıcılık Mimarisi** için önce `docs/DATABASE.md`, ER modeli, tablo/kolon sözlüğü, indeks/sorgu planı, RLS/rol matrisi, partition/retention ve migration/restore yaklaşımı tasarlanacaktır. Kullanıcı onayından sonra migration koduna geçilecektir.
+`docs/DATABASE.md`, `docs/DATABASE_SCHEMA.md`, `docs/DATABASE_SECURITY.md` ve `docs/DATABASE_OPERATIONS.md` kullanıcı tarafından incelenecektir. Kullanıcı onayından sonraki prompt'ta migration runner, başlangıç şeması, RLS/roller, test database'i ve seed uygulamasına geçilecektir. İnceleme tamamlanmadan veritabanı kodu yazılmayacaktır.

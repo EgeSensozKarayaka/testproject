@@ -274,3 +274,49 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Bağlam:** pnpm `ci` adını kendi temiz/frozen kurulum alias'ı olarak yorumlar ve aynı adlı package script'ini çalıştırmaz.
 - **Karar:** Birleşik repository kalite kapısı `pnpm run ci` komutudur; GitHub Actions ve dokümantasyon açık `run` biçimini kullanır.
 - **Sonuçlar:** `pnpm ci` bağımlılık kurulumu olarak kalır; kalite kapısı sanılıp testlerin atlanması önlenir.
+
+## D-033 — SQL-first PostgreSQL şeması ve tipli Kysely erişimi
+
+- **Tarih:** 2026-10-10 01:13 +06:00
+- **Durum:** Proposed — kullanıcı incelemesi bekliyor
+- **Bağlam:** RLS, roller, partition, partial index ve online constraint gibi PostgreSQL'e özgü yetenekler v1 veri bütünlüğünün merkezindedir.
+- **Karar:** Migration'lar sürümlü ve checksum'lı düz SQL olacaktır. Uygulama sorguları `pg` transaction altyapısı üzerinde Kysely ile tipli yazılacaktır; ORM schema auto-sync kullanılmayacaktır.
+- **Alternatifler:** Tam ORM migration üretimi; yalnız string tabanlı raw SQL repository; harici migration binary'si.
+- **Gerekçe:** Üretim DDL'ini açık ve review edilebilir tutarken uygulama sorgularında TypeScript tip güvenliğini korumak; migration davranışını bir ORM sürümüne bağlamamak.
+- **Sonuçlar:** Repository-owned runner advisory lock, checksum ledger, transaction/no-transaction ayrımı ve schema compatibility kontrolü uygular. Uygulanmış migration değiştirilmez; düzeltme yeni ileri migration'dır.
+
+## D-034 — UUIDv7, doğrudan owner ve üç katmanlı tenant izolasyonu
+
+- **Tarih:** 2026-10-10 01:13 +06:00
+- **Durum:** Proposed — kullanıcı incelemesi bekliyor
+- **Karar:** Aggregate/event kimlikleri PostgreSQL 18 `uuidv7()` kullanır. Her private satır doğrudan `owner_id` taşır; composite owner foreign key, API authorization ve FORCE RLS birlikte uygulanır. Runtime rolleri tablo sahibi veya BYPASSRLS olmaz.
+- **Alternatifler:** Sequence kimlik; yalnız API filtresi; owner'ı join zincirinden türetmek; bütün servislerde tek geniş DB rolü.
+- **Gerekçe:** Global kimlik ve iyi index locality sağlamak, hatalı join/filter durumunda çapraz kullanıcı erişimini veritabanında da reddetmek ve servis arıza alanlarını yetkiyle sınırlamak.
+- **Sonuçlar:** API private sorguları transaction-local user context gerektirir. Auth/public bootstrap yalnız dar security-definer fonksiyonlarla yapılır. RLS context sızıntısı ve çapraz-owner bağlar negatif integration testleriyle doğrulanır.
+
+## D-035 — Current projection, immutable run ve açık interval ayrımı
+
+- **Tarih:** 2026-10-10 01:13 +06:00
+- **Durum:** Proposed — kullanıcı incelemesi bekliyor
+- **Karar:** Dashboard check başına tek current-state projection'ı okur; her probe sonucu immutable run olarak yazılır. Tek açık/provisional availability aralığı ayrı `open_health_intervals` tablosunda, kapanmış geçmiş aylık partition'larda tutulur.
+- **Alternatifler:** Dashboard'u ham run'lardan türetmek; current state ve run'ı tek tabloda tutmak; açık ve kapalı aralıkları tek partitioned tabloda saklamak.
+- **Gerekçe:** Dashboard latency'sini geçmiş hacminden ayırmak, rejected/stale gözlemleri kaybetmemek ve partition sınırları arasında “check başına tek açık interval” invariant'ını PK ile korumak.
+- **Sonuçlar:** Probe kabul transaction'ı run, state, interval, incident ve outbox'ı atomik günceller. Projection rebuild edilebilir; history append ağırlıklıdır.
+
+## D-036 — Aylık raw partition, minute/hour rollup ve coverage ayrımı
+
+- **Tarih:** 2026-10-10 01:13 +06:00
+- **Durum:** Proposed — kullanıcı incelemesi bekliyor
+- **Karar:** Raw runs ve yoğun zaman serileri UTC zamanına göre partition edilir; 24 saat/7 gün için minute, ay için hour rollup kullanılır. Availability yalnız UP+DOWN süresinden, coverage ise gözlemlenmiş sürenin istek aralığına oranından hesaplanır.
+- **Alternatifler:** Bütün geçmişi tek tabloda tutmak; aylık sorguda raw run scan etmek; UNKNOWN süreyi DOWN kabul etmek; ilk günden ayrı time-series database kullanmak.
+- **Gerekçe:** Check sayısını sabit 50 ile sınırlamadan retention ve sorgu maliyetini yönetmek, ay görünümünü bounded tutmak ve veri boşluğunu yanlış downtime'a çevirmemek.
+- **Sonuçlar:** Partitioned primary key zaman kolonunu içerir; run primary key'i ve referansları `(owner_id,finished_at,run_id)` üçlüsünü taşır. Default partition yalnız güvenlik ağıdır ve satır düşerse alarm üretir.
+
+## D-037 — Forward-only migration ve doğrulanmış PITR/restore hedefi
+
+- **Tarih:** 2026-10-10 01:13 +06:00
+- **Durum:** Proposed — kullanıcı incelemesi bekliyor
+- **Karar:** Production şema değişimleri expand/backfill/verify/switch/contract ve forward-fix yaklaşımıyla yapılır. İlk production süreklilik hedefi managed PostgreSQL üzerinde RPO ≤5 dakika, RTO ≤60 dakika, 14 günlük PITR ve en az üç aylık restore drill'dir.
+- **Alternatifler:** Otomatik down migration; yalnız günlük dump; restore testi olmadan backup başarı bildirimi.
+- **Gerekçe:** Veri kaybeden geri dönüşleri ve uzun kilitleri önlemek; yedeğin varlığını değil uygulama invariant'larıyla geri yüklenebilirliğini kanıtlamak.
+- **Sonuçlar:** Startup migration çalıştırmaz. Şema uyumsuzluğu readiness'i düşürür. Hedefler gerçek production altyapısı kurulup restore drill geçmeden sağlanmış sayılmaz.

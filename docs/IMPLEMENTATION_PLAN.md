@@ -594,4 +594,4 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 2 — Repository, Araç Zinciri ve Yerel Geliştirme Temeli** tamamlanmıştır. Workspace scaffold'u, kilitli bağımlılıklar, minimal runtime'lar, container profilleri, CI ve yerel kalite/E2E kanıtları `docs/DEVELOPMENT_ENVIRONMENT.md` ve `docs/PROJECT_STATUS.md` içinde kayıtlıdır.
 
-Sıradaki aktif iş **Aşama 3 — Nihai Veritabanı ve Kalıcılık Mimarisi** tasarımıdır. Bu aşamanın şeması, RLS/rol modeli, indeksleri, partition/retention ve migration yaklaşımı kullanıcıyla kabul edilmeden migration koduna başlanmayacaktır.
+**Aşama 3 — Nihai Veritabanı ve Kalıcılık Mimarisi** tasarım seti `docs/DATABASE*.md` dosyalarında hazırlanmış ve kullanıcı incelemesine sunulmuştur. Şema, RLS/rol modeli, indeksler, partition/rollup/retention ve migration/restore yaklaşımı kabul edilmeden migration koduna başlanmayacaktır. Sonraki prompt'ta kullanıcı onayı alınırsa Aşama 3 uygulama kapsamına geçilecektir.

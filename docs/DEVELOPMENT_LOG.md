@@ -99,3 +99,14 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - İlk uzak CI koşusunda `setup-uv@v10` hareketli etiketi çözümlenemedi; resmi `v10.2.0` release'i doğrulanıp workflow tam sürüme pinlendi.
 - uv managed-Python kataloğunda `3.14.8` henüz bulunmadığı, GitHub'ın resmi Python toolcache'inde bulunduğu doğrulandı; CI tam sürümü `actions/setup-python@v7` ile kuracak şekilde düzeltildi.
 - Temiz Linux runner'da type-aware ESLint'in workspace `dist` declaration'ları olmadan package tiplerini çözemediği görüldü; `pnpm lint` gerekli ortak paket build'ini kendi içinde yapacak biçimde deterministik hale getirildi.
+
+### 01:13 — Aşama 3 veritabanı ve kalıcılık tasarımı
+
+- PostgreSQL 18.6 için SQL-first migration ve Kysely tabanlı tipli query yaklaşımı tasarlandı.
+- Kullanıcı, check/group, job/attempt/run, current state, health interval, incident, maintenance, notification, outbox, public status, rollup, prediction ve audit tablolarının kolon sözlüğü tamamlandı.
+- UUIDv7, composite owner foreign key, transaction-local user context, FORCE RLS ve ayrı least-privilege service rolleri kesin tasarım önerisi olarak kaydedildi.
+- Partitioned run kimliklerinin PostgreSQL unique constraint ve sahiplik kuralları nedeniyle `(owner_id,finished_at,id)` olması ve run referanslarının aynı üçlüyü taşıması belirlendi.
+- Tek açık health interval'ın partitioned geçmişten ayrı tutulması, UNKNOWN/coverage semantiği ve minute/hour rollup yaklaşımı tasarlandı.
+- Kritik query/indeksler, scheduler lease/fencing akışı, retention, forward-only migration, seed/test database, backup/PITR ve restore drill planlandı.
+- PostgreSQL 18 UUIDv7, partition constraint, RLS ve transaction-local setting davranışları resmi PostgreSQL belgeleriyle doğrulandı.
+- Bu turda migration, seed, şema SQL'i, dependency veya uygulama kodu yazılmadı; tasarım kullanıcı incelemesine bırakıldı.
