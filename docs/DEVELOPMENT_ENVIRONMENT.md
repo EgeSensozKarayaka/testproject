@@ -1,8 +1,8 @@
 # Site Availability Monitor — Repository ve Geliştirme Ortamı Mimarisi
 
-**Sürüm:** 1.0  
-**Durum:** Aşama 2 tasarım tabanı — uygulama öncesi incelemeye hazır  
-**Tarih:** 2026-10-09 23:06 +06:00  
+**Sürüm:** 1.1
+**Durum:** Aşama 2 uygulandı ve doğrulandı
+**Tarih:** 2026-10-10 00:50 +06:00
 **Dayanak:** `ARCHITECTURE.md`, `DOMAIN_MODEL.md`, `STATE_MACHINES.md`
 
 ## 1. Amaç
@@ -13,22 +13,22 @@ Bu aşamanın amacı ürün özelliği geliştirmek değil; sonraki bütün aşa
 
 ## 2. Temel Kararlar
 
-| Alan | Karar |
-| --- | --- |
-| Repository | Tek Git repository, polyglot monorepo |
-| Node runtime | Node.js 24 LTS; tam patch sürümü pinlenir |
-| Node package manager | pnpm 11.25.x; repository içinde tam sürüm pinlenir |
-| Python runtime | CPython 3.14.x; predictor için minor seri sabitlenir |
-| Python dependency manager | `uv`, `pyproject.toml` ve commit edilen `uv.lock` |
-| Yerel PostgreSQL tabanı | PostgreSQL 18.6, Debian Bookworm image |
-| Node module sistemi | ESM |
-| Node dili | Strict TypeScript |
-| Task orchestration | pnpm workspace komutları; başlangıçta Turborepo/Nx yok |
-| Yerel altyapı | Docker Compose v2 |
-| Host geliştirme | Uygulamalar host'ta hot reload, altyapı container'da |
-| Tam-stack doğrulama | Bütün servisler container içinde Compose profile ile |
-| CI hedefi | Linux runner; Windows host geliştirme uyumluluğu korunur |
-| Ana CI | GitHub Actions |
+| Alan                      | Karar                                                    |
+| ------------------------- | -------------------------------------------------------- |
+| Repository                | Tek Git repository, polyglot monorepo                    |
+| Node runtime              | Node.js 24 LTS; tam patch sürümü pinlenir                |
+| Node package manager      | pnpm 11.25.x; repository içinde tam sürüm pinlenir       |
+| Python runtime            | CPython 3.14.x; predictor için minor seri sabitlenir     |
+| Python dependency manager | `uv`, `pyproject.toml` ve commit edilen `uv.lock`        |
+| Yerel PostgreSQL tabanı   | PostgreSQL 18.6, Debian Bookworm image                   |
+| Node module sistemi       | ESM                                                      |
+| Node dili                 | Strict TypeScript                                        |
+| Task orchestration        | pnpm workspace komutları; başlangıçta Turborepo/Nx yok   |
+| Yerel altyapı             | Docker Compose v2                                        |
+| Host geliştirme           | Uygulamalar host'ta hot reload, altyapı container'da     |
+| Tam-stack doğrulama       | Bütün servisler container içinde Compose profile ile     |
+| CI hedefi                 | Linux runner; Windows host geliştirme uyumluluğu korunur |
+| Ana CI                    | GitHub Actions                                           |
 
 Node.js 24, tasarım tarihinde resmi olarak LTS durumundadır. Python predictor için aynı gün yayınlanan yeni major yerine paket ekosistemi açısından daha olgun Python 3.14 serisi tercih edilir. Sürümler `latest` etiketiyle değil, pin dosyaları ve container tag/digest ile sabitlenir.
 
@@ -234,7 +234,7 @@ pnpm test:unit                   # Hızlı birim testleri
 pnpm test:integration            # PostgreSQL/dış adapter entegrasyonları
 pnpm test:e2e                    # Playwright akışları
 pnpm test                        # Unit + integration varsayılan seti
-pnpm ci                          # CI kalite kapılarının yerel eşdeğeri
+pnpm run ci                      # CI kalite kapılarının yerel eşdeğeri
 pnpm db:migrate                  # İleri migration
 pnpm db:seed                     # İdempotent demo seed
 pnpm db:reset                    # Yalnızca local/test; production'da reddedilir
@@ -291,17 +291,17 @@ API veya worker servisleri predictor'a `depends_on` taşımaz.
 
 Planlanan servisler:
 
-| Servis | Varsayılan/Profile | Kalıcı volume | Sağlık bağımlılığı |
-| --- | --- | --- | --- |
-| `postgres` | Varsayılan | Evet | Kendi healthcheck'i |
-| `mailpit` | Varsayılan | Hayır | Kendi healthcheck'i |
-| `target-simulator` | Varsayılan | Hayır | HTTP healthcheck |
-| `api` | `app` | Hayır | PostgreSQL ready + migration tamam |
-| `monitor-worker` | `app` | Hayır | PostgreSQL ready + migration tamam |
-| `notification-worker` | `app` | Hayır | PostgreSQL ready; SMTP readiness başlangıcı engellemez |
-| `web` | `app` | Hayır | API liveness; hard startup dependency gerekmez |
-| `predictor` | `prediction` | Hayır | PostgreSQL ready; ana servisler buna bağlı değil |
-| `migrate` | One-shot profile/job | Hayır | PostgreSQL ready |
+| Servis                | Varsayılan/Profile   | Kalıcı volume | Sağlık bağımlılığı                                     |
+| --------------------- | -------------------- | ------------- | ------------------------------------------------------ |
+| `postgres`            | Varsayılan           | Evet          | Kendi healthcheck'i                                    |
+| `mailpit`             | Varsayılan           | Hayır         | Kendi healthcheck'i                                    |
+| `target-simulator`    | Varsayılan           | Hayır         | HTTP healthcheck                                       |
+| `api`                 | `app`                | Hayır         | PostgreSQL ready + migration tamam                     |
+| `monitor-worker`      | `app`                | Hayır         | PostgreSQL ready + migration tamam                     |
+| `notification-worker` | `app`                | Hayır         | PostgreSQL ready; SMTP readiness başlangıcı engellemez |
+| `web`                 | `app`                | Hayır         | API liveness; hard startup dependency gerekmez         |
+| `predictor`           | `prediction`         | Hayır         | PostgreSQL ready; ana servisler buna bağlı değil       |
+| `migrate`             | One-shot profile/job | Hayır         | PostgreSQL ready                                       |
 
 Compose kuralları:
 
@@ -331,14 +331,16 @@ Compose kuralları:
 
 Local varsayılanlar:
 
-| Bileşen | Port |
-| --- | --- |
-| Web dev server | `5173` |
-| API | `3000` |
-| Target simulator | `4010` |
-| PostgreSQL | `15432` (host), `5432` (Compose ağı) |
-| Mailpit SMTP | `1025` |
-| Mailpit UI | `8025` |
+| Bileşen          | Port                                 |
+| ---------------- | ------------------------------------ |
+| Web dev server   | `5173`                               |
+| Web container    | `15173` (host), `8080` (Compose ağı) |
+| API              | `13000` (host), `3000` (Compose ağı) |
+| Target simulator | `4010`                               |
+| PostgreSQL       | `15432` (host), `5432` (Compose ağı) |
+| Mailpit SMTP     | `1025`                               |
+| Mailpit UI       | `8025`                               |
+| Predictor        | `18000` (host), `8000` (Compose ağı) |
 
 Portlar environment ile değiştirilebilir. Frontend yalnız public API base URL kullanır; database veya SMTP adresi browser build'ine girmez.
 
@@ -576,3 +578,13 @@ Aşama 2 uygulaması ancak aşağıdakiler kanıtlandığında tamamlanır:
 - uv, `pyproject.toml`, `.python-version` ve commit edilebilir cross-platform `uv.lock` proje akışını destekler: <https://docs.astral.sh/uv/guides/projects/>
 - Docker Compose profile'ları opsiyonel servis gruplarını etkinleştirmek için kullanılır: <https://docs.docker.com/compose/how-tos/profiles/>
 
+## 26. Uygulama Sonucu
+
+Aşama 2, 2026-10-10 tarihinde uygulandı ve yerel ortamda doğrulandı:
+
+- Frozen pnpm kurulumu, format, lint, strict typecheck, unit/integration test komutları ve bütün build'ler geçti.
+- `app` profili API, web, iki worker ve target simulator image'larını üretip bütün healthcheck'lerle başladı.
+- Playwright, web/API entegrasyonunu ve iki bağımsız browser context'ini doğruladı.
+- Predictor image'ı ayrı profile ile çalıştı; durdurulduğunda ana API sağlıklı kalmaya devam etti.
+- Predictor Ruff/mypy/pytest kapıları geçti ve `%70` zorunlu coverage eşiğinin üzerinde `%84.95` sağladı.
+- Aşama 3 şeması henüz tasarlanmadığı için `migrate` servisi ve gerçek database komutları bilinçli olarak eklenmedi; placeholder komutlar açıklayıcı hatayla durur.

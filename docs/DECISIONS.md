@@ -251,3 +251,26 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Gerekçe:** Tekrarlanabilir image seçimi sağlamak, kullanıcının çalışan servislerine dokunmamak ve belgelenmiş kararlı bir bağlantı noktası korumak.
 - **Sonuçlar:** Uygulamalar Compose içinde `postgres:5432`, host araçları `localhost:15432` kullanır. PostgreSQL 18 şema/extension uyumluluğu Aşama 3'te tekrar doğrulanır; release öncesinde image digest'leri pinlenir.
 
+## D-030 — Araç sürümleri ecosystem peer sınırlarına göre birlikte pinlenir
+
+- **Tarih:** 2026-10-10
+- **Durum:** Accepted
+- **Karar:** Node `24.19.0`, pnpm `11.25.0`, TypeScript `6.0.3` ve ilgili araçlar exact pinlenir. TypeScript 7, mevcut `typescript-eslint` peer aralığı dışında olduğu için kullanılmaz. ESLint `9.39.5`, `eslint-plugin-jsx-a11y` ESLint 10'u destekleyene veya eşdeğer erişilebilirlik kural seti doğrulanana kadar geçici uyumluluk pini olarak tutulur.
+- **Gerekçe:** En yeni tekil sürümleri karıştırmak yerine birlikte çalışan, strict peer validation'dan geçen ve lockfile ile yeniden üretilebilen bir toolchain kullanmak.
+- **Sonuçlar:** Deprecation/major yükseltmeleri bağımlılık botuyla körlemesine alınmaz; peer uyumluluğu, lint sonucu ve build birlikte doğrulanır.
+
+## D-031 — Application ve prediction Compose profilleri arıza sınırıdır
+
+- **Tarih:** 2026-10-10
+- **Durum:** Accepted
+- **Karar:** Ana Node süreçleri `app`, predictor ayrı `prediction` profilindedir. Ana servisler predictor'a `depends_on` veya readiness bağımlılığı taşımaz. Predictor CPU/bellek sınırı ve ayrı process/container ile çalışır.
+- **Gerekçe:** Tahmin yan özelliğinin çökmesi, yavaşlaması veya kapalı olması monitoring ürününü durdurmamalıdır.
+- **Sonuçlar:** Predictor health başarılıyken ve predictor durdurulduktan sonra API readiness'in devam ettiği smoke test ile doğrulanmıştır.
+
+## D-032 — Kök kalite komutu açıkça `pnpm run ci` olarak çağrılır
+
+- **Tarih:** 2026-10-10
+- **Durum:** Accepted
+- **Bağlam:** pnpm `ci` adını kendi temiz/frozen kurulum alias'ı olarak yorumlar ve aynı adlı package script'ini çalıştırmaz.
+- **Karar:** Birleşik repository kalite kapısı `pnpm run ci` komutudur; GitHub Actions ve dokümantasyon açık `run` biçimini kullanır.
+- **Sonuçlar:** `pnpm ci` bağımlılık kurulumu olarak kalır; kalite kapısı sanılıp testlerin atlanması önlenir.

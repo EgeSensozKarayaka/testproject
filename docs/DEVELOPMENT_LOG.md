@@ -76,3 +76,23 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Git ve Docker altyapısı `chore: add local infrastructure compose` commit'iyle ayrı tutuldu.
 - Yerel `main` dalı GitHub `origin/main` dalına başarıyla gönderildi ve upstream bağlantısı kuruldu.
 
+## 2026-10-10
+
+### 00:50 — Aşama 2 uygulaması tamamlandı
+
+- Node.js 24.19.0 ve pnpm 11.25.0 ile 14 projelik polyglot workspace kuruldu; bağımlılıklar exact sürümler ve lockfile ile sabitlendi.
+- React/Vite web, Fastify API, monitor worker, notification worker ve deterministik target simulator runtime temelleri eklendi.
+- Domain, contract, config, database, check-engine, notification, observability ve testing package sınırları oluşturuldu.
+- Python 3.14.8 ve uv 0.12.20 ile opsiyonel predictor package/lock/test temeli kuruldu.
+- Strict TypeScript, ESLint, Prettier, Vitest, Playwright, Ruff, mypy, pytest ve coverage kapıları uygulandı.
+- `pnpm run ci` format, lint, typecheck, 8 Node testi, integration keşfi ve bütün production build'leriyle geçti.
+- Predictor testleri 3'ten 10'a genişletildi; config sınırları, database failure ve HTTP health sözleşmesi test edildi; coverage `%84.95` oldu.
+- Multi-stage ve non-root Node, web ve predictor image'ları gerçek Docker build ile doğrulandı.
+- `app` profilindeki API, web, iki worker, target simulator, PostgreSQL ve Mailpit birlikte sağlıklı başladı.
+- Target simulator `200`/`503`, worker readiness ve web/API browser entegrasyonu doğrulandı.
+- Playwright ile iki bağımsız browser context aynı anda başarıyla çalıştı.
+- Predictor ayrı profile ile başlatıldı; predictor durdurulduktan sonra API'nin sağlıklı kaldığı doğrulandı.
+- İlk container build'inde app build argümanının dependency katmanını gereksiz yere çoğalttığı görüldü; Dockerfile arg konumu değiştirilerek dört Node servisinin kurulum katmanı ortaklaştırıldı.
+- `pnpm ci` komutunun pnpm yerleşik kurulum alias'ıyla çakıştığı bulundu; CI ve belgeler `pnpm run ci` olarak düzeltildi.
+- Playwright Chromium CDN'i yerel ağda timeout verdi; aynı test paketi kurulu Microsoft Edge kanalıyla geçirildi. CI, Chromium kurulumunu sürdürür.
+- Migration, seed ve reset uygulaması Aşama 3 veritabanı tasarımı onaylanana kadar bilinçli olarak ertelendi.

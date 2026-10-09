@@ -85,7 +85,7 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 2 — Repository, Araç Zinciri ve Yerel Geliştirme Temeli
 
-**Durum:** Uygulama başladı — 2026-10-09 23:16 +06:00; Git ve yerel container altyapısı kısmen kuruldu
+**Durum:** Tamamlandı — 2026-10-10 00:50 +06:00
 
 **Amaç:** Bütün sonraki bileşenlerin aynı kalite ve çalışma kurallarına sahip olacağı monorepo temelini kurmak.
 
@@ -592,6 +592,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 ## 5. Aktif İş ve Sonraki Geçiş
 
-Aktif iş **Aşama 2 — Repository, Araç Zinciri ve Yerel Geliştirme Temeli**dir. Tasarım `docs/DEVELOPMENT_ENVIRONMENT.md` içinde kayıtlıdır. Yerel Git repository ve PostgreSQL/Mailpit Compose altyapısı kurulmuştur; GitHub remote/ilk commit, workspace scaffold, bağımlılık kurulumu, uygulama container'ları ve CI henüz tamamlanmamıştır.
+**Aşama 2 — Repository, Araç Zinciri ve Yerel Geliştirme Temeli** tamamlanmıştır. Workspace scaffold'u, kilitli bağımlılıklar, minimal runtime'lar, container profilleri, CI ve yerel kalite/E2E kanıtları `docs/DEVELOPMENT_ENVIRONMENT.md` ve `docs/PROJECT_STATUS.md` içinde kayıtlıdır.
 
-Tasarım kabul edildikten sonra Aşama 2 aynı belgede tanımlanan sırayla uygulanıp temiz ortamda doğrulanacaktır. Ancak bu kapı geçildikten sonra **Aşama 3 — Nihai Veritabanı ve Kalıcılık Mimarisi** tasarımına başlanacaktır.
+Sıradaki aktif iş **Aşama 3 — Nihai Veritabanı ve Kalıcılık Mimarisi** tasarımıdır. Bu aşamanın şeması, RLS/rol modeli, indeksleri, partition/retention ve migration yaklaşımı kullanıcıyla kabul edilmeden migration koduna başlanmayacaktır.
