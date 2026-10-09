@@ -310,6 +310,22 @@ export interface OutboxDispatchTable {
   updated_at: GeneratedTimestamp;
 }
 
+export interface ApiIdempotencyRecordTable {
+  created_at: GeneratedTimestamp;
+  encrypted_response: Buffer | null;
+  encryption_key_version: string | null;
+  expires_at: Timestamp;
+  id: GeneratedUuid;
+  key_digest: Buffer;
+  operation: string;
+  owner_id: string | null;
+  request_hash: Buffer;
+  response_body: JsonObject | null;
+  response_headers: JsonObject;
+  response_status: number;
+  subject_digest: Buffer;
+}
+
 export interface RecipientTable extends CreatedUpdatedRow, OwnedRow {
   disabled_at: Timestamp | null;
   email_display: string;
@@ -484,6 +500,7 @@ export interface DatabaseSchema {
   'auth.users': UserTable;
   'infra.outbox_dispatches': OutboxDispatchTable;
   'infra.outbox_events': OutboxEventTable;
+  'infra.api_idempotency_records': ApiIdempotencyRecordTable;
   'monitoring.check_current_states': CheckCurrentStateTable;
   'monitoring.check_job_attempts': CheckJobAttemptTable;
   'monitoring.check_jobs': CheckJobTable;

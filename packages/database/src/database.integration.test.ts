@@ -78,7 +78,7 @@ databaseSuite('PostgreSQL persistence architecture', () => {
   it('migrates from zero, records checksums, and is idempotent', async () => {
     const first = await runMigrations(pool, { appBuild: 'integration-test' });
     expect(first.currentRevision).toBe(TARGET_SCHEMA_REVISION);
-    expect(first.applied).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(first.applied).toEqual([1, 2, 3, 4, 5, 6, 7]);
 
     const second = await runMigrations(pool, { appBuild: 'integration-test' });
     expect(second).toEqual({ applied: [], currentRevision: TARGET_SCHEMA_REVISION });
@@ -262,6 +262,51 @@ databaseSuite('PostgreSQL persistence architecture', () => {
     ).rejects.toMatchObject({ code: '42501' });
   });
 
+  it('isolates idempotency receipts and enforces bounded sanitized storage', async () => {
+    const insertReceipt = `
+      INSERT INTO infra.api_idempotency_records
+        (owner_id, subject_digest, operation, key_digest, request_hash, response_status, response_headers, response_body, expires_at)
+      VALUES
+        ($1, decode(repeat($2, 32), 'hex'), 'check.create', decode(repeat($3, 32), 'hex'), decode(repeat($4, 32), 'hex'), 201, '{"Location":"/api/v1/checks/example"}'::jsonb, '{"id":"example"}'::jsonb, statement_timestamp() + interval '24 hours')
+    `;
+    await pool.query(insertReceipt, [ownerA, '11', '12', '13']);
+    await pool.query(insertReceipt, [ownerB, '21', '22', '23']);
+
+    const ownerAView = await withRole(pool, 'site_monitor_api', ownerA, async (client) => {
+      const result = await client.query<{ owner_id: string }>(
+        'SELECT owner_id FROM infra.api_idempotency_records ORDER BY owner_id',
+      );
+      return { count: result.rowCount ?? 0, ownerId: result.rows[0]?.owner_id ?? '' };
+    });
+    expect(ownerAView).toEqual({ count: 1, ownerId: ownerA });
+
+    await expect(
+      withRole(pool, 'site_monitor_api', ownerA, async (client) => {
+        await client.query(
+          `
+            INSERT INTO infra.api_idempotency_records
+              (owner_id, subject_digest, operation, key_digest, request_hash, response_status, expires_at)
+            VALUES
+              (NULL, decode(repeat('31', 32), 'hex'), 'auth.register', decode(repeat('32', 32), 'hex'), decode(repeat('33', 32), 'hex'), 202, statement_timestamp() + interval '24 hours')
+          `,
+        );
+        return {};
+      }),
+    ).rejects.toMatchObject({ code: '42501' });
+
+    await expect(
+      pool.query(
+        `
+          INSERT INTO infra.api_idempotency_records
+            (owner_id, subject_digest, operation, key_digest, request_hash, response_status, response_headers, expires_at)
+          VALUES
+            ($1, decode(repeat('41', 32), 'hex'), 'check.create', decode(repeat('42', 32), 'hex'), decode(repeat('43', 32), 'hex'), 201, '{"Set-Cookie":"forbidden"}'::jsonb, statement_timestamp() + interval '24 hours')
+        `,
+        [ownerA],
+      ),
+    ).rejects.toMatchObject({ code: '23514' });
+  });
+
   it('starts runtime pools in their restricted database role', async () => {
     const apiPool = createDatabasePool({
       applicationName: 'database-role-integration-test',
@@ -356,7 +401,7 @@ databaseSuite('PostgreSQL persistence architecture', () => {
       NODE_ENV: 'test',
     });
     expect(result.currentRevision).toBe(TARGET_SCHEMA_REVISION);
-    expect(result.applied).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(result.applied).toEqual([1, 2, 3, 4, 5, 6, 7]);
     expect((await pool.query('SELECT id FROM auth.users')).rowCount).toBe(0);
   });
 });

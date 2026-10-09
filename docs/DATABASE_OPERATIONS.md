@@ -222,6 +222,7 @@ Migration'lar `database/migrations/` altında değişmez, sıralı SQL dosyalar�
 000004_messaging_public_prediction_audit.sql
 000005_security_and_access.sql
 000006_partitions_and_housekeeping.sql
+000007_api_idempotency_records.sql
 ```
 
 Repository-owned TypeScript runner `pg` ile:
