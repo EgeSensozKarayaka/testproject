@@ -21,7 +21,7 @@
     "dev:prediction": "docker compose --profile prediction up --build predictor",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint .",
+    "lint": "node scripts/run-lint.mjs",
     "test": "node scripts/run-tests.mjs",
     "test:e2e": "playwright test",
     "test:integration": "node scripts/run-vitest.mjs integration",

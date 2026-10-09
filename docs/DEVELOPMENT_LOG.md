@@ -98,3 +98,4 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Migration, seed ve reset uygulaması Aşama 3 veritabanı tasarımı onaylanana kadar bilinçli olarak ertelendi.
 - İlk uzak CI koşusunda `setup-uv@v10` hareketli etiketi çözümlenemedi; resmi `v10.2.0` release'i doğrulanıp workflow tam sürüme pinlendi.
 - uv managed-Python kataloğunda `3.14.8` henüz bulunmadığı, GitHub'ın resmi Python toolcache'inde bulunduğu doğrulandı; CI tam sürümü `actions/setup-python@v7` ile kuracak şekilde düzeltildi.
+- Temiz Linux runner'da type-aware ESLint'in workspace `dist` declaration'ları olmadan package tiplerini çözemediği görüldü; `pnpm lint` gerekli ortak paket build'ini kendi içinde yapacak biçimde deterministik hale getirildi.
