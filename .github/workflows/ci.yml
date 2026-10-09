@@ -45,7 +45,11 @@ jobs:
         with:
           version: 0.12.20
           enable-cache: true
-      - name: Install Python and dependencies
+          python-version: 3.14.8
+          working-directory: services/predictor
+      - name: Install Python
+        run: uv python install 3.14.8
+      - name: Install dependencies
         run: uv sync --locked
       - name: Ruff format
         run: uv run ruff format --check .
