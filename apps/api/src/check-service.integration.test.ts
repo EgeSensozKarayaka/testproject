@@ -426,9 +426,9 @@ databaseSuite('check service PostgreSQL boundary', () => {
 
     await schemaPool.query(
       `UPDATE monitoring.check_current_states
-       SET fresh_until = statement_timestamp() - interval '1 second'
+       SET fresh_until = $3::timestamptz + interval '4 seconds'
        WHERE owner_id = $1 AND check_id = $2`,
-      [ownerB, created.check.id],
+      [ownerB, created.check.id, run.rows[0]!.finished_at],
     );
     const overduePage = await service.list(ownerB, {
       freshness: 'STALE',
@@ -444,10 +444,7 @@ databaseSuite('check service PostgreSQL boundary', () => {
         observation_mode: 'UNOBSERVED',
       },
     });
-    expect(BigInt(overdue!.status.current_incident!.observed_duration_ms)).toBeGreaterThanOrEqual(
-      3000n,
-    );
-    expect(BigInt(overdue!.status.current_incident!.observed_duration_ms)).toBeLessThan(7000n);
+    expect(overdue!.status.current_incident!.observed_duration_ms).toBe('4000');
     const falselyFresh = await service.list(ownerB, { freshness: 'FRESH', limit: 20 });
     expect(falselyFresh.data.some((item) => item.check.id === created.check.id)).toBe(false);
     await schemaPool.query(

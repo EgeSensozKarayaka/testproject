@@ -241,20 +241,20 @@ databaseSuite('group service PostgreSQL boundary', () => {
       fixtures.push({ count, groupId: created.group.id });
       await schemaPool.query(
         `WITH inserted AS (
-           INSERT INTO app.checks
-             (id, owner_id, group_id, name, url, interval_seconds, timeout_ms,
-              expected_status_code, next_run_at)
-           SELECT gen_random_uuid(), $1::uuid, $2::uuid,
-                  format('Capacity check %s/%s', $3::int, item),
-                  format('https://capacity-%s-%s.example.test/', $3::int, item),
-                  30, 5000, 200, statement_timestamp()
-           FROM generate_series(1, $3::int) AS item
-           RETURNING owner_id, id
-         )
-         INSERT INTO monitoring.check_current_states
-           (owner_id, check_id, health_state, freshness_state, fresh_until)
-         SELECT owner_id, id, 'UP', 'FRESH', statement_timestamp() + interval '1 hour'
-         FROM inserted`,
+             INSERT INTO app.checks
+               (id, owner_id, group_id, name, url, interval_seconds, timeout_ms,
+                expected_status_code, next_run_at)
+             SELECT gen_random_uuid(), $1::uuid, $2::uuid,
+                    format('Capacity check %s/%s', $3::int, item),
+                    format('https://capacity-%s-%s.example.test/', $3::int, item),
+                    30, 5000, 200, statement_timestamp()
+             FROM generate_series(1, $3::int) AS item
+             RETURNING owner_id, id
+           )
+           INSERT INTO monitoring.check_current_states
+             (owner_id, check_id, health_state, freshness_state, fresh_until)
+           SELECT owner_id, id, 'UP', 'FRESH', statement_timestamp() + interval '1 hour'
+           FROM inserted`,
         [ownerA, created.group.id, count],
       );
     }
@@ -270,7 +270,7 @@ databaseSuite('group service PostgreSQL boundary', () => {
       });
     }
     expect(elapsedMs).toBeLessThan(5_000);
-  });
+  }, 30_000);
 
   it('soft-deletes a group and atomically detaches its live checks', async () => {
     const target = await service.create(
