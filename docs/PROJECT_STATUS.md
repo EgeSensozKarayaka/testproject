@@ -1,6 +1,6 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 07:47 +06:00
+**Son güncelleme:** 2026-10-10 07:54 +06:00
 **Genel durum:** Aşama 5 doğrulandı; Aşama 6 group API dilimi gerçek PostgreSQL ile doğrulandı, check API ve UI uygulaması sürüyor
 
 ## Tamamlanan
@@ -31,6 +31,7 @@
 - Aşama 6 domain/OpenAPI odaklı paket: **32/32 test geçti**; contract drift ve ilgili strict TypeScript kontrolleri geçti.
 - Group HTTP sınırı ve config odaklı paket dahil **18/18 test geçti**; gerçek PostgreSQL group service paketi **6/6** geçti. Concurrent idempotency, owner izolasyonu, stale ETag, cursor tamper, atomik detach ve quota doğrulandı.
 - Final `pnpm run ci`; format, generated-contract drift, lint, strict typecheck, 73 unit test ve bütün production build'leriyle geçti. Admin URL ayrı verildiğinde group integration paketi de 6/6 geçti.
+- Compose API ve migrate imajları temizden rebuild edildi; migration işi başarıyla kapandı, API healthy oldu. Canlı readiness `200`, oturumsuz group list ve parametrik group route'ları beklenen `401` ile auth sınırına ulaştı.
 - `pnpm typecheck`: ortak paketler, React, API, iki worker ve target simulator için strict TypeScript kontrolü geçti.
 - Playwright: auth frontend smoke, iki bağımsız browser context ve UI → Mailpit → verification → login → logout akışı **3/3 geçti**.
 - Canlı Compose akışında kayıt `202`, Mailpit teslimi, doğrulama `204`, login/session `200`, logout `204` ve logout sonrası session `401` doğrulandı.
@@ -60,7 +61,6 @@
 - Host `5432` ve `3000` başka projeler tarafından kullanıldığından PostgreSQL `15432`, API `13000`, web `15173` portundadır.
 - Group API tamamlandı; check route'ları, check mutation orchestration'ı ve React yönetim ekranları henüz uygulanmadı.
 - Group cursor şu anda tek aktif HMAC anahtarı kullanır; kesintisiz anahtar rotasyonu için önceki doğrulama anahtarını kabul eden key-ring Aşama 17 sertleştirmesinde eklenmelidir.
-- Revision 12 ve group servisi temiz test veritabanında doğrulandı; çalışan Compose API imajı bu dilimde henüz rebuild edilmediği için yeni route'ları taşımıyor.
 
 ## Sıradaki İş
 
