@@ -515,3 +515,96 @@ export function loadRealtimeRuntimeConfig(
     shutdownGraceMs: parsed.REALTIME_SHUTDOWN_GRACE_MS,
   };
 }
+
+export interface ApiRealtimeRuntimeConfig {
+  globalConnectionLimit: number;
+  heartbeatMs: number;
+  ipConnectionLimit: number;
+  listenerGraceMs: number;
+  ownerConnectionLimit: number;
+  projectionConcurrency: number;
+  projectionQueueLimit: number;
+  queueByteLimit: number;
+  queueEventLimit: number;
+  sessionConnectionLimit: number;
+  sessionRevalidateBatchSize: number;
+  sessionRevalidateMs: number;
+  shutdownGraceMs: number;
+}
+
+export function loadApiRealtimeRuntimeConfig(
+  environment: NodeJS.ProcessEnv = process.env,
+): ApiRealtimeRuntimeConfig {
+  const parsed = z
+    .object({
+      REALTIME_API_GLOBAL_CONNECTION_LIMIT: z.coerce
+        .number()
+        .int()
+        .min(2)
+        .max(100_000)
+        .default(1_000),
+      REALTIME_API_HEARTBEAT_MS: z.coerce.number().int().min(1_000).max(60_000).default(15_000),
+      REALTIME_API_IP_CONNECTION_LIMIT: z.coerce.number().int().min(1).max(10_000).default(50),
+      REALTIME_API_LISTENER_GRACE_MS: z.coerce.number().int().min(0).max(60_000).default(5_000),
+      REALTIME_API_OWNER_CONNECTION_LIMIT: z.coerce.number().int().min(1).max(10_000).default(20),
+      REALTIME_API_PROJECTION_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(8),
+      REALTIME_API_PROJECTION_QUEUE_LIMIT: z.coerce
+        .number()
+        .int()
+        .min(16)
+        .max(100_000)
+        .default(2_048),
+      REALTIME_API_QUEUE_BYTE_LIMIT: z.coerce
+        .number()
+        .int()
+        .min(4_096)
+        .max(16_777_216)
+        .default(1_048_576),
+      REALTIME_API_QUEUE_EVENT_LIMIT: z.coerce.number().int().min(4).max(4_096).default(256),
+      REALTIME_API_SESSION_CONNECTION_LIMIT: z.coerce.number().int().min(1).max(1_000).default(5),
+      REALTIME_API_SESSION_REVALIDATE_BATCH_SIZE: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(1_000)
+        .default(100),
+      REALTIME_API_SESSION_REVALIDATE_MS: z.coerce
+        .number()
+        .int()
+        .min(5_000)
+        .max(300_000)
+        .default(60_000),
+      REALTIME_API_SHUTDOWN_GRACE_MS: z.coerce.number().int().min(100).max(30_000).default(5_000),
+    })
+    .parse(environment);
+
+  if (parsed.REALTIME_API_SESSION_CONNECTION_LIMIT > parsed.REALTIME_API_OWNER_CONNECTION_LIMIT) {
+    throw new Error(
+      'REALTIME_API_SESSION_CONNECTION_LIMIT cannot exceed the owner connection limit',
+    );
+  }
+  if (parsed.REALTIME_API_OWNER_CONNECTION_LIMIT > parsed.REALTIME_API_GLOBAL_CONNECTION_LIMIT) {
+    throw new Error(
+      'REALTIME_API_OWNER_CONNECTION_LIMIT cannot exceed the global connection limit',
+    );
+  }
+  if (parsed.REALTIME_API_IP_CONNECTION_LIMIT > parsed.REALTIME_API_GLOBAL_CONNECTION_LIMIT) {
+    throw new Error('REALTIME_API_IP_CONNECTION_LIMIT cannot exceed the global connection limit');
+  }
+
+  return {
+    globalConnectionLimit: parsed.REALTIME_API_GLOBAL_CONNECTION_LIMIT,
+    heartbeatMs: parsed.REALTIME_API_HEARTBEAT_MS,
+    ipConnectionLimit: parsed.REALTIME_API_IP_CONNECTION_LIMIT,
+    listenerGraceMs: parsed.REALTIME_API_LISTENER_GRACE_MS,
+    ownerConnectionLimit: parsed.REALTIME_API_OWNER_CONNECTION_LIMIT,
+    projectionConcurrency: parsed.REALTIME_API_PROJECTION_CONCURRENCY,
+    projectionQueueLimit: parsed.REALTIME_API_PROJECTION_QUEUE_LIMIT,
+    queueByteLimit: parsed.REALTIME_API_QUEUE_BYTE_LIMIT,
+    queueEventLimit: parsed.REALTIME_API_QUEUE_EVENT_LIMIT,
+    sessionConnectionLimit: parsed.REALTIME_API_SESSION_CONNECTION_LIMIT,
+    sessionRevalidateBatchSize: parsed.REALTIME_API_SESSION_REVALIDATE_BATCH_SIZE,
+    sessionRevalidateMs: parsed.REALTIME_API_SESSION_REVALIDATE_MS,
+    shutdownGraceMs: parsed.REALTIME_API_SHUTDOWN_GRACE_MS,
+  };
+}

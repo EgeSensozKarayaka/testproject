@@ -11,7 +11,7 @@ export {
   type SchemaState,
 } from './migrations.js';
 export { TARGET_SCHEMA_REVISION } from './migrations.js';
-export type { Pool, PoolClient } from 'pg';
+export type { Notification, Pool, PoolClient } from 'pg';
 export { resetDatabase, runSeeds } from './operations.js';
 export {
   type ActivatedOutboxEventInput,

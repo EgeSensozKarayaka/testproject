@@ -2,9 +2,9 @@
 
 **Aşama:** 13 — Canlı Güncelleme Altyapısı
 
-**Durum:** Nihai mimari; Dilim 1 relay çekirdeği uygulandı ve doğrulandı
+**Durum:** Nihai mimari; Dilim 1 relay ve Dilim 2 private API stream/projection uygulandı ve doğrulandı
 
-**Tarih:** 2026-10-10 19:35 +06:00
+**Tarih:** 2026-10-10 19:50 +06:00
 
 **Kapsam:** FR-DASH-004–005, FR-PUBLIC-004–005, NFR-PERF-002, AC-013–014, AC-070–074
 
@@ -77,12 +77,10 @@ Mevcut repository şu temeli sağlar:
 Kalan uygulama boşlukları:
 
 1. `REALTIME` destination production'da bilinçli olarak aktif değildir; relay consumer hazır ve pasif hedefte doğrulanmıştır.
-2. API process'inde dedicated PostgreSQL listener ve subscriber registry yoktur.
-3. İç domain event'ini dış SSE allowlist'ine çeviren, owner-scoped current projection reader yoktur.
-4. Mevcut OpenAPI `DashboardPage` tek cursor ile iki collection'ı tarif eder; bu, büyük check/group koleksiyonları için tam snapshot pagination sözleşmesi değildir.
-5. Browser heartbeat comment'ini native `EventSource` API'sinden gözleyemez; 45 saniye stale kuralı bu API ile kanıtlanamaz.
-6. Session expiry/revocation, slow consumer, replica restart ve listener reconnect davranışları runtime'da uygulanmamıştır.
-7. Public snapshot/token projection'ı henüz yoktur; public route'u erken açmak güvenli değildir.
+2. Fetch-stream browser parser'ı, 45 saniye stale detection, snapshot coordination ve polling fallback henüz uygulanmamıştır.
+3. Mevcut OpenAPI `DashboardPage` tek cursor ile iki collection'ı tarif eder; browser yakınsaması bu nedenle görünür ekranın bounded snapshot setini kullanacaktır.
+4. Production capacity/proxy kabulü ve iki gerçek browser yakınsaması Dilim 3 kapsamındadır.
+5. Public snapshot/token projection'ı henüz yoktur; public route'u erken açmak güvenli değildir.
 
 ## 5. Bileşen Topolojisi
 
@@ -405,11 +403,11 @@ Sonuçlar local baseline olarak raporlanır; production SLO veya sonsuz bağlant
 
 ### Dilim 2 — Private API stream ve projection
 
-- dedicated listener, owner hub, frame serializer ve backpressure;
-- private projection reader/mapper;
-- session expiry/revocation ve graceful shutdown;
-- private route, headers, media/auth/rate/capacity hataları;
-- iki API replica owner-isolation integration testleri.
+- [x] dedicated listener, owner hub, frame serializer ve backpressure;
+- [x] private projection reader/mapper;
+- [x] session expiry/revocation ve graceful shutdown;
+- [x] private route, headers, media/auth/rate/capacity hataları;
+- [x] iki API replica owner-isolation ve listener reconnect integration testleri.
 
 ### Dilim 3 — Browser client, cutover ve kapanış
 

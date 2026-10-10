@@ -14,6 +14,7 @@ export interface AuthRoutesOptions {
   allowedOrigin: string;
   authService: AuthServicePort;
   cookieSecure: boolean;
+  onSessionRevoked?: (sessionId: string) => void;
 }
 
 export type AuthServicePort = Pick<
@@ -195,6 +196,7 @@ export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOpti
             });
           }
           await options.authService.logout(token);
+          options.onSessionRevoked?.(session.sessionId);
         }
       }
       clearSessionCookie(reply, options.cookieSecure);

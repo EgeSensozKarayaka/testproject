@@ -1,4 +1,5 @@
 import {
+  loadApiRealtimeRuntimeConfig,
   loadAuthRuntimeConfig,
   loadDatabaseUrl,
   loadHistoryRuntimeConfig,
@@ -15,6 +16,9 @@ import { GroupService } from './group-service.js';
 import { HistoryService } from './history-service.js';
 import { MaintenanceService } from './maintenance-service.js';
 import { NotificationService } from './notification-service.js';
+import { RealtimeHub } from './realtime-hub.js';
+import { PostgresRealtimeListener } from './realtime-listener.js';
+import { RealtimeProjectionCoordinator, RealtimeProjectionService } from './realtime-projection.js';
 
 const config = loadRuntimeConfig({ defaultPort: 13_000, serviceName: 'api' });
 const logger = createLogger({
@@ -28,6 +32,7 @@ const database = createDatabasePool({
   databaseRole: 'site_monitor_api',
 });
 const authConfig = loadAuthRuntimeConfig();
+const apiRealtimeConfig = loadApiRealtimeRuntimeConfig();
 const authService = await AuthService.create(database, {
   csrfKey: { key: authConfig.csrfKey, version: authConfig.csrfKeyVersion },
   emailEncryptionKey: {
@@ -61,6 +66,30 @@ const notificationService = new NotificationService(database, {
   },
   securityKey: authConfig.rateLimitKey,
 });
+const realtimeListenerDatabase = createDatabasePool({
+  applicationName: `${config.serviceName}-realtime-listener`,
+  connectionString: loadDatabaseUrl(),
+  databaseRole: 'site_monitor_api',
+  maxConnections: 1,
+});
+const realtimeHub = new RealtimeHub(apiRealtimeConfig, authConfig.rateLimitKey);
+const realtimeProjection = new RealtimeProjectionCoordinator({
+  concurrency: apiRealtimeConfig.projectionConcurrency,
+  hub: realtimeHub,
+  limit: apiRealtimeConfig.projectionQueueLimit,
+  projector: new RealtimeProjectionService(database),
+});
+const realtimeListener = new PostgresRealtimeListener({
+  graceMs: apiRealtimeConfig.listenerGraceMs,
+  logger,
+  onInvalidPayload: () => realtimeHub.resyncAll('PROJECTION_INVALIDATED'),
+  onRestart: () => realtimeHub.resyncAll('SUBSCRIBER_RESTARTED'),
+  onWakeup: (wakeup) => {
+    if (realtimeHub.hasOwner(wakeup.owner_id)) realtimeProjection.enqueue(wakeup);
+  },
+  pool: realtimeListenerDatabase,
+});
+realtimeListener.start();
 const app = buildApiApplication({
   allowedOrigin: process.env.WEB_ORIGIN ?? 'http://localhost:15173',
   authService,
@@ -71,7 +100,8 @@ const app = buildApiApplication({
   logger,
   maintenanceService,
   notificationService,
-  readiness: async () => isDatabaseReady(database),
+  realtimeHub,
+  readiness: async () => (await isDatabaseReady(database)) && realtimeListener.ready,
   serviceName: config.serviceName,
   version: config.version,
 });
@@ -81,7 +111,10 @@ async function stop(signal: string): Promise<void> {
   if (stopping) return;
   stopping = true;
   logger.info({ signal }, 'shutting down');
+  await realtimeListener.stop();
+  await realtimeHub.shutdown();
   await app.close();
+  await realtimeListenerDatabase.end();
   await database.end();
 }
 

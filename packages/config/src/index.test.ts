@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  loadApiRealtimeRuntimeConfig,
   loadDatabaseUrl,
   loadHousekeepingRuntimeConfig,
   loadHistoryRuntimeConfig,
@@ -136,6 +137,41 @@ describe('realtime worker configuration', () => {
       }),
     ).toThrow('REALTIME_RETRY_CAP_SECONDS cannot be lower');
     expect(() => loadRealtimeRuntimeConfig({ REALTIME_BATCH_SIZE: '1001' })).toThrow();
+  });
+});
+
+describe('API realtime configuration', () => {
+  it('uses bounded connection, queue and lifecycle defaults', () => {
+    expect(loadApiRealtimeRuntimeConfig({})).toEqual({
+      globalConnectionLimit: 1_000,
+      heartbeatMs: 15_000,
+      ipConnectionLimit: 50,
+      listenerGraceMs: 5_000,
+      ownerConnectionLimit: 20,
+      projectionConcurrency: 8,
+      projectionQueueLimit: 2_048,
+      queueByteLimit: 1_048_576,
+      queueEventLimit: 256,
+      sessionConnectionLimit: 5,
+      sessionRevalidateBatchSize: 100,
+      sessionRevalidateMs: 60_000,
+      shutdownGraceMs: 5_000,
+    });
+  });
+
+  it('rejects limits that cannot be enforced hierarchically', () => {
+    expect(() =>
+      loadApiRealtimeRuntimeConfig({
+        REALTIME_API_OWNER_CONNECTION_LIMIT: '10',
+        REALTIME_API_SESSION_CONNECTION_LIMIT: '11',
+      }),
+    ).toThrow('SESSION_CONNECTION_LIMIT cannot exceed');
+    expect(() =>
+      loadApiRealtimeRuntimeConfig({
+        REALTIME_API_GLOBAL_CONNECTION_LIMIT: '20',
+        REALTIME_API_IP_CONNECTION_LIMIT: '21',
+      }),
+    ).toThrow('IP_CONNECTION_LIMIT cannot exceed');
   });
 });
 

@@ -1,19 +1,19 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 19:35 +06:00
+**Son güncelleme:** 2026-10-10 19:50 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–12 ve Aşama 13 Dilim 1 tamamlandı
+**Mevcut kilometre taşı:** Aşama 0–12 ve Aşama 13 Dilim 1–2 tamamlandı
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
-## 1. Sıradaki Çalışma — Aşama 13 Dilim 2
+## 1. Sıradaki Çalışma — Aşama 13 Dilim 3
 
 [`REALTIME.md`](./REALTIME.md) nihai mimarisine göre:
 
-- Her API replica için dedicated `LISTEN site_monitor_realtime_v1` bağlantısını ve reconnect/readiness yaşam döngüsünü uygula
-- Owner bazlı bounded hub, projection reader/mapper, serializer ve slow-consumer backpressure sınırlarını kur
-- Authenticated private SSE route'unu session expiry/revocation ve graceful shutdown davranışıyla aç
-- İki API replica ve owner izolasyonu testlerini geçir; production `REALTIME` activation'ını Dilim 3'e kadar kapalı tut
+- Browser `fetch` stream parser'ını, stale detection/reconnect backoff'unu ve polling fallback'i uygula
+- Stream-before-snapshot koordinasyonunu mevcut authenticated query cache/invalidation akışına bağla
+- İki browser, slow consumer, reconnect ve worker outage kabul/kapsam testlerini tamamla
+- Capacity/proxy kanıtlarından sonra `REALTIME` destination'ını güvenli cutover ile aktive et
 
 Aşama 12 kapanış ölçümleri [history kapasite raporunda](./HISTORY_CAPACITY_REPORT.md) saklanır.
 

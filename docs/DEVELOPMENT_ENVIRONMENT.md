@@ -293,19 +293,19 @@ API veya worker servisleri predictor'a `depends_on` taşımaz.
 
 Planlanan servisler:
 
-| Servis                | Varsayılan/Profile   | Kalıcı volume | Sağlık bağımlılığı                                     |
-| --------------------- | -------------------- | ------------- | ------------------------------------------------------ |
-| `postgres`            | Varsayılan           | Evet          | Kendi healthcheck'i                                    |
-| `mailpit`             | Varsayılan           | Hayır         | Kendi healthcheck'i                                    |
-| `target-simulator`    | Varsayılan           | Hayır         | HTTP healthcheck                                       |
-| `api`                 | `app`                | Hayır         | PostgreSQL ready + migration tamam                     |
-| `monitor-worker`      | `app`                | Hayır         | PostgreSQL ready + migration tamam                     |
-| `notification-worker` | `app`                | Hayır         | PostgreSQL ready; SMTP readiness başlangıcı engellemez |
-| `housekeeping-worker` | `app`                | Hayır         | PostgreSQL ready + migration tamam                     |
-| `realtime-worker`     | `app`                | Hayır         | PostgreSQL ready + migration tamam                     |
-| `web`                 | `app`                | Hayır         | API liveness; hard startup dependency gerekmez         |
-| `predictor`           | `prediction`         | Hayır         | PostgreSQL ready; ana servisler buna bağlı değil       |
-| `migrate`             | One-shot profile/job | Hayır         | PostgreSQL ready                                       |
+| Servis                | Varsayılan/Profile   | Kalıcı volume | Sağlık bağımlılığı                                      |
+| --------------------- | -------------------- | ------------- | ------------------------------------------------------- |
+| `postgres`            | Varsayılan           | Evet          | Kendi healthcheck'i                                     |
+| `mailpit`             | Varsayılan           | Hayır         | Kendi healthcheck'i                                     |
+| `target-simulator`    | Varsayılan           | Hayır         | HTTP healthcheck                                        |
+| `api`                 | `app`                | Hayır         | PostgreSQL ready + migration + dedicated listener hazır |
+| `monitor-worker`      | `app`                | Hayır         | PostgreSQL ready + migration tamam                      |
+| `notification-worker` | `app`                | Hayır         | PostgreSQL ready; SMTP readiness başlangıcı engellemez  |
+| `housekeeping-worker` | `app`                | Hayır         | PostgreSQL ready + migration tamam                      |
+| `realtime-worker`     | `app`                | Hayır         | PostgreSQL ready + migration tamam                      |
+| `web`                 | `app`                | Hayır         | API liveness; hard startup dependency gerekmez          |
+| `predictor`           | `prediction`         | Hayır         | PostgreSQL ready; ana servisler buna bağlı değil        |
+| `migrate`             | One-shot profile/job | Hayır         | PostgreSQL ready                                        |
 
 Compose kuralları:
 
@@ -314,6 +314,7 @@ Compose kuralları:
 - PostgreSQL volume açık isim taşır ve yanlışlıkla silinmez.
 - Mailpit verisi varsayılan olarak ephemeral'dır.
 - Healthcheck yalnız process varlığını değil gerekli minimum bağımlılığı kontrol eder.
+- Her API replica request pool'undan ayrı, tek bağlantılık `LISTEN site_monitor_realtime_v1` pool'u kullanır; listener grace dışı kopuksa readiness fail-closed olur.
 - `depends_on` readiness yerine geçmez; uygulamalar retry/backoff ile bağlantı kurar.
 - Resource limit'leri özellikle worker ve predictor için tanımlanabilir.
 - Predictor profile kapalıyken Compose geçerli ve ana sistem eksiksizdir.

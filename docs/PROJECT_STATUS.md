@@ -1,11 +1,15 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 19:35 +06:00
+**Son güncelleme:** 2026-10-10 19:50 +06:00
 
-**Genel durum:** Aşama 0–12 ve Aşama 13 Dilim 1 tamamlandı; private SSE Dilim 2 sırada
+**Genel durum:** Aşama 0–12 ve Aşama 13 Dilim 1–2 tamamlandı; browser client/cutover Dilim 3 sırada
 
 ## Tamamlanan
 
+- Aşama 13 Dilim 2: her API replica'da request pool'undan ayrı PostgreSQL listener, grace-aware readiness/reconnect, owner/session/IP/global admission limitli local hub, bounded/coalescing slow-consumer kuyruğu ve owner-RLS private projection katmanı
+- `GET /api/v1/events` authenticated SSE sınırı; exact origin, `Accept`/session/rate/capacity kontrolü, no-cache/no-buffering header'ları, ilk `stream.ready`, 15 saniye heartbeat, periyodik session doğrulama, logout'ta anlık local stream kapatma ve bounded graceful shutdown
+- İki API listener'ı aynı PostgreSQL notification'ını kendi owner client'ına yayınlarken diğer owner'a sıfır frame verdi; cross-owner projection RLS ile sonuç üretmedi ve zorla kesilen listener `SUBSCRIBER_RESTARTED` sonrası yeniden bağlanıp yayın almaya devam etti. Slow consumer overflow'u yalnız ilgili bağlantıyı kapattı
+- Aşama 13 Dilim 2 final `pnpm run ci` kapısı format, 58-operation contract drift, lint, bütün strict typecheck'ler, **35 dosyada 239/239 unit**, **17 dosyada 92/92 gerçek PostgreSQL/socket/process integration** ve bütün production build'leriyle geçti. Full-stack Playwright **4/4** geçti; güncel API image'ında listener bağlandı, readiness `200` oldu ve production `REALTIME` activation satır sayısı bilinçli olarak `0` kaldı
 - Aşama 13 Dilim 1: Revision 27 ile dar `site_monitor_realtime` rolü, REALTIME-only lease/fencing claim ve completion/retry/dead sınırı, aynı transaction'da 1 KiB altı redacted PostgreSQL wake-up ve schema preflight'i
 - Ayrı `realtime-worker` process/container'ı; bounded poll/batch/retry, deterministic full-jitter, terminal unsupported-event kararı, loop-aware readiness ve bounded graceful shutdown. Production `REALTIME` destination bilinçli olarak pasif bırakıldı
 - Realtime relay gerçek PostgreSQL paketi **4/4** geçti: rollback'te sıfır notification, commit'te exact redacted wake-up, expired lease sonrası stale fence reddi ve retry/dead durumlarında yayın yokluğu. Unit toplamı **227/227**, integration toplamı **91/91** geçti; güncel container readiness `200`
@@ -173,7 +177,7 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Aşama 13 private SSE runtime, browser stream client ve `REALTIME` cutover kodu; relay çekirdeği tamamlandı, hedef henüz pasif
+- Aşama 13 browser stream client, snapshot/polling koordinasyonu ve `REALTIME` cutover kodu; relay ve private API stream tamamlandı, hedef henüz pasif
 - Notification recipient/policy yönetim arayüzü (backend ve worker tamam; yönetim frontend'i Aşama 14 kapsamındadır)
 - History grafikleri ve incident journal yönetim arayüzü (private backend API tamam)
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
@@ -198,4 +202,4 @@
 
 ## Sıradaki İş
 
-Aşama 13 Dilim 2 uygulanacaktır: her API replica'da dedicated PostgreSQL listener, owner-scoped bounded hub/projection, authenticated private SSE route, session/backpressure yaşam döngüsü ve iki-replica owner izolasyonu. Production `REALTIME` activation Dilim 3'e kadar kapalı kalacaktır.
+Aşama 13 Dilim 3 uygulanacaktır: fetch-stream browser client, stale/reconnect ve polling fallback, stream-before-snapshot query koordinasyonu, iki-browser/slow-client kabulü, capacity/proxy kanıtları ve güvenli `REALTIME` cutover'ı. Public production stream Aşama 15'e bağlı kalacaktır.

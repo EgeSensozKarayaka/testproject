@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { buildApiApplication } from './app.js';
 import type { AuthServicePort } from './auth-routes.js';
+import type { RealtimeHub } from './realtime-hub.js';
 
 const applications: ReturnType<typeof buildApiApplication>[] = [];
 
@@ -49,13 +50,14 @@ function createService(overrides: Partial<AuthServicePort> = {}): AuthServicePor
   };
 }
 
-function createApplication(authService: AuthServicePort) {
+function createApplication(authService: AuthServicePort, realtimeHub?: RealtimeHub) {
   const app = buildApiApplication({
     allowedOrigin: 'http://localhost:15173',
     authService,
     cookieSecure: false,
     logger: createLogger({ environment: 'test', service: 'api-test', version: '0.1.0' }),
     readiness: () => Promise.resolve(true),
+    ...(realtimeHub ? { realtimeHub } : {}),
     serviceName: 'api',
     version: '0.1.0',
   });
@@ -129,6 +131,31 @@ describe('authentication HTTP boundary', () => {
     expect(response.statusCode).toBe(403);
     expect(response.json()).toMatchObject({ code: 'csrf_failed' });
     expect(service.logout).not.toHaveBeenCalled();
+  });
+
+  it('closes local realtime streams immediately after a valid logout', async () => {
+    const service = createService({
+      getSession: vi.fn<AuthServicePort['getSession']>(() => Promise.resolve(session())),
+    });
+    const closeSession = vi.fn();
+    const realtimeHub = {
+      closeSession,
+      shutdown: vi.fn(() => Promise.resolve()),
+    } as unknown as RealtimeHub;
+    const response = await createApplication(service, realtimeHub).inject({
+      headers: {
+        ...trustedHeaders,
+        cookie: 'site_monitor_session=valid-token',
+        'x-csrf-token': 'v1.valid-csrf-token-value',
+      },
+      method: 'POST',
+      payload: {},
+      url: '/api/v1/auth/logout',
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(service.logout).toHaveBeenCalledWith('valid-token');
+    expect(closeSession).toHaveBeenCalledWith(session().sessionId);
   });
 
   it('returns the authenticated profile with a strong resource ETag', async () => {

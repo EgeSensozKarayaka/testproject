@@ -396,7 +396,7 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 - `docs/REALTIME.md`
 
-**Mimari durumu:** 2026-10-10 19:12 +06:00 tarihinde nihai tasarım hazırlandı; 19:31'de Dilim 1 relay çekirdeği tamamlandı. Public-safe transport portları bu aşamada hazırlanır, gerçek public route/snapshot aktivasyonu Aşama 15'te atomik olarak yapılır.
+**Mimari durumu:** 2026-10-10 19:12 +06:00 tarihinde nihai tasarım hazırlandı; 19:31'de Dilim 1 relay çekirdeği, 19:50'de Dilim 2 private API stream/projection tamamlandı. Gerçek public route/snapshot aktivasyonu Aşama 15'te atomik olarak yapılır.
 
 **Uygulama kapsamı:**
 
@@ -645,4 +645,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 13 Dilim 1 — Realtime relay çekirdeği** tamamlanmıştır. Revision 27 dar `site_monitor_realtime` rolünü, REALTIME-only lease/fencing claim ve completion/retry/dead sınırını, transactional redacted PostgreSQL wake-up'ını ve storage preflight'ini ekler. Ayrı realtime worker bounded polling, deterministic retry, readiness ve graceful shutdown ile production-benzeri container'da doğrulandı; `REALTIME` activation bilinçli olarak kapalı kaldı.
 
-**Sıradaki çalışma Aşama 13 Dilim 2 — Private API stream ve projection'dır.** Dedicated API listener, owner-scoped bounded hub/projection, authenticated SSE route, session/backpressure yaşam döngüsü ve iki API replica owner izolasyonu uygulanacaktır.
+**Aşama 13 Dilim 2 — Private API stream ve projection** tamamlanmıştır. Dedicated API listener, owner-scoped bounded hub/projection, authenticated SSE route, session/backpressure yaşam döngüsü, cross-owner RLS ve iki API replica reconnect/broadcast davranışı uygulanıp doğrulandı. `REALTIME` activation kapalı kaldı.
+
+**Sıradaki çalışma Aşama 13 Dilim 3 — Browser client, cutover ve kapanıştır.** Fetch-stream parser, stale/reconnect/polling fallback, snapshot koordinasyonu, iki browser kabulü, capacity/proxy kanıtları ve güvenli `REALTIME` activation uygulanacaktır.

@@ -10,9 +10,10 @@ export async function requireAuthenticatedSession(
   reply: FastifyReply,
   authService: Pick<AuthServicePort, 'getSession'>,
   cookieSecure: boolean,
+  allowTouch = true,
 ): Promise<AuthenticatedSession> {
   const token = readSessionCookie(request);
-  const session = token ? await authService.getSession(token) : null;
+  const session = token ? await authService.getSession(token, allowTouch) : null;
   if (!session) {
     clearSessionCookie(reply, cookieSecure);
     throw new ApiProblemError({

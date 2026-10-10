@@ -1,6 +1,18 @@
 import { z } from 'zod';
 
+import { domainEventTypeSchema } from './events.js';
 import { decimalVersionSchema } from './http.js';
+
+export const internalRealtimeWakeupSchema = z.strictObject({
+  aggregate_id: z.uuid(),
+  aggregate_type: z.string().min(1).max(100),
+  aggregate_version: decimalVersionSchema.nullable(),
+  event_id: z.uuid(),
+  event_type: domainEventTypeSchema,
+  occurred_at: z.iso.datetime({ offset: true }),
+  owner_id: z.uuid(),
+  v: z.literal(1),
+});
 
 export const privateRealtimeEventTypeSchema = z.enum([
   'stream.ready',
@@ -28,7 +40,7 @@ const realtimeResourceSchema = z.strictObject({
   version: decimalVersionSchema.nullable(),
 });
 
-function realtimeEnvelope(eventType: z.ZodType) {
+function realtimeEnvelope<T extends z.ZodType<string>>(eventType: T) {
   return z.strictObject({
     event_id: z.uuid(),
     event_type: eventType,
@@ -44,3 +56,4 @@ export const publicRealtimeEventSchema = realtimeEnvelope(publicRealtimeEventTyp
 
 export type PrivateRealtimeEvent = z.infer<typeof privateRealtimeEventSchema>;
 export type PublicRealtimeEvent = z.infer<typeof publicRealtimeEventSchema>;
+export type InternalRealtimeWakeup = z.infer<typeof internalRealtimeWakeupSchema>;
