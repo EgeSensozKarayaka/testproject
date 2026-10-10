@@ -19,17 +19,13 @@ function integrationTestFiles(root) {
 }
 
 const mode = process.argv[2];
+const integrationFiles = [
+  ...integrationTestFiles('apps'),
+  ...integrationTestFiles('packages'),
+].sort((left, right) => left.localeCompare(right, 'en'));
 const vitestArgs =
   mode === 'integration'
-    ? [
-        'exec',
-        'vitest',
-        'run',
-        '--passWithNoTests',
-        '--no-file-parallelism',
-        ...integrationTestFiles('apps'),
-        ...integrationTestFiles('packages'),
-      ]
+    ? ['exec', 'vitest', 'run', '--passWithNoTests', '--no-file-parallelism', ...integrationFiles]
     : ['exec', 'vitest', 'run', '--exclude', '**/*.integration.test.ts', '--exclude', 'e2e/**'];
 
 run(vitestArgs);
