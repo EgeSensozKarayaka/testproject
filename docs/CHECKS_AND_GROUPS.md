@@ -1,8 +1,8 @@
 # Kontrol ve Grup Yönetimi Mimarisi
 
 **Aşama:** 6 — Kontrol ve Grup Yönetimi  
-**Durum:** Kullanıcı tarafından onaylandı; sözleşme/domain/revision 12 ve group API uygulandı, check API ile UI uygulaması sürüyor
-**Son güncelleme:** 2026-10-10 07:54 +06:00
+**Durum:** Kullanıcı tarafından onaylandı; sözleşme/domain, revision 12–13 ve group/check API uygulandı, React yönetim UI'ı sürüyor
+**Son güncelleme:** 2026-10-10 08:22 +06:00
 **Bağlı belgeler:** [`REQUIREMENTS.md`](./REQUIREMENTS.md), [`ACCEPTANCE_CRITERIA.md`](./ACCEPTANCE_CRITERIA.md), [`DOMAIN_MODEL.md`](./DOMAIN_MODEL.md), [`STATE_MACHINES.md`](./STATE_MACHINES.md), [`DATABASE.md`](./DATABASE.md), [`API_DESIGN.md`](./API_DESIGN.md), [`API_ERRORS.md`](./API_ERRORS.md), [`EVENT_CATALOG.md`](./EVENT_CATALOG.md), [`openapi-v1.yaml`](./openapi-v1.yaml), [`AUTH_AND_OWNERSHIP.md`](./AUTH_AND_OWNERSHIP.md)
 
 ## 1. Amaç ve sınır
@@ -101,6 +101,8 @@ Mevcut revision 1–11 değiştirilmez. Uygulama sırasında revision 12 aşağ�
 4. `app.checks` ve `app.check_groups` üzerinde fiziksel `DELETE` API yetkisini kaldırır; ürün silmeleri yalnız soft-delete command'idir.
 5. `infra.outbox_events`, gerekli `infra.outbox_dispatches` ve `audit.events` insert sınırlarını owner/correlation doğrulamasıyla açar; API bu tablolarda genel okuma veya update yapamaz.
 6. Yeni migration sonrası Kysely şema tipleri ve gerçek PostgreSQL entegrasyon fixture'ları güncellenir.
+
+Uygulama sırasında revision 12'nin API'ye current-state ve job yazma yetkisi verdiği, ancak bu belgede zorunlu olan config/pause/delete incident ve health-interval geçişleri için gerekli dar izinleri vermediği gerçek PostgreSQL testinde doğrulandı. Uygulanmış revision 12 değiştirilmedi; forward-only revision 13 yalnız incident kapanış/suspension kolonlarını, open interval rotation kilidini ve finalized interval insert'ini API rolüne açtı. Worker claim, run acceptance, fencing ve probe sonucu alanları API'ye açılmadı.
 
 Veritabanındaki URL `varchar(4096)` savunma alanı korunur; dış sözleşme normalize edilmeden önce en fazla 2048 Unicode code point, canonical serialization sonrasında en fazla 4096 UTF-8 byte kabul eder. Veritabanındaki `timeout_ms <= 300000` savunma tavanı da değiştirilmez; v1 API daha dar `60000` ms tavanını uygular. Bu ayrım gelecekte güvenli genişlemeyi migration zorunluluğu olmadan mümkün kılar ancak v1 route daha geniş değeri kabul etmez.
 

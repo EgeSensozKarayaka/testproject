@@ -500,3 +500,23 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** YAML'de framework'e özel colon sözdizimi; her handler'da elle path yazmak; generated path'i handler'da ad hoc dönüştürmek.
 - **Gerekçe:** Tek sözleşme kaynağını korumak, 57 operation boyunca aynı adaptasyonu uygulamak ve sözleşme/route drift'ini testle yakalamak.
 - **Sonuçlar:** Parametrik bütün mevcut ve gelecek API route'ları düzeltmeden yararlanır. Generator drift kontrolü dönüşümü korur; route testleri gerçek UUID yolunu kullanır.
+
+## D-056 — Check state komutları için revision 13 dar yetki forward-fix'i
+
+- **Tarih:** 2026-10-10 08:22 +06:00
+- **Durum:** Accepted — gerçek PostgreSQL check service testleriyle doğrulandı
+- **Bağlam:** Revision 12 API'ye current-state ve job mutation yüzeyi verdi; ancak onaylanan probe-change, pause ve delete semantiği açık incident segmentini ve health interval'ını aynı transaction'da kapatmayı gerektiriyordu. API rolünün bu tablolarda yalnız SELECT yetkisi vardı.
+- **Karar:** Uygulanmış revision 12 değiştirilmeyecek. Forward-only revision 13 API rolüne incident kapanış/suspension kolonlarında column-level UPDATE, incident segment kapanış kolonlarında column-level UPDATE, open health interval için INSERT/DELETE ve satır kilidine yetecek yalnız `updated_at` UPDATE, finalized health interval için INSERT verir.
+- **Alternatifler:** Belgelenen state yan etkilerini sonraki worker'a ertelemek; API'ye monitoring tablolarında genel UPDATE vermek; revision 12 checksum'ını değiştirmek; security-definer command fonksiyonları eklemek.
+- **Gerekçe:** Config/state/job/audit/outbox atomikliğini korumak, least privilege sınırını bozmamak ve migration ledger geçmişini immutable tutmak.
+- **Sonuçlar:** API hâlâ run kaydı, accepted observation alanları, worker lease/fencing veya probe sonucu yazamaz. Revision 13 sıfırdan ve reset migration testlerine dahil edildi; check command transition'ları gerçek rol altında doğrulandı.
+
+## D-057 — OpenAPI 3.1 write composition runtime için draft-07'ye çevrilir
+
+- **Tarih:** 2026-10-10 08:22 +06:00
+- **Durum:** Accepted — check route ve contract drift testleriyle doğrulandı
+- **Bağlam:** Canonical `CheckCreate`/`CheckPatch`, ortak alanları `allOf` ile birleştirirken unknown field engeli için OpenAPI 3.1 `unevaluatedProperties:false` kullanır. Fastify'ın varsayılan Ajv draft-07 derleyicisi bu keyword'ü strict modda reddederek route registration'ı durdurdu.
+- **Karar:** Canonical OpenAPI 3.1 belgesi ve generated client tipleri değişmeden kalır. Runtime artifact generator yalnız tamamı object olan basit `allOf + unevaluatedProperties` composition'ını property/required/constraint'leri birleştirerek eşdeğer draft-07 `additionalProperties:false` objesine dönüştürür.
+- **Alternatifler:** Fastify Ajv strict modunu kapatmak; unknown alanları kabul etmek; canonical şemada alanları kopyalamak; elle route schema yazmak; bütün runtime'ı farklı JSON Schema draft'ına geçirmek.
+- **Gerekçe:** Kapalı request gövdesi güvenliğini ve tek canonical sözleşme kaynağını korurken framework adaptasyonunu deterministik generator sınırında tutmak.
+- **Sonuçlar:** Unknown field doğrulaması çalışmaya devam eder; public OpenAPI/TypeScript anlamı değişmez. Generator testi flattened runtime şemasını, drift kapısı ise generated artifact'i korur.
