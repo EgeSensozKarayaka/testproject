@@ -2473,6 +2473,8 @@ export const openApiOperations = {
                 type: 'string',
                 format: 'uri',
                 maxLength: 2048,
+                description:
+                  'Absolute HTTP(S) URL. Credentials are forbidden. The fragment is removed during canonicalization and the canonical UTF-8 serialization must not exceed 4096 bytes.',
               },
               interval_seconds: {
                 type: 'integer',
@@ -2491,7 +2493,10 @@ export const openApiOperations = {
               },
               expected_body_substring: {
                 type: ['string', 'null'],
+                minLength: 1,
                 maxLength: 2048,
+                description:
+                  'Case-sensitive literal substring. In addition to this character bound, the API enforces a 2048-byte UTF-8 limit. Null disables body matching.',
               },
               group_id: {
                 oneOf: [
@@ -2663,6 +2668,75 @@ export const openApiOperations = {
           },
         },
         '422': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '429': {
           type: 'object',
           additionalProperties: false,
           required: [
@@ -2955,6 +3029,8 @@ export const openApiOperations = {
                 type: 'string',
                 format: 'uri',
                 maxLength: 2048,
+                description:
+                  'Absolute HTTP(S) URL. Credentials are forbidden. The fragment is removed during canonicalization and the canonical UTF-8 serialization must not exceed 4096 bytes.',
               },
               interval_seconds: {
                 type: 'integer',
@@ -2973,7 +3049,10 @@ export const openApiOperations = {
               },
               expected_body_substring: {
                 type: ['string', 'null'],
+                minLength: 1,
                 maxLength: 2048,
+                description:
+                  'Case-sensitive literal substring. In addition to this character bound, the API enforces a 2048-byte UTF-8 limit. Null disables body matching.',
               },
               group_id: {
                 oneOf: [
@@ -3351,6 +3430,75 @@ export const openApiOperations = {
             },
           },
         },
+        '429': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     },
   },
@@ -3596,6 +3744,75 @@ export const openApiOperations = {
             },
           },
         },
+        '429': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     },
   },
@@ -3711,6 +3928,75 @@ export const openApiOperations = {
             updated_at: {
               type: 'string',
               format: 'date-time',
+            },
+          },
+        },
+        '404': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
             },
           },
         },
@@ -3853,6 +4139,75 @@ export const openApiOperations = {
           },
         },
         '428': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '429': {
           type: 'object',
           additionalProperties: false,
           required: [
@@ -4039,6 +4394,75 @@ export const openApiOperations = {
             },
           },
         },
+        '404': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
         '409': {
           type: 'object',
           additionalProperties: false,
@@ -4178,6 +4602,75 @@ export const openApiOperations = {
           },
         },
         '428': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '429': {
           type: 'object',
           additionalProperties: false,
           required: [
@@ -4507,6 +5000,75 @@ export const openApiOperations = {
             },
           },
         },
+        '404': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
         '409': {
           type: 'object',
           additionalProperties: false,
@@ -4646,6 +5208,75 @@ export const openApiOperations = {
           },
         },
         '428': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '429': {
           type: 'object',
           additionalProperties: false,
           required: [
@@ -5304,7 +5935,145 @@ export const openApiOperations = {
             },
           },
         },
+        '409': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
         '422': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '429': {
           type: 'object',
           additionalProperties: false,
           required: [
@@ -5577,6 +6346,75 @@ export const openApiOperations = {
             },
           },
         },
+        '404': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
         '412': {
           type: 'object',
           additionalProperties: false,
@@ -5647,6 +6485,75 @@ export const openApiOperations = {
           },
         },
         '428': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '429': {
           type: 'object',
           additionalProperties: false,
           required: [
@@ -5753,6 +6660,75 @@ export const openApiOperations = {
         required: ['X-CSRF-Token', 'If-Match'],
       },
       response: {
+        '404': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
         '412': {
           type: 'object',
           additionalProperties: false,
@@ -5823,6 +6799,75 @@ export const openApiOperations = {
           },
         },
         '428': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '429': {
           type: 'object',
           additionalProperties: false,
           required: [

@@ -209,3 +209,14 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Sabit 50 kontrol limiti reddedildi. Deployment-configurable, owner bazlı ve advisory-lock ile replica-safe quota; rate limit ve worker concurrency'den ayrı tasarlandı.
 - 20/200/500 fixture, iki sekmede stale ETag, concurrent manual coalescing, cross-owner 404, transaction rollback ve secret redaction dahil kabul/test matrisi çıkarıldı.
 - Bu turda migration, dependency, route, UI veya runtime kodu değiştirilmedi. Tasarım kullanıcı incelemesine bırakıldı; Aşama 6 uygulaması sonraki onaylı turda başlayacak.
+
+### 07:19 — Aşama 6 sözleşme, domain ve revision 12 temeli
+
+- Kullanıcı onayıyla D-050–D-054 kararları Accepted yapıldı ve Aşama 6 uygulaması başlatıldı.
+- OpenAPI check/group uçlarına eksik not-found/rate-limit cevapları, manuel receipt cache yasağı, URL canonicalization açıklaması ve expected substring boş/UTF-8 byte sınırı eklendi; 57 operation'ın TypeScript/runtime artifact'leri yeniden üretildi.
+- `packages/domain` içinde bağımlılıksız check/group normalizasyonu, HTTP(S) URL canonicalization, credential ve bariz local/private/reserved IPv4/IPv6 engeli, UTF-8 expected-text sınırı ve PATCH değişiklik sınıflandırması uygulandı.
+- Metadata, group, probe ve schedule değişiklikleri birleşik PATCH için ayrı sınıflandırıldı; normalize no-op davranışı testlendi.
+- Forward-only revision 12, group description kolonunu ve expected body 1..2048 UTF-8 byte constraint'ini ekledi. API'nin check/group fiziksel DELETE yetkisi kaldırıldı; config/current-state/manual-job/audit/outbox için dar owner-scoped yazma sınırı açıldı.
+- İlk entegrasyon turunda iki test-fixture kusuru (aynı PostgreSQL placeholder'ında UUID/text tip belirsizliği ve eski revision beklentisi) bulundu; migration geçmişi değiştirilmeden test kodu düzeltildi.
+- Sonuç: domain/OpenAPI **32/32**, gerçek PostgreSQL migration/rol/RLS paketi **13/13** geçti. Contract drift kontrolü ve ilgili strict TypeScript kontrolleri geçti.
+- Henüz check/group route, application service, React yönetim ekranı veya gerçek probe uygulanmadı; Aşama 6 tamamlandı sayılmıyor.

@@ -104,6 +104,7 @@ export interface OneTimeTokenTable extends OwnedRow {
 
 export interface CheckGroupTable extends CreatedUpdatedRow, OwnedRow {
   deleted_at: Timestamp | null;
+  description: string | null;
   id: GeneratedUuid;
   name: string;
   resource_version: GeneratedBigInt;

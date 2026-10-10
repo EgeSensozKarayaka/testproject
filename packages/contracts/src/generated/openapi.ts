@@ -774,11 +774,15 @@ export interface components {
     };
     CheckWriteFields: {
       name?: string;
-      /** Format: uri */
+      /**
+       * Format: uri
+       * @description Absolute HTTP(S) URL. Credentials are forbidden. The fragment is removed during canonicalization and the canonical UTF-8 serialization must not exceed 4096 bytes.
+       */
       url?: string;
       interval_seconds?: number;
       timeout_ms?: number;
       expected_status_code?: number;
+      /** @description Case-sensitive literal substring. In addition to this character bound, the API enforces a 2048-byte UTF-8 limit. Null disables body matching. */
       expected_body_substring?: string | null;
       group_id?: components['schemas']['Uuid'] | null;
     };
@@ -1635,6 +1639,7 @@ export interface operations {
       };
       409: components['responses']['ConflictProblem'];
       422: components['responses']['ValidationProblem'];
+      429: components['responses']['RateLimitProblem'];
     };
   };
   getCheck: {
@@ -1685,6 +1690,7 @@ export interface operations {
       404: components['responses']['NotFoundProblem'];
       412: components['responses']['PreconditionFailed'];
       428: components['responses']['PreconditionRequired'];
+      429: components['responses']['RateLimitProblem'];
     };
   };
   updateCheck: {
@@ -1719,6 +1725,7 @@ export interface operations {
       412: components['responses']['PreconditionFailed'];
       422: components['responses']['ValidationProblem'];
       428: components['responses']['PreconditionRequired'];
+      429: components['responses']['RateLimitProblem'];
     };
   };
   pauseCheck: {
@@ -1736,9 +1743,11 @@ export interface operations {
     requestBody?: never;
     responses: {
       200: components['responses']['CheckCommandResult'];
+      404: components['responses']['NotFoundProblem'];
       409: components['responses']['ConflictProblem'];
       412: components['responses']['PreconditionFailed'];
       428: components['responses']['PreconditionRequired'];
+      429: components['responses']['RateLimitProblem'];
     };
   };
   resumeCheck: {
@@ -1756,9 +1765,11 @@ export interface operations {
     requestBody?: never;
     responses: {
       200: components['responses']['CheckCommandResult'];
+      404: components['responses']['NotFoundProblem'];
       409: components['responses']['ConflictProblem'];
       412: components['responses']['PreconditionFailed'];
       428: components['responses']['PreconditionRequired'];
+      429: components['responses']['RateLimitProblem'];
     };
   };
   listCheckRuns: {
@@ -1805,15 +1816,19 @@ export interface operations {
       /** @description Durable manual run request accepted or coalesced */
       202: {
         headers: {
+          /** @description Manual command receipts are private and must not be cached */
+          'Cache-Control'?: 'no-store';
           [name: string]: unknown;
         };
         content: {
           'application/json': components['schemas']['ManualRunReceipt'];
         };
       };
+      404: components['responses']['NotFoundProblem'];
       409: components['responses']['ConflictProblem'];
       412: components['responses']['PreconditionFailed'];
       428: components['responses']['PreconditionRequired'];
+      429: components['responses']['RateLimitProblem'];
     };
   };
   getCheckHistory: {
@@ -1914,7 +1929,9 @@ export interface operations {
           'application/json': components['schemas']['Group'];
         };
       };
+      409: components['responses']['ConflictProblem'];
       422: components['responses']['ValidationProblem'];
+      429: components['responses']['RateLimitProblem'];
     };
   };
   getGroup: {
@@ -1962,8 +1979,10 @@ export interface operations {
         };
         content?: never;
       };
+      404: components['responses']['NotFoundProblem'];
       412: components['responses']['PreconditionFailed'];
       428: components['responses']['PreconditionRequired'];
+      429: components['responses']['RateLimitProblem'];
     };
   };
   updateGroup: {
@@ -1994,8 +2013,10 @@ export interface operations {
           'application/json': components['schemas']['Group'];
         };
       };
+      404: components['responses']['NotFoundProblem'];
       412: components['responses']['PreconditionFailed'];
       428: components['responses']['PreconditionRequired'];
+      429: components['responses']['RateLimitProblem'];
     };
   };
   listIncidents: {

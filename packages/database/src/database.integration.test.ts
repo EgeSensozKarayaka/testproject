@@ -99,7 +99,7 @@ databaseSuite('PostgreSQL persistence architecture', () => {
   it('migrates from zero, records checksums, and is idempotent', async () => {
     const first = await runMigrations(pool, { appBuild: 'integration-test' });
     expect(first.currentRevision).toBe(TARGET_SCHEMA_REVISION);
-    expect(first.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    expect(first.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 
     const second = await runMigrations(pool, { appBuild: 'integration-test' });
     expect(second).toEqual({ applied: [], currentRevision: TARGET_SCHEMA_REVISION });
@@ -201,6 +201,86 @@ databaseSuite('PostgreSQL persistence architecture', () => {
     } finally {
       client.release();
     }
+  });
+
+  it('applies the check/group foundation constraints and narrow API write boundary', async () => {
+    await pool.query(
+      `UPDATE app.check_groups SET description = 'Critical services' WHERE owner_id = $1`,
+      [ownerA],
+    );
+    const group = await pool.query<{ description: string | null }>(
+      'SELECT description FROM app.check_groups WHERE owner_id = $1',
+      [ownerA],
+    );
+    expect(group.rows[0]?.description).toBe('Critical services');
+
+    await expect(
+      pool.query(
+        'UPDATE app.checks SET expected_body_substring = $1 WHERE owner_id = $2 AND id = $3',
+        ['ü'.repeat(1025), ownerB, checkB],
+      ),
+    ).rejects.toMatchObject({ code: '23514' });
+
+    const apiWrites = await withRole(pool, 'site_monitor_api', ownerB, async (client) => {
+      const eventId = '00000000-0000-4000-8000-000000000801';
+      await client.query(
+        `INSERT INTO monitoring.check_current_states (owner_id, check_id) VALUES ($1, $2)`,
+        [ownerB, checkB],
+      );
+      const event = await client.query(
+        `
+          INSERT INTO infra.outbox_events (
+            id, owner_id, event_type, schema_version, aggregate_type, aggregate_id,
+            aggregate_version, correlation_id, occurred_at, payload
+          ) VALUES ($3, $1, 'check.created', 1, 'check', $2::uuid, 1, uuidv7(), statement_timestamp(),
+            jsonb_build_object('check_id', $2::uuid, 'resource_version', '1'))
+        `,
+        [ownerB, checkB, eventId],
+      );
+      await client.query(
+        `INSERT INTO infra.outbox_dispatches (event_id, destination) VALUES ($1, 'REALTIME')`,
+        [eventId],
+      );
+      await client.query(
+        `
+          INSERT INTO audit.events (
+            occurred_at, owner_id, actor_type, actor_id, action, resource_type,
+            resource_id, correlation_id, result, metadata
+          ) VALUES (
+            statement_timestamp(), $1::uuid, 'USER', $1::uuid::text, 'check.created', 'check',
+            $2, uuidv7(), 'SUCCESS', '{}'::jsonb
+          )
+        `,
+        [ownerB, checkB],
+      );
+      return { eventCount: event.rowCount ?? 0 };
+    });
+    expect(apiWrites.eventCount).toBe(1);
+
+    await expect(
+      withRole(pool, 'site_monitor_api', ownerB, async (client) => {
+        await client.query('DELETE FROM app.checks WHERE owner_id = $1 AND id = $2', [
+          ownerB,
+          checkB,
+        ]);
+        return {};
+      }),
+    ).rejects.toMatchObject({ code: '42501' });
+
+    await expect(
+      withRole(pool, 'site_monitor_api', ownerA, async (client) => {
+        await client.query(
+          `
+            INSERT INTO infra.outbox_events (
+              owner_id, event_type, schema_version, aggregate_type, aggregate_id,
+              aggregate_version, correlation_id, occurred_at, payload
+            ) VALUES ($1, 'check.created', 1, 'check', $2::uuid, 1, uuidv7(), statement_timestamp(), '{}'::jsonb)
+          `,
+          [ownerB, checkB],
+        );
+        return {};
+      }),
+    ).rejects.toMatchObject({ code: '42501' });
   });
 
   it('executes the least-privilege account, session, throttle, and email lifecycle', async () => {
@@ -536,7 +616,7 @@ databaseSuite('PostgreSQL persistence architecture', () => {
       NODE_ENV: 'test',
     });
     expect(result.currentRevision).toBe(TARGET_SCHEMA_REVISION);
-    expect(result.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    expect(result.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
     expect((await pool.query('SELECT id FROM auth.users')).rowCount).toBe(0);
   });
 });

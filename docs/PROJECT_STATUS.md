@@ -1,7 +1,7 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 06:52 +06:00
-**Genel durum:** Aşama 5 doğrulandı; Aşama 6 kontrol/grup yönetimi nihai tasarımı kullanıcı incelemesinde, uygulama henüz başlamadı
+**Son güncelleme:** 2026-10-10 07:19 +06:00
+**Genel durum:** Aşama 5 doğrulandı; Aşama 6 sözleşme/domain/revision 12 temeli uygulandı, API ve UI uygulaması sürüyor
 
 ## Tamamlanan
 
@@ -18,11 +18,14 @@
 - React kayıt/giriş/parola sıfırlama/doğrulama ve authenticated temel ekranı
 - Organizasyon katmanı eklemeden gerçek kullanıcı bazlı sahiplik modeli; bir kullanıcı birden fazla bağımsız browser session açabilir
 - Aşama 6 için check/group CRUD, pause/resume/delete, manual job coalescing, URL doğrulama, quota, ETag/idempotency, transaction ve test mimarisi
+- Check/group saf domain doğrulaması ve değişiklik sınıflandırması; HTTP(S) canonicalization, bariz private/local hedef engeli ve UTF-8 expected-text sınırı
+- Revision 12 group description, DB byte constraint'i, soft-delete yetki sınırı ve API'nin owner-scoped current-state/manual-job/audit/outbox yazma temeli
 
 ## Doğrulama Kanıtları
 
 - `pnpm test:unit`: **8 dosyada 35/35 test geçti**.
-- Gerçek PostgreSQL admin URL'siyle `pnpm test:integration`: **12/12 test geçti**; sıfırdan migration `1..11`, checksum drift, RLS/context temizliği, auth/session/rate-limit/e-posta/profile/rehash sınırları ve reset doğrulandı.
+- Gerçek PostgreSQL admin URL'siyle ilgili paket: **13/13 test geçti**; sıfırdan migration `1..12`, checksum drift, RLS/context temizliği, auth sınırları ve Aşama 6 description/byte/soft-delete/audit-outbox yetkileri doğrulandı.
+- Aşama 6 domain/OpenAPI odaklı paket: **32/32 test geçti**; contract drift ve ilgili strict TypeScript kontrolleri geçti.
 - `pnpm typecheck`: ortak paketler, React, API, iki worker ve target simulator için strict TypeScript kontrolü geçti.
 - Playwright: auth frontend smoke, iki bağımsız browser context ve UI → Mailpit → verification → login → logout akışı **3/3 geçti**.
 - Canlı Compose akışında kayıt `202`, Mailpit teslimi, doğrulama `204`, login/session `200`, logout `204` ve logout sonrası session `401` doğrulandı.
@@ -50,9 +53,9 @@
 - Local restore provası production RPO/RTO/PITR garantisi değildir.
 - Soğuk Docker image build'i registry bağlantı hızına bağlı olarak birkaç dakika sürebilir; warm build ve normal `up` akışı daha hızlıdır. Build cache mount/prune optimizasyonu Aşama 17 operasyonel sertleştirme kapsamındadır.
 - Host `5432` ve `3000` başka projeler tarafından kullanıldığından PostgreSQL `15432`, API `13000`, web `15173` portundadır.
-- OpenAPI'deki group `description` alanı mevcut revision 11 veritabanında henüz yoktur; forward-only revision 12 Aşama 6 uygulamasında eklenecektir.
-- `expected_body_substring` mevcut tabloda karakter sayısıyla bounded'dır; kesin 2048 UTF-8 byte DB constraint'i revision 12 planıdır.
+- Check/group HTTP route'ları, authenticated idempotency service'i, cursor/quota uygulaması ve React yönetim ekranları henüz uygulanmadı.
+- Revision 12 temiz test veritabanında doğrulandı; çalışan ana Compose veritabanı/rebuild bu uygulama dilimi henüz tamamlanmadığı için güncellenmedi.
 
 ## Sıradaki İş
 
-`docs/CHECKS_AND_GROUPS.md` belgesini kullanıcıyla değerlendirmek; onaydan sonraki promptta Aşama 6 uygulamasına OpenAPI/contract düzeltmeleri ve saf domain doğrulama katmanıyla başlamak.
+Aşama 6'nın sonraki dikey diliminde authenticated command/idempotency/cursor altyapısını ve owner-scoped group/check API route'larını uygulamak.

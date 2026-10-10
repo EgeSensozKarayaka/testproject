@@ -205,7 +205,7 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 6 — Kontrol ve Grup Yönetimi
 
-**Durum:** Nihai tasarım hazır — 2026-10-10 06:52 +06:00; kullanıcı incelemesinde, uygulama başlamadı
+**Durum:** Uygulama sürüyor — tasarım onaylandı; OpenAPI/domain/revision 12 temeli 2026-10-10 07:19 +06:00 doğrulandı
 
 **Amaç:** Monitoring çalıştırılmadan önce kontrol yapılandırmasının güvenilir CRUD modelini oluşturmak.
 
