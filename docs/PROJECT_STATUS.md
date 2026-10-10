@@ -1,6 +1,6 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 08:30 +06:00
+**Son güncelleme:** 2026-10-10 08:48 +06:00
 **Genel durum:** Aşama 5 doğrulandı; Aşama 6 group ve check API dilimleri gerçek PostgreSQL ile doğrulandı, React yönetim UI'ı sürüyor
 
 ## Tamamlanan
@@ -41,6 +41,7 @@
 - Compose API ve migrate imajları temizden rebuild edildi; migration işi başarıyla kapandı, API healthy oldu. Canlı readiness `200`, oturumsuz group list ve parametrik group route'ları beklenen `401` ile auth sınırına ulaştı.
 - Check API sonrası tam Compose stack temizden rebuild edildi; migration logu revision 13'ün uygulandığını, schema compatibility head değerinin `13` olduğunu ve bütün uygulama servislerinin healthy olduğunu gösterdi. Canlı readiness `200`, oturumsuz check list/tekil yolları beklenen `401` döndürdü.
 - Aşama 6 group API GitHub Actions koşusu [`38015275133`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38015275133) başarıyla tamamlandı: Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin beşi de geçti.
+- Aşama 6 check API GitHub Actions koşusu [`38018138265`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38018138265) başarıyla tamamlandı: Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin beşi de geçti.
 - `pnpm typecheck`: ortak paketler, React, API, iki worker ve target simulator için strict TypeScript kontrolü geçti.
 - Playwright: auth frontend smoke, iki bağımsız browser context ve UI → Mailpit → verification → login → logout akışı **3/3 geçti**.
 - Canlı Compose akışında kayıt `202`, Mailpit teslimi, doğrulama `204`, login/session `200`, logout `204` ve logout sonrası session `401` doğrulandı.
