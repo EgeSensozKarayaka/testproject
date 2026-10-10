@@ -1,11 +1,14 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 15:23 +06:00
+**Son güncelleme:** 2026-10-10 15:42 +06:00
 
-**Genel durum:** Aşama 0–8 tamamlandı ve doğrulandı; Aşama 9 production runtime, kapasite ve process-failure recovery kanıtları tamamlandı, API-isolation/iki-worker kapanış kanıtı sırada
+**Genel durum:** Aşama 0–9 tamamlandı ve doğrulandı; sıradaki çalışma Aşama 10 bakım pencereleri mimarisidir
 
 ## Tamamlanan
 
+- İki gerçek production monitor-worker ve ayrı production API prosesinin aynı PostgreSQL üzerinde eşzamanlı çalıştığı 200-check kabul profili; 200 job/attempt/run/accepted result ve 200 hedef isteği tam eşleşirken iki worker da iş aldı
+- Worker yükü sırasında gerçek session ile 40 authenticated check-list ve 40 readiness isteğinin tamamının başarılı olması; list p95 **32.1 ms**, readiness p95 **18.4 ms**, ayrı proses/pool API izolasyonu
+- Tekrarlama yöntemi, exact correctness tablosu, latency bütçeleri ve replica başına concurrency tavizini içeren `docs/MONITOR_RUNTIME_ISOLATION_REPORT.md`
 - Production monitor worker'ın gerçek hanging HTTP probe sırasında ayrı Node prosesinde `SIGKILL` ile kaybedilmesi; elle lease değiştirmeden doğal expiry, `LEASE_LOST`, bounded retry, daha yüksek fence ile replacement completion ve eski FAIL sonucunun current state/incident'ı değiştirmeden `ATTEMPT_NOT_CURRENT` reddi
 - Tekrarlanabilir senaryo, kalıcı lineage tablosu, dürüst zombie-delivery ayrımı ve kapsam dışı failure mode'ları içeren `docs/MONITOR_FAILURE_RECOVERY_REPORT.md`
 - Production scheduler→PostgreSQL queue→bounded dispatcher→atomik observation yolunu aynı kodla çalıştıran 20/200/500 kapasite fixture'ı; exact terminal/run sayısı, owner-fair ilk claim, concurrency ve DB pool sınırları otomatik doğrulanıyor
@@ -67,6 +70,8 @@
 
 ## Doğrulama Kanıtları
 
+- Aşama 9 kapanış `pnpm run ci` kapısı format, 57-operation contract drift, lint, bütün workspace strict typecheck'leri, **22 dosyada 165/165 unit**, **8 dosyada 57/57 gerçek PostgreSQL/socket/process integration** ve bütün production build'leriyle geçti.
+- Multi-process izolasyon testi hedefli koşuda **1/1** geçti: iki worker 200 job'ı attempt numarası 1'i aşmadan ve duplicate HTTP/run üretmeden tamamladı; yük altındaki 80 API isteğinin tamamı `200` döndü.
 - Recovery dilimi final `pnpm run ci` kapısında format, 57-operation contract drift, lint, bütün workspace strict typecheck'leri, **22 dosyada 165/165 unit**, **7 dosyada 56/56 gerçek PostgreSQL/socket/process integration** ve bütün production build'leriyle geçti.
 - Process-failure hedefli observation-store paketi gerçek PostgreSQL ve gerçek child process ile **10/10** geçti. Worker'ın hedefe ulaşmış hanging probe'u sırasında force-kill edildiği, job'ın expiry'ye kadar `RUNNING` kaldığı, replacement fence'in monoton büyüdüğü, accepted PASS sonrasında eski FAIL'in yalnız rejected history olduğu ve sıfır incident üretildiği doğrulandı.
 - 20/200/500 kapasite testi izole, sıfırdan migration uygulanmış gerçek PostgreSQL üzerinde **3/3** geçti. 500-check burst scheduler'da **4.60 sn**, dispatch+persistence'ta **4.14 sn**, uçtan uca **8.73 sn** sürdü; **57.25 check/s**, **4.55 sn claim-lag p95**, **60.2 ms execution/persistence p95**, en fazla **7/8 busy DB connection**, 500/500 accepted run ve sıfır aktif job ölçüldü.
@@ -118,7 +123,6 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Aşama 9 için worker yükü altında API izolasyonu ve iki production worker davranışının birleşik kapanış kanıtı
 - Maintenance reconciliation ve incident e-posta politikaları
 - Rollup/retention background işleri, history sorguları ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
@@ -129,7 +133,7 @@
 ## Bilinen Sınırlamalar
 
 - Authenticated ekran group/check yapılandırmasını yönetir; probe ve sağlık motorları kalıcılık seviyesinde bağlanmış olsa da canlı monitoring projection/UI henüz uygulanmadığından nihai durum paneli değildir.
-- Production worker loop'u, 20/200/500 runtime throughput/queue-lag profili ve SIGKILL sonrası doğal lease reclaim/stale-result fencing doğrulanmıştır; aynı yük altında API latency ve iki production worker'ın birleşik davranışı henüz ölçümlü kabul kanıtına dönüştürülmemiştir.
+- Production worker loop'u, 20/200/500 runtime throughput/queue-lag, SIGKILL sonrası doğal lease reclaim/stale-result fencing ve iki gerçek worker yükü altında API latency doğrulanmıştır. Ölçümler yerel regresyon baseline'ıdır; production SLO veya çok-node PostgreSQL/network partition garantisi değildir.
 - Auth rate limit PostgreSQL fixed-window yaklaşımıdır. V1 ve yatay API replica'ları için tutarlıdır; yüksek hacimli internet trafiğinde edge WAF/CDN katmanı gerekir.
 - Yerel Compose kolaylığı için tek PostgreSQL bootstrap login'i dar `NOLOGIN` rollere geçer. Production'da servis başına ayrı login wrapper/secret gerekir.
 - Yerel HTTP ortamında session cookie `Secure=false`; production config fail-fast secret ve HTTPS/Secure cookie gerektirir.
@@ -143,4 +147,4 @@
 
 ## Sıradaki İş
 
-Aşama 9'un kalan son dilimi worker yükü altında API izolasyonu, iki-worker davranışı ve kapanış raporudur.
+Aşama 10 bakım pencereleri için nihai mimari hazırlanacaktır; kullanıcı belgeyi inceledikten sonra migration ve uygulama dilimlerine geçilecektir.

@@ -1,25 +1,30 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 15:23 +06:00
+**Son güncelleme:** 2026-10-10 15:42 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–8 tamamlandı; Aşama 9 production runtime, kapasite ve process-failure recovery kanıtları doğrulandı
+**Mevcut kilometre taşı:** Aşama 0–9 tamamlandı ve doğrulandı
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
-## 1. Sıradaki Çalışma — Aşama 9
+## 1. Sıradaki Çalışma — Aşama 10
 
-[`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) mimarisinin revision 14, typed config, durable cancellation/manual intent, result pointer, activation-aware outbox, owner-fair materialization/claim, global-owner-host bounded probe dispatcher, cancellation acknowledgement, infrastructure retry/DEAD, expired-lease recovery, atomik observation persistence, deadline freshness reconciliation, production runtime koordinasyonu, loop-aware readiness, bounded graceful drain, [20/200/500 kapasite profili](./MONITOR_CAPACITY_REPORT.md) ve [process-kill/fencing kanıtı](./MONITOR_FAILURE_RECOVERY_REPORT.md) tamamlandı. Kalan son uygulama dilimi:
+Bakım pencerelerinin nihai mimarisini `docs/MAINTENANCE_WINDOWS.md` içinde oluştur:
 
-1. Worker yükü altında API izolasyonu, iki-worker davranışı ve Aşama 9 kapanış raporu
+- Check ve group scope ile sahiplik sınırları
+- UTC ve `[start, end)` semantiği
+- Örtüşen pencerelerin birleşim davranışı
+- Aktif pencereyi uzatma, kısaltma ve silme yarışları
+- Bakım sırasında probe/state/incident akışı ile yalnız notification suppression ayrımı
+- Bakım bitişinde site hâlâ DOWN ise tek bildirim üreten durable reconciliation işi
+- Grup üyeliği değişikliğinin açık incident ve maintenance kapsamına etkisi
+- Migration, API, event/outbox ve zaman kontrollü kabul testleri
 
-## 2. Aşama 9 Sonrasında
+## 2. Aşama 9 Kapanış Kanıtları
 
-- Maintenance window komutları ve bildirim bastırma/sonradan gönderme reconciliation'ı
-- Incident açılış ve recovery e-postaları; durable, idempotent delivery
-- Günlük/haftalık/aylık availability ve response-time history sorguları ile rollup/retention işleri
-- Authenticated dashboard için SSE tabanlı canlı güncelleme ve reconnect/catch-up
-- Owner kontrollü alan seçimi olan public status sayfası
-- İzole Python predictor'ın gerçek telemetry akışına bağlanması ve güvenilirlik sınırlarının ölçülmesi
+- [Scheduler ve worker nihai mimarisi](./SCHEDULER_AND_WORKERS.md)
+- [20/200/500 kapasite raporu](./MONITOR_CAPACITY_REPORT.md)
+- [Process-kill ve stale-result fencing raporu](./MONITOR_FAILURE_RECOVERY_REPORT.md)
+- [İki-worker ve API izolasyon raporu](./MONITOR_RUNTIME_ISOLATION_REPORT.md)
 
 ## 3. Üretim Öncesi Sertleştirme
 

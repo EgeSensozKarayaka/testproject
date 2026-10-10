@@ -710,3 +710,13 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Lease'i SQL ile elle expire etmek; yalnız queue unit testi; öldürülen prosesin geç sonuç yazdığını varsaymak; platforma özel process suspend/resume kullanmak; gerçek internet hedefiyle nondeterministik test.
 - **Gerekçe:** Crash recovery ile stale-result safety farklı failure mode'lardır. İkisini sahte bir anlatıyla birleştirmeden aynı kalıcı lineage üzerinde doğrulamak, platformlar arası tekrarlanabilirliği ve testin neyi kanıtladığının dürüstlüğünü korur.
 - **Sonuçlar:** Test `SIGKILL → doğal expiry → LEASE_LOST → retry → daha yüksek fence → accepted PASS → rejected stale FAIL` zincirini korur. External HTTP exactly-once garanti edilmez; current state ve incident yalnız current attempt sonucundan etkilenir. Ayrıntılı kanıt `MONITOR_FAILURE_RECOVERY_REPORT.md` içindedir.
+
+## D-077 — Worker ölçeği ile API izolasyonu ayrı proses ve ayrı pool üzerinden kanıtlanır
+
+- **Tarih:** 2026-10-10 15:34 +06:00
+- **Durum:** Accepted — iki worker/API multi-process kabul testiyle doğrulandı
+- **Bağlam:** Aynı event loop veya aynı PostgreSQL pool içinde yapılan bir yük testi, monitor probe/persistence yükünün API'yi process ya da connection starvation ile durdurmadığını kanıtlayamaz. Yalnız readiness çağırmak da owner-scoped liste sorgusunun RLS/join/cursor yolunu kapsamaz.
+- **Karar:** Kabul testi gerçek API ve iki gerçek monitor-worker entrypoint'ini üç ayrı Node prosesinde başlatır. Worker'lar ayrı dörder bağlantılık pool ve ayrı worker kimlikleri kullanır; API kendi pool'unu açar. 200 due check 150 ms gerçek HTTP hedefe giderken hem readiness hem gerçek session ile authenticated 100-limit check listesi örneklenir. Exact job/attempt/run/hedef-request sayıları ve iki worker'ın katılımı kalıcı veriden doğrulanır.
+- **Alternatifler:** In-process Fastify inject; doğrudan `CheckService.list`; tek worker kapasite profiline readiness eklemek; yalnız pool metriğine bakmak; dış internet hedefi kullanmak.
+- **Gerekçe:** Process, event loop, pool, HTTP/auth/RLS ve iki-replica claim sınırlarını tek deterministik senaryoda kapsamak; dış ağ oynaklığını ölçüme katmadan API starvation ve duplicate execution regresyonlarını görünür kılmak.
+- **Sonuçlar:** Yerel koşuda 200 job/attempt/run/accepted result ve 200 HTTP çağrısı tam eşleşti, iki worker da iş aldı ve attempt numarası 1'i aşmadı. Yük altında 40 API örneğinde readiness p95 18.4 ms, list p95 32.1 ms ölçüldü. Eşikler production SLO değil geniş regresyon bütçeleridir; process-local host limiti iki replica'da beklendiği gibi toplam 8 concurrency üretti.

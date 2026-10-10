@@ -1,6 +1,6 @@
 # AI Kullanımı
 
-**Son güncelleme:** 2026-10-10 15:11 +06:00
+**Son güncelleme:** 2026-10-10 15:42 +06:00
 
 ## Araç ve model
 
@@ -33,6 +33,8 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 15. Aşama 9'un altıncı uygulama diliminde AI owner-fair deadline aday seçimi ve check-first freshness reconciler'ı mevcut observation effect uygulayıcısına bağladı. İki replica idempotency'si, exact-deadline incident suspension'ı ve yeni observation ile kilit sırası yarışı gerçek PostgreSQL üzerinde doğrulandı; iki farklı owner ile global limit öncesi fairness sabitlendi. Yeni migration veya dependency gerekmedi ve production loop erken aktive edilmedi.
 16. Aşama 9'un yedinci uygulama diliminde AI dört bağımsız runtime loop'unu production entrypoint'ine bağladı; loop-aware readiness, mevcut/sonraki ay partition preflight'i ve bounded graceful drain ekledi. Canlı Compose smoke, unit testlerin yakalayamadığı PostgreSQL mikrosaniye eşitliği ile exact-allowlist Docker hostname sıralama hatalarını ortaya çıkardı; iki sorun dar regresyon testleriyle düzeltildi. Restart sonrası gerçek run devamlılığı, `PASS/200`, `UP/FRESH`, sıfır duplicate aktif job ve SIGTERM drain kaydı doğrulandı.
 17. Aşama 9'un sekizinci uygulama diliminde AI 20/200/500 due check'i production queue/dispatcher/persistence kod yolundan geçiren gerçek PostgreSQL kapasite fixture'ı hazırladı. Dış ağ değişkenliği deterministik 5/50 ms probe portuyla ayrıldı; Aşama 7'nin 50 gerçek socket concurrency testi tamamlayıcı kanıt olarak korundu. CPU, RSS, DB connection, active probe, scheduler/dispatch süreleri, p95 claim/execution lag ve throughput makine-okunur kaydedildi; observed baseline ile gevşek CI regresyon bütçesi ayrı belgelendi.
+18. Aşama 9'un dokuzuncu uygulama diliminde AI production monitor entrypoint'ini gerçek hanging HTTP probe sırasında child process olarak force-kill etti. Lease elle değiştirilmeden doğal doldu, replacement daha yüksek fence ile tamamladı ve eski immutable claim'in gecikmiş FAIL sonucu state/incident'ı değiştirmeden rejected history oldu. Gerçek crash ile zombie delivery'nin farklı failure mode'ları olduğu açıkça belgelendi.
+19. Aşama 9 kapanışında AI iki production monitor-worker ve ayrı production API entrypoint'ini üç child process'te aynı izole PostgreSQL üzerinde çalıştırdı. 200 check'in exact job/attempt/run/hedef-request eşitliği ve iki worker katılımı kanıtlanırken gerçek session'lı API list/readiness latency'si 40 kez ölçüldü; process/pool izolasyonu ile replica başına hostname limitinin birleşik etkisi dürüstçe raporlandı.
 
 ## Güvenlik ve gizlilik
 
