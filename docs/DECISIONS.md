@@ -564,7 +564,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-062 — Sağlık motoru saf reducer ve typed transaction planıdır
 
 - **Tarih:** 2026-10-10 11:02 +06:00
-- **Durum:** Accepted for implementation
+- **Durum:** Accepted — Aşama 8 uygulama ve testleriyle doğrulandı
 - **Bağlam:** Sağlık/incident kuralları scheduler, SQL ve worker lifecycle'ına gömülürse transition matrisi yalnız entegrasyon ortamında test edilebilir ve retry/replay davranışı belirsizleşir.
 - **Karar:** Aşama 8 motoru `packages/domain` içinde I/O, global clock ve UUID üretimi olmayan saf reducer olacaktır. Immutable snapshot alıp acceptance, current-state patch, interval/incident effect ve redacted event fact'lerinden oluşan typed transaction planı döndürecektir. SQL effect uygulama Aşama 9 adapter'ına aittir.
 - **Alternatifler:** State machine'i monitor-worker SQL koduna gömmek; event consumer ile eventual state üretmek; stored procedure içine bütün domain kararlarını taşımak.
@@ -574,7 +574,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-063 — V1 failure threshold sabit iki ve sayaç saturating'dir
 
 - **Tarih:** 2026-10-10 11:02 +06:00
-- **Durum:** Accepted for implementation
+- **Durum:** Accepted — Aşama 8 uygulama ve testleriyle doğrulandı
 - **Bağlam:** Görev kısa süreli tek hatanın downtime sayılmamasını ister fakat kullanıcıya göre değişken threshold zorunlu değildir. Runtime'da değişebilen gizli bir eşik geçmiş incident anlamını değiştirebilir.
 - **Karar:** V1'de threshold tam olarak iki ardışık accepted FAIL'dir. İlk FAIL SUSPECT/candidate, ikinci FAIL DOWN/incident üretir; sayaç iki değerinde saturate edilir. Gelecekte per-check eşik eklenirse version'lı probe config ve generation değişimidir.
 - **Alternatifler:** Deployment env ile sessizce değişen eşik; kullanıcı bazlı ayar; zaman pencereli oran; ilk hatada DOWN.
@@ -584,7 +584,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-064 — Freshness doğruluğu read-time override ile reconciler'dan bağımsızdır
 
 - **Tarih:** 2026-10-10 11:02 +06:00
-- **Durum:** Accepted for implementation
+- **Durum:** Accepted — Aşama 8 uygulama ve testleriyle doğrulandı
 - **Bağlam:** Kalıcı freshness reconciler birkaç saniye gecikebilir. Yalnız persisted `FRESH` alanını okumak süresi geçmiş check'i UP/DOWN gösterebilir ve açık incident süresine monitoring gap ekleyebilir.
 - **Karar:** Bütün snapshot/group sorguları `fresh_until <= statement_timestamp()` durumunu anında STALE/effective UNKNOWN sayacaktır. Açık incident'ın query-time observed süresi en fazla `fresh_until` noktasına kadar büyür ve effective observation mode UNOBSERVED olur. Reconciler sonradan aynı deadline'da interval/segmenti kalıcılaştırır.
 - **Alternatifler:** Yalnız background reconciler; her okumada state tablosuna write; küçük gecikmeyi kabul etmek; stale süreyi DOWN saymak.
@@ -594,7 +594,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-065 — Grup sağlığı child snapshot'larından query-time türetilir
 
 - **Tarih:** 2026-10-10 11:02 +06:00
-- **Durum:** Accepted for implementation
+- **Durum:** Accepted — Aşama 8 uygulama ve testleriyle doğrulandı
 - **Bağlam:** Grup sağlığı child check'lerin efektif durumudur. Ayrı mutable group state satırı dual-write, stale projection ve rebuild yükü getirir; owner kotası mevcut aggregate sorgusunu bounded tutar.
 - **Karar:** V1 group health `LIVE + ACTIVE` child'ların read-time effective health değerlerinden `DOWN > SUSPECT > UNKNOWN > UP` önceliğiyle tek set-based sorguda türetilir. PAUSED ayrı sayılır, DELETED dışlanır; 50 sabit ürün limiti yoktur.
 - **Alternatifler:** Her observation'da group state row update; child başına N+1 query; cache'i source of truth yapmak.

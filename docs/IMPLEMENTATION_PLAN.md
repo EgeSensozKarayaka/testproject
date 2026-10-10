@@ -257,7 +257,7 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 8 — Sağlık Durumu, Incident ve Grup Durumu
 
-**Durum:** Tasarım tamamlandı — 2026-10-10 11:02 +06:00; uygulama kullanıcı incelemesini bekliyor
+**Durum:** Tamamlandı ve doğrulandı — 2026-10-10 11:53 +06:00
 
 **Amaç:** Scheduler'dan bağımsız olarak sonuçlardan deterministik durum geçişleri üreten domain katmanını uygulamak.
 
@@ -617,6 +617,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 7 — Güvenli HTTP Kontrol Motoru ve Hedef Simülatörü** tamamlanmıştır. Resolve-once DNS/IP pinning, public-address policy, direct connector, tek total deadline, bounded streaming/decompression, redirect politikası, typed hata taksonomisi, genişletilmiş simulator ve gerçek socket entegrasyon testleri uygulanmıştır. Monitor worker motoru oluşturur; job claim, overlap/fairness ve sonuç kalıcılığı Aşama 9'a aittir.
 
-**Aşama 8 — Sağlık Durumu, Incident ve Grup Durumu tasarımı** tamamlanmıştır. Saf reducer sınırı, canonical acceptance precedence, sabit iki-failure threshold, provisional timeline, incident segmentleri, read-time freshness/duration doğruluğu, query-time grup türetimi, event fact'leri ve Aşama 9 transaction portu `docs/HEALTH_AND_INCIDENT_ENGINE.md` içinde kesinleştirilmiştir.
+**Aşama 8 — Sağlık Durumu, Incident ve Grup Durumu** tamamlanmıştır. Saf reducer, invariant doğrulaması, canonical acceptance precedence, sabit iki-failure threshold, provisional timeline çözümleme, incident segment/duration effect'leri, deadline reconciliation, read-time freshness/duration projection'ı, query-time grup türetimi ve bounded event fact'leri uygulanmıştır. API check/group sorguları da aynı canlı deadline semantiğine geçirilmiştir.
 
-**Sıradaki çalışma**, kullanıcı tasarımı inceledikten sonra Aşama 8 uygulama dilimleridir. Önce domain tipleri/invariant validator ve acceptance kararı, ardından observation reducer, incident/interval effect'leri, freshness/group projection helper'ları ve sequence/property testleri uygulanacaktır. Kalıcı job/scheduler entegrasyonu Aşama 9'a aittir.
+**Sıradaki çalışma**, Aşama 9 — Kalıcı Scheduler ve Monitor Worker mimarisinin kesinleştirilmesidir. Aşama 8 planlarının PostgreSQL transaction'ında uygulanması, job claim/lease/fencing, overlap engeli, fairness, freshness reconciler ve outbox atomikliği Aşama 9'a aittir.

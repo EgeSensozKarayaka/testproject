@@ -1,6 +1,6 @@
 # AI Kullanımı
 
-**Son güncelleme:** 2026-10-10 07:47 +06:00
+**Son güncelleme:** 2026-10-10 11:53 +06:00
 
 ## Araç ve model
 
@@ -23,6 +23,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 5. Uygulama sırasında temiz veritabanında bulunan notifier schema grant eksikliği, uygulanmış migration değiştirilmeden yeni forward-only migration ile giderildi.
 6. Aşama 6'da check/group kapsamı önce nihai mimariye ayrıldı; ilk uygulama dilimi domain/migration temeli, ikinci dilim authenticated group API olarak küçük commit ve gerçek PostgreSQL kanıtlarıyla ilerletildi.
 7. Group route testleri OpenAPI-to-Fastify parametrik yol uyumsuzluğunu ortaya çıkardı; AI önerisi generator seviyesinde düzeltilip contract drift ve gerçek UUID route testleriyle doğrulandı.
+8. Aşama 8'de onaylanan sağlık/incident mimarisi saf TypeScript reducer'a dönüştürüldü. AI; acceptance precedence, iki-failure threshold, provisional interval çözümleme, incident gap süreleri ve read-time freshness için sequence/regresyon testleri üretti; sonuçlar strict typecheck ve gerçek PostgreSQL ile doğrulandı.
 
 ## Güvenlik ve gizlilik
 

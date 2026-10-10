@@ -1,11 +1,12 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 11:02 +06:00
-**Genel durum:** Aşama 0–7 tamamlandı ve doğrulandı; Aşama 8 sağlık/incident/grup durumu tasarımı tamamlandı, uygulama kullanıcı incelemesini bekliyor
+**Son güncelleme:** 2026-10-10 11:53 +06:00
+**Genel durum:** Aşama 0–8 tamamlandı ve doğrulandı; sıradaki çalışma Aşama 9 kalıcı scheduler/monitor worker mimarisidir
 
 ## Tamamlanan
 
-- Aşama 8 için saf state reducer sınırı, canonical observation acceptance precedence, sabit iki-failure threshold, provisional timeline, incident segment/duration, read-time freshness override, query-time group aggregate ve test mimarisi
+- Aşama 8 saf state reducer'ı; immutable snapshot/invariant doğrulaması, canonical observation acceptance precedence, sabit iki-failure threshold, provisional timeline çözümleme, incident segment/duration effect'leri, deadline reconciliation ve bounded event fact'leri
+- Check ve group API sorgularında reconciler'dan bağımsız `fresh_until` read-time override'ı; effective UNKNOWN/UNOBSERVED görünümü, incident duration cap'i ve aynı semantiği kullanan set-based group aggregate
 - Scheduler/DB'den bağımsız güvenli HTTP probe motoru; versioned snapshot doğrulama, frozen DNS candidate pinning, public IPv4/IPv6 policy, redirect, total deadline/cancellation, bounded streaming/decompression ve typed hata taksonomisi
 - DNS çağrısı yapmayan kısa ömürlü direct TCP/TLS connector; hostname/SNI sertifika doğrulaması, proxy bypass'ı, operator port allowlist'i ve production'da reddedilen exact-origin local simulator istisnası
 - Başarı/body/status, streaming, gecikme/hang, büyük/sıkıştırılmış body, redirect/loop, flaky ve erken bağlantı kapanması fixture'larıyla genişletilmiş hedef simülatörü
@@ -38,6 +39,9 @@
 
 ## Doğrulama Kanıtları
 
+- Aşama 8 domain paketi **16/16** odaklı testte geçti; buna 250 observation'lık sabit-seed sequence, duplicate/diagnostic/stale fencing reddi, provisional UP/DOWN/UNKNOWN çözümleme, incident suspend/resume/recovery ve deadline duration cap dahildir.
+- Check/group PostgreSQL sınırı **17/17** geçti. Reconciler gecikmesinde list/filter sonucu STALE/UNKNOWN, incident görünümü UNOBSERVED ve duration deadline'da capped; group aggregate 20/200/500 canlı check fixture'ıyla doğrulandı. Kapasite testinin fixture + sorgu süresi yerel warm koşuda **359 ms** idi.
+- Final `pnpm run ci`; format, 57-operation contract drift, lint, strict typecheck, **18 dosyada 147/147 unit**, gerçek PostgreSQL ile **4 dosyada 34/34 integration** ve bütün production build'leriyle geçti.
 - Aşama 7 odaklı unit paketi **6 dosyada 52/52**, gerçek socket HTTP/redirect/gzip/oversize/TLS/timeout ve 50 eşzamanlı probe entegrasyonu **4/4** geçti.
 - Final yerel `pnpm run ci`; format, generated-contract drift, lint, strict typecheck, **17 dosyada 131/131 unit test**, integration kapıları ve bütün production build'leriyle geçti.
 - Gerçek PostgreSQL admin URL'siyle birleşik integration paketi **4 dosyada 32/32** geçti; buna Aşama 7'nin gerçek socket entegrasyonları da dahildir.
@@ -67,7 +71,7 @@
 ## Bilinçli Olarak Henüz Yapılmayan
 
 - Scheduler/job claim, check overlap engeli, global concurrency/fairness ve probe sonucu kalıcılığı
-- Probe sonuçlarından incident/state geçişleri, maintenance reconciliation ve incident e-posta politikaları
+- Saf health/incident planlarının PostgreSQL observation transaction'ına bağlanması, maintenance reconciliation ve incident e-posta politikaları
 - Rollup/retention background işleri, history sorguları ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
 - Predictor analiz algoritması/model lifecycle'ı
@@ -76,7 +80,7 @@
 
 ## Bilinen Sınırlamalar
 
-- Authenticated ekran group/check yapılandırmasını yönetir; kontrol motoru henüz scheduler ve sonuç kalıcılığına bağlı olmadığından nihai canlı monitoring dashboard'u değildir.
+- Authenticated ekran group/check yapılandırmasını yönetir; probe ve sağlık motorları henüz Aşama 9 scheduler/sonuç kalıcılığı transaction'ına bağlı olmadığından nihai canlı monitoring dashboard'u değildir.
 - Auth rate limit PostgreSQL fixed-window yaklaşımıdır. V1 ve yatay API replica'ları için tutarlıdır; yüksek hacimli internet trafiğinde edge WAF/CDN katmanı gerekir.
 - Yerel Compose kolaylığı için tek PostgreSQL bootstrap login'i dar `NOLOGIN` rollere geçer. Production'da servis başına ayrı login wrapper/secret gerekir.
 - Yerel HTTP ortamında session cookie `Secure=false`; production config fail-fast secret ve HTTPS/Secure cookie gerektirir.
@@ -90,4 +94,4 @@
 
 ## Sıradaki İş
 
-Kullanıcı `docs/HEALTH_AND_INCIDENT_ENGINE.md` tasarımını inceledikten sonra Aşama 8'i küçük dilimlerle uygulamak; önce domain tipleri/invariant validator ve acceptance kararı, ardından observation reducer, incident/interval effect'leri, freshness/group projection helper'ları ve sequence/property testlerine geçmek.
+Aşama 9 için kalıcı scheduler/monitor worker mimarisini kesinleştirmek; job claim/lease/fencing, fairness ve concurrency sınırlarını, aynı check'in kendisiyle çakışmamasını, observation planlarının atomik PostgreSQL uygulamasını, freshness reconciler'ı ve outbox sınırını birlikte tasarlamak.

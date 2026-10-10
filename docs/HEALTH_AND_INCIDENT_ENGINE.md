@@ -1,6 +1,6 @@
 # Sağlık, Incident ve Grup Durumu Motoru
 
-**Durum:** Aşama 8 uygulama öncesi nihai tasarım
+**Durum:** Aşama 8 uygulandı ve yerelde doğrulandı — 2026-10-10 11:53 +06:00
 **Tarih:** 2026-10-10 11:02 +06:00
 **Dayanak:** `REQUIREMENTS.md`, `ACCEPTANCE_CRITERIA.md`, `DOMAIN_MODEL.md`, `STATE_MACHINES.md`, `DATABASE_SCHEMA.md`, `EVENT_CATALOG.md`, `CHECKS_AND_GROUPS.md`, `CHECK_ENGINE.md`
 **Saf domain paketi:** `packages/domain`

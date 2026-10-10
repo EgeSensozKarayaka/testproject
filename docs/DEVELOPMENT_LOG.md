@@ -296,3 +296,13 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Provisional timeline'ın PASS ile UP, threshold FAIL ile DOWN, pause/stale/config ile UNKNOWN finalize edilmesi; incident segmentlerinin yalnız gözlemlenen DOWN süresini toplaması ve group health'in aynı effective freshness helper'ıyla query-time türetilmesi ayrıntılandırıldı.
 - D-062–D-065 kararları implementation-ready olarak kaydedildi. Mevcut revision 13 şemasında zorunlu yeni kolon bulunmadı; persistence/lease/fencing transaction uygulaması ve gerekirse forward-only constraint migration'ı Aşama 9'a bırakıldı.
 - Bu turda runtime, dependency veya migration değiştirilmedi. Belge kullanıcı incelemesine bırakıldı; sonraki prompt ile Aşama 8 domain uygulama dilimleri başlayabilir.
+
+### 11:53 — Aşama 8 sağlık, incident ve grup durumu uygulaması
+
+- `packages/domain` içine I/O, global clock ve UUID üretimi kullanmayan saf monitoring reducer'ı eklendi. Canonical rejection precedence, sabit iki-failure threshold, saturating sayaç, immutable snapshot/invariant kontrolü ve typed current-state/interval/incident/event planı uygulandı.
+- İlk FAIL SUSPECT/provisional candidate üretir; ikinci ardışık FAIL incident'ı ilk FAIL zamanıyla açar. PASS provisional geçmişi UP olarak çözer, recovery incident'ı tek kez kapatır ve observed duration yalnız açık segmentleri toplar.
+- Freshness reconciler geçişi tam `fresh_until` anında idempotent planlanır. Gecikmiş observation geldiğinde reducer önce overdue snapshot'ı aynı deadline'da reconcile eder; aradaki boşluk DOWN süresine katılmaz. Query projection'ları deadline'ı inclusive STALE sınırı sayar ve incident süresini burada keser.
+- Check listeleme/filtreleme ve group aggregate SQL'i persisted freshness bayrağına ek olarak canlı DB deadline'ını kullanacak şekilde düzeltildi. Reconciler gecikmesinde check STALE/UNKNOWN, açık incident effective UNOBSERVED görünür; group child sayımları aynı kurala uyar.
+- Domain testleri acceptance, transition, incident, gap, group precedence, redaction, input immutability ve 250 adımlık sabit-seed sequence'i kapsar. Gerçek PostgreSQL regresyonları deadline/filter/duration ile 20/200/500 group aggregate fixture'ını kapsar; kapasite senaryosu yerel warm koşuda fixture dahil **359 ms** sürdü.
+- Mevcut revision 13 şeması yeterli kaldı; migration ve yeni runtime dependency eklenmedi. Kalıcı observation transaction'ı, scheduler/lease/fencing ve freshness worker Aşama 9'a bırakıldı.
+- Final `pnpm run ci`; format, OpenAPI drift, lint, strict typecheck, **147/147 unit**, **34/34 gerçek PostgreSQL integration** ve bütün production build'leriyle geçti.
