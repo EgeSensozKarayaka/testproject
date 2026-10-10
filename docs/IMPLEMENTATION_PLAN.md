@@ -333,7 +333,7 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 11 — Transactional E-posta ve Bildirim Sistemi
 
-**Durum:** Nihai mimari hazır; uygulama sırada — 2026-10-10 16:27 +06:00
+**Durum:** Tamamlandı — 2026-10-10 17:19 +06:00
 
 **Amaç:** Kesinti ve recovery e-postalarını tekrarsız, bakım kurallarıyla uyumlu ve ana sistemden izole biçimde göndermek.
 
@@ -361,6 +361,8 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 ---
 
 ### Aşama 12 — Geçmiş, Rollup, Availability ve Housekeeping
+
+**Durum:** Nihai mimari hazır; uygulama sırada — 2026-10-10 17:27 +06:00
 
 **Amaç:** Ham veri büyürken günlük, haftalık ve aylık geçmişin hızlı ve doğru açılmasını sağlamak.
 
@@ -629,4 +631,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 11 — Transactional E-posta ve Bildirim Sistemi** tamamlanmıştır. Revision 16–20; recipient/policy API'sini, encrypted transactional queue genişletmesini, durable outbox→intent→delivery worker'ını, iki aşamalı maintenance kontrolünü, başarılı DOWN lineage'ına bağlı recovery'yi, conservative SMTP sonuç modelini ve source-of-truth cutover reconciliation'ını uygular. İki worker/fencing, restart/deadline, maintenance yarışı, SMTP sonuç matrisi, Mailpit text/HTML ve SMTP outage izolasyonu kapanış paketinde doğrulanmıştır.
 
-**Sıradaki çalışma Aşama 12 — Geçmiş, Rollup ve Availability için nihai mimarinin hazırlanmasıdır.** Bu geçişte önce sorgu/retention/aggregation sözleşmesi yazılacak; kodlama sonraki kullanıcı onayından sonra başlayacaktır.
+**Aşama 12 — Geçmiş, Rollup, Availability ve Housekeeping nihai mimarisi** tamamlanmıştır. Zaman ağırlıklı availability/coverage, sabit day/week/month bucket bütçeleri, bounded yeniden hesaplama kuyruğu, ayrı housekeeping process'i, incident journal cursor semantiği ve detach→grace→drop retention yaşam döngüsü `docs/HISTORY_AND_RETENTION.md` içinde kesinleştirilmiştir. Mevcut foreign key zincirlerinin belgelenmiş retention sürelerini uygulanamaz kıldığı görülmüş; Revision 21 için kompakt run evidence ve yazım-anı lineage doğrulaması tasarlanmıştır.
+
+**Sıradaki çalışma, kullanıcı belgeyi okuduktan sonra Aşama 12 uygulama dilimi 1'dir:** forward-only Revision 21, saf bucket/availability fonksiyonları ve migration güvenlik testleri. Bu plan güncellemesinde üretim kodu veya migration uygulanmamıştır.

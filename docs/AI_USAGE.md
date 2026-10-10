@@ -1,6 +1,6 @@
 # AI Kullanımı
 
-**Son güncelleme:** 2026-10-10 16:27 +06:00
+**Son güncelleme:** 2026-10-10 17:27 +06:00
 
 ## Araç ve model
 
@@ -43,6 +43,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 25. Aşama 11'in ilk uygulama diliminde AI revision 16 ile default/group policy reconciliation'ını, recipient transactional-email lineage ve dar SECURITY DEFINER sınırlarını, public recipient confirmation'ını ve incident delivery kanıt şemasını hazırladı. Mevcut demo seed'in yeni default-policy trigger'ıyla scope unique conflict üreteceği kod incelemesinde görülerek seed sabit policy id'sinden ayrıştırıldı; temiz PostgreSQL migration/seed koşusuyla doğrulandı. Saf domain katmanı policy flag/recipient tutarlılığını ve inheritance'ın tam override semantiğini uyguladı; incident notification consumer'ı henüz aktive edilmedi.
 26. Aşama 11 recipient/policy diliminde AI generated OpenAPI'yi 58 operasyona çıkardı; owner-scoped Fastify/service katmanı ile encrypted recipient verification/test queue bağlantısını uyguladı. Gerçek PostgreSQL testleri üç SQL tür/isim belirsizliğini yakaladı ve açık cast/alias ile kapattı. Lifecycle incelemesi token rotasyonundan sonra eski doğrulama işlerinin gönderilebilmesini buldu; yalnız claim edilmemiş işler güvenli biçimde iptal edildi, PROCESSING SMTP çağrısı geriye dönük iptal edilmiş gösterilmedi. Incident outbox consumer ve `NOTIFICATION` cutover hâlâ kapalıdır.
 27. Aşama 11 kapanışında AI iki-worker delivery claim/fencing, materialization sonrası maintenance, restart ile deferred recovery ve SMTP kalıcı sonuç matrisini gerçek PostgreSQL testine ekledi. Browser kabulü production API/worker üzerinden recipient verification ve test mailini; production renderer üzerinden üç operational template'in gerçek Mailpit text/HTML gövdelerini doğruladı. SMTP servisi durdurularak API/monitor izolasyonu gözlendi; socket timeout'un retry yerine terminal `DELIVERY_UNKNOWN` olması mimarideki conservative duplicate politikasına uygun kaydedildi.
+28. Aşama 12 mimarisinde AI mevcut partition, rollup, health interval, incident ve scheduler tablolarını retention hedefleriyle birlikte inceledi. Ham run'ın queue satırlarına; incident, current-state ve health-interval kanıtının da ham run'a bağlı FK zincirinin 30/90/400 günlük temizliği uygulanamaz kıldığı bulundu. Tasarım; kompakt uzun ömürlü run evidence, yazım-anı queue lineage doğrulaması, cursor indeksleri, bounded deterministic rebuild range'leri, ayrı fakat aynı domain içinde housekeeping process'i, zaman ağırlıklı availability/coverage ve sabit bucket bütçeleriyle bu boşluğu kodlamadan önce kapattı.
 
 ## Güvenlik ve gizlilik
 

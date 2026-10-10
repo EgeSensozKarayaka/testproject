@@ -770,3 +770,43 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Tüm tarihsel outbox replay; açık incident'ları yok saymak; process memory backfill listesi; destination'ı worker kodundan önce aktive etmek.
 - **Gerekçe:** Geçmiş spam üretmeden aktivasyon anındaki gerçek durumu kapsamak ve restart güvenli kalmak.
 - **Sonuçlar:** Aktivasyon sonrası consumer kesintisi normal durable backlog oluşturur. Reconciliation event'i `cutover-v1` marker'ı ve partial unique index ile restart-safe tekilleştirilir. İlk Revision 19 preflight'i data-modifying CTE'nin yeni satırını aynı statement içinde base-table rescan ile göremediğini yakaladı; forward-only Revision 20 `RETURNING` satırlarını dispatch kaynağına açıkça dahil etti. Backfill ile canlı event yarışı iki dispatch tüketse bile unique intent/delivery nedeniyle ikinci DOWN üretemez.
+
+## D-083 — Availability run oranı değil gözlemlenmiş süre oranıdır
+
+- **Tarih:** 2026-10-10 17:27 +06:00
+- **Durum:** Accepted — Aşama 12 nihai mimarisi
+- **Bağlam:** Kontrollerin interval'ları değişebilir; server duruşu, pause ve henüz doğrulanmamış ilk hata run sayısına dayalı oranı yanıltır. Veri boşluğu düşüş olarak gösterilmemelidir.
+- **Karar:** Availability `UP / (UP + DOWN)` gözlemlenmiş süre oranıdır. `UNKNOWN` ve açık `PROVISIONAL` paydadan çıkarılır; coverage ayrıca `(UP + DOWN) / requested_window` olarak döner. Her pencere ve bucket `UP + DOWN + UNKNOWN + PROVISIONAL = requested duration` invariant'ını korur.
+- **Alternatifler:** Başarılı run/toplam run oranı; boşluğu DOWN saymak; UNKNOWN süresini availability paydasına katmak.
+- **Gerekçe:** Farklı cadence'lerde aynı sağlık çizelgesinin aynı sonucu vermesi ve uygulama duruşunun sahte incident/SLA kaybı üretmemesi.
+- **Sonuçlar:** Veri yokken availability `0` değil `null` olur. Day/week/month response'ları coverage ve sınıflandırmayı açıkça taşır; frontend eksik bucket tahmin etmez.
+
+## D-084 — Geçmiş çıktısı sabit bütçeli, rollup düzeltmesi kaynak-temelli ve bounded'dır
+
+- **Tarih:** 2026-10-10 17:27 +06:00
+- **Durum:** Accepted — Aşama 12 nihai mimarisi
+- **Bağlam:** 30 saniyelik run'ları ay görünümünde doğrudan taramak büyümeyle doğrusal maliyet yaratır. Geç finalize edilen uzun interval'lar geçmiş bucket'ları düzeltebildiği için yalnız monoton zaman watermark'ı yeterli değildir.
+- **Karar:** Day/week/month sırasıyla en fazla 288/336/360 bucket döndürür; minute ve hour rollup'lar source-of-truth'tan deterministik yeniden hesaplanır. Source cursor değişen aralığı bounded, ilerlemeli rebuild range olarak kuyruğa alır. Minute düzeltmesi hour düzeltmesini tetikler; average-of-average yasaktır.
+- **Alternatifler:** İstek anında raw tarama; yalnız append-only watermark; her interval finalize olduğunda bütün bucket'ları tek transaction'da yazmak; yaklaşık availability.
+- **Gerekçe:** Geç düzeltmede doğruluğu, restart/iki-worker idempotency'sini ve ay sorgusunda sabit çıktı/sorgu maliyetini birlikte korumak.
+- **Sonuçlar:** Projection configured raw-tail bütçesinden fazla geri kalırsa history endpoint'i kontrollü `503 history_projection_lagging` verir; yanlış veya sınırsız fallback yapmaz. Dashboard ve monitor bundan bağımsız kalır.
+
+## D-085 — Housekeeping ayrı process'tir fakat ayrı ürün mikroservisi değildir
+
+- **Tarih:** 2026-10-10 17:27 +06:00
+- **Durum:** Accepted — Aşama 12 nihai mimarisi
+- **Bağlam:** Rollup aggregate, partition DDL ve retention purge; API ve probe worker'ıyla aynı event loop/pool'u tüketirse yavaş bir bakım işi temel monitoring yolunu etkileyebilir.
+- **Karar:** `apps/housekeeping-worker` aynı Node.js monorepo/domain sınırında, public API'siz ayrı process/container ve dar `site_monitor_housekeeper` yetkisiyle çalışır. Küçük ayrı DB pool'u; bağımsız source, rollup, partition ve purge loop'ları kullanır.
+- **Alternatifler:** API içi cron; monitor worker'a ek loop; bağımsız deploy/repository/veritabanı olan mikroservis.
+- **Gerekçe:** Operasyonel arıza izolasyonu sağlarken gereksiz dağıtık sistem ve domain çoğaltması oluşturmamak.
+- **Sonuçlar:** API/monitor readiness'i housekeeper'a bağlı değildir. İki replica `SKIP LOCKED`, deterministik upsert ve advisory lock ile desteklenir; exactly-once değil idempotent sonuç iddia edilir.
+
+## D-086 — Retention, ham run'dan bağımsız kompakt lineage kanıtı kullanır
+
+- **Tarih:** 2026-10-10 17:27 +06:00
+- **Durum:** Accepted — Aşama 12 nihai mimarisi
+- **Bağlam:** Mevcut `check_runs → jobs/attempts` ile `incidents/current-state/segments/open-health/finalized-health → check_runs` foreign key zinciri 30 günlük queue, 90 günlük raw run ve 400 günlük sağlık/incident retention hedeflerini aynı anda uygulanamaz kılar.
+- **Karar:** Forward-only Revision 21 kabul edilmiş stateful run'lar için kompakt `run_evidence` yazar ve uzun ömürlü state, incident ve health-interval referanslarını buraya taşır. Raw run içindeki job/attempt locator'ları korunur fakat kalıcı FK kaldırılır; owner/check/job/attempt eşleşmesi yeni run yazılırken trigger/fonksiyonla doğrulanır. Migration her referans türünü backfill edip sayısal bütünlük kontrolü yapmadan constraint değiştirmez.
+- **Alternatifler:** Bütün raw run/job/attempt verisini 400 gün saklamak; incident FK'lerini kanıtsız kaldırmak; cascading delete; retention hedeflerini sessizce uygulamamak.
+- **Gerekçe:** Tarihsel incident bütünlüğünü korurken geniş raw partition'ları ve terminal queue satırlarını kendi sürelerinde temizleyebilmek.
+- **Sonuçlar:** Referanslı evidence FK `RESTRICT` ile yaşar, referanssız evidence kısa grace sonrası bounded temizlenir. `started_at` ile partition edilen health interval child'ı, içindeki en yeni `ended_at` retention cutoff'tan eski olmadan düşürülemez. İlk production partition drop'u backfill, migration güvenlik ve restore testleri geçmeden aktive edilmez.

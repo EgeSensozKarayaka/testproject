@@ -1,11 +1,13 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 17:19 +06:00
+**Son güncelleme:** 2026-10-10 17:27 +06:00
 
-**Genel durum:** Aşama 0–11 tamamlandı; sıradaki çalışma Aşama 12 geçmiş/rollup/availability mimarisi
+**Genel durum:** Aşama 0–11 tamamlandı; Aşama 12 nihai mimarisi hazır, uygulaması başlamadı
 
 ## Tamamlanan
 
+- Aşama 12 için zaman ağırlıklı availability/coverage, sabit day/week/month bucket bütçeleri, deterministic bounded rollup düzeltmesi, ayrı housekeeping process'i, incident journal ve partition retention yaşam döngüsünü kesinleştiren `docs/HISTORY_AND_RETENTION.md`
+- Mevcut 30/90/400 günlük retention hedeflerini engelleyen queue→raw run→state/incident/health-interval foreign key zincirinin tespiti; Revision 21 için kompakt run evidence, insert-time lineage doğrulaması, cursor indeksleri, typed rebuild queue, group-at-open snapshot ve detach/grace/drop manifest çözümünün kaydı
 - Revision 16–20 ile default/group policy reconciliation'ı, recipient transactional-email lineage'ı, public confirm/enqueue/cancel sınırları, incident delivery/attempt state machine'i, dar notifier claim/complete fonksiyonları, `NOTIFICATION` activation ve açık-incident source reconciliation'ı
 - Owner-scoped notification recipient list/create/disable, verification resend/confirm, test-email ve default/group policy get/replace API'si; ETag/If-Match, CSRF/origin/session/rate-limit, idempotency, signed cursor, VERIFIED recipient ve tam override inheritance kuralları
 - Dört loop'lu notification worker'da outbox consume, current-source intent evaluation, recipient delivery ve transactional mail için bounded/fair SMTP gönderimi; loop-aware readiness, bounded shutdown, deterministic Message-ID ve sanitized retry/failed/unknown sonuçları
@@ -149,7 +151,7 @@
 ## Bilinçli Olarak Henüz Yapılmayan
 
 - Notification recipient/policy yönetim arayüzü (backend ve worker tamam; yönetim frontend'i Aşama 14 kapsamındadır)
-- Rollup/retention background işleri, history sorguları ve grafikler
+- Mimarisi hazır olan rollup/retention background işleri ile history/incident API implementasyonu ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
 - Predictor analiz algoritması/model lifecycle'ı
 - MFA/passkey, OAuth/OIDC, organizasyon/üyelik/rol modeli ve kullanıcıya açık session/device yönetimi
@@ -172,4 +174,4 @@
 
 ## Sıradaki İş
 
-Aşama 12 için geçmiş, response-time rollup, availability hesabı, incident journal sorguları, retention ve ay görünümünün hızlı açılma sözleşmesini içeren nihai mimari hazırlanacaktır.
+Kullanıcı `docs/HISTORY_AND_RETENTION.md` belgesini inceledikten sonra Aşama 12 uygulama dilimi 1 başlatılacaktır: forward-only Revision 21, saf bucket/availability fonksiyonları ve migration güvenlik testleri. Housekeeping runtime, private API ve kapasite kapanışı sonraki ayrı dilimlerdir.
