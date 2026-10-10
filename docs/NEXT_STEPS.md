@@ -1,19 +1,19 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 17:52 +06:00
+**Son güncelleme:** 2026-10-10 18:29 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–11 ve Aşama 12 housekeeping runtime tamamlandı; private history/incident API sırada
+**Mevcut kilometre taşı:** Aşama 0–11 ve Aşama 12 private API tamamlandı; kapasite kapanışı sırada
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
-## 1. Sıradaki Çalışma — Aşama 12 Private API
+## 1. Sıradaki Çalışma — Aşama 12 Kapasite Kapanışı
 
 `docs/HISTORY_AND_RETENTION.md` sözleşmesine göre:
 
-- Canonical history/incident OpenAPI şemalarını projection gerçekliğiyle eşleştir
-- Owner-scoped day/week/month history ve incident journal service/routes katmanını ekle
-- Signed/filter-bound cursor, tombstone erişimi ve projection-lag fail-closed davranışını test et
-- Ardından 20/200/500 rollup profili ve 35 günlük sorgu planı ile Aşama 12'yi kapat
+- 20/200/500 check için source discovery ve minute→hour rollup throughput'unu ölç
+- 500-check eşdeğer 35 günlük deterministic dataset üzerinde month query süresini ve `EXPLAIN (ANALYZE, BUFFERS)` planını kaydet
+- Housekeeper yükü altında private history API pool/latency izolasyonunu doğrula
+- Correctness matrisini, kapasite raporunu ve Aşama 12 durum belgelerini kapat
 
 ## 2. Aşama 10 Kapanış Kanıtları
 

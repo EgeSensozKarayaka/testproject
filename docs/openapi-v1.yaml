@@ -521,6 +521,8 @@ paths:
                 $ref: '#/components/schemas/HistoryResponse'
         '404':
           $ref: '#/components/responses/NotFoundProblem'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /api/v1/checks/{check_id}/prediction:
     get:
       tags: [Checks]
@@ -664,6 +666,16 @@ paths:
           name: status
           schema:
             $ref: '#/components/schemas/IncidentState'
+        - in: query
+          name: started_before
+          description: Return incidents that start before this exclusive UTC boundary.
+          schema:
+            $ref: '#/components/schemas/Instant'
+        - in: query
+          name: ended_after
+          description: Return incidents whose wall-clock span ends after this exclusive UTC boundary.
+          schema:
+            $ref: '#/components/schemas/Instant'
       responses:
         '200':
           description: Incident page
@@ -1478,6 +1490,11 @@ components:
             $ref: '#/components/schemas/Problem'
     ServiceUnavailable:
       description: Required dependency or schema is unavailable
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 0
       content:
         application/problem+json:
           schema:
@@ -2041,6 +2058,10 @@ components:
           coverage_ratio,
           classification,
           sample_count,
+          observed_up_ms,
+          observed_down_ms,
+          unknown_ms,
+          provisional_ms,
         ]
       properties:
         from:
@@ -2064,6 +2085,14 @@ components:
         sample_count:
           type: integer
           minimum: 0
+        observed_up_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        observed_down_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        unknown_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        provisional_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
     HistoryResponse:
       type: object
       additionalProperties: false
@@ -2074,11 +2103,15 @@ components:
           from,
           to,
           resolution,
+          bucket_seconds,
+          generated_at,
+          data_through,
           availability_ratio,
           coverage_ratio,
           observed_up_ms,
           observed_down_ms,
           unknown_ms,
+          provisional_ms,
           buckets,
         ]
       properties:
@@ -2094,6 +2127,13 @@ components:
         resolution:
           type: string
           enum: [minute, hour]
+        bucket_seconds:
+          type: integer
+          minimum: 1
+        generated_at:
+          $ref: '#/components/schemas/Instant'
+        data_through:
+          $ref: '#/components/schemas/Instant'
         availability_ratio:
           type: [number, 'null']
           minimum: 0
@@ -2107,6 +2147,8 @@ components:
         observed_down_ms:
           $ref: '#/components/schemas/NonNegativeIntegerString'
         unknown_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        provisional_ms:
           $ref: '#/components/schemas/NonNegativeIntegerString'
         buckets:
           type: array
@@ -2182,6 +2224,8 @@ components:
         [
           id,
           check_id,
+          check_name,
+          group_id_at_open,
           status,
           observation_mode,
           started_at,
@@ -2196,6 +2240,14 @@ components:
           $ref: '#/components/schemas/Uuid'
         check_id:
           $ref: '#/components/schemas/Uuid'
+        check_name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        group_id_at_open:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
         status:
           $ref: '#/components/schemas/IncidentState'
         observation_mode:
@@ -2212,13 +2264,9 @@ components:
           type: [string, 'null']
           enum: [RECOVERED, CONFIG_CHANGED, CHECK_DELETED, ADMINISTRATIVE, null]
         observed_duration_ms:
-          oneOf:
-            - $ref: '#/components/schemas/NonNegativeIntegerString'
-            - type: 'null'
+          $ref: '#/components/schemas/NonNegativeIntegerString'
         wall_duration_ms:
-          oneOf:
-            - $ref: '#/components/schemas/NonNegativeIntegerString'
-            - type: 'null'
+          $ref: '#/components/schemas/NonNegativeIntegerString'
     IncidentSegment:
       type: object
       additionalProperties: false
@@ -2240,6 +2288,8 @@ components:
         [
           id,
           check_id,
+          check_name,
+          group_id_at_open,
           status,
           observation_mode,
           started_at,
@@ -2248,6 +2298,7 @@ components:
           closure_reason,
           observed_duration_ms,
           wall_duration_ms,
+          generated_at,
           segments,
         ]
       properties:
@@ -2255,6 +2306,14 @@ components:
           $ref: '#/components/schemas/Uuid'
         check_id:
           $ref: '#/components/schemas/Uuid'
+        check_name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        group_id_at_open:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
         status:
           $ref: '#/components/schemas/IncidentState'
         observation_mode:
@@ -2271,13 +2330,11 @@ components:
           type: [string, 'null']
           enum: [RECOVERED, CONFIG_CHANGED, CHECK_DELETED, ADMINISTRATIVE, null]
         observed_duration_ms:
-          oneOf:
-            - $ref: '#/components/schemas/NonNegativeIntegerString'
-            - type: 'null'
+          $ref: '#/components/schemas/NonNegativeIntegerString'
         wall_duration_ms:
-          oneOf:
-            - $ref: '#/components/schemas/NonNegativeIntegerString'
-            - type: 'null'
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        generated_at:
+          $ref: '#/components/schemas/Instant'
         segments:
           type: array
           items:
@@ -2285,7 +2342,7 @@ components:
     IncidentPage:
       type: object
       additionalProperties: false
-      required: [data, page]
+      required: [data, page, generated_at]
       properties:
         data:
           type: array
@@ -2293,6 +2350,8 @@ components:
             $ref: '#/components/schemas/Incident'
         page:
           $ref: '#/components/schemas/PageMeta'
+        generated_at:
+          $ref: '#/components/schemas/Instant'
     MaintenanceState:
       type: string
       enum: [UPCOMING, ACTIVE, ENDED, CANCELLED]

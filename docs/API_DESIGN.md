@@ -302,15 +302,15 @@ Status eksenleri bir enumda birleştirilmez:
 
 ### 8.3 History
 
-`period` server saatine göre değil request anındaki UTC `to` değerine göre belirlenir:
+`period`, tek `REPEATABLE READ` transaction içindeki PostgreSQL zamanına ve source çözünürlük sınırına göre belirlenir:
 
-| Period  | Aralık         | Resolution                          |
-| ------- | -------------- | ----------------------------------- |
-| `day`   | Son 24 saat    | minute                              |
-| `week`  | Son 7×24 saat  | minute veya bounded adaptive minute |
-| `month` | Son 30×24 saat | hour                                |
+| Period  | Aralık         | Resolution |
+| ------- | -------------- | ---------- |
+| `day`   | Son 24 saat    | minute     |
+| `week`  | Son 7×24 saat  | minute     |
+| `month` | Son 30×24 saat | hour       |
 
-Response; `from`, `to`, `resolution`, `availability_ratio`, `coverage_ratio`, `observed_up_ms`, `observed_down_ms`, `unknown_ms` ve sıralı bucket'lar taşır. No-data bucket `response_time_ms=null`, `classification=UNKNOWN` olur; DOWN olarak doldurulmaz.
+Response; `from`, `to`, `generated_at`, `data_through`, source `resolution`, gerçek `bucket_seconds`, `availability_ratio`, `coverage_ratio`, dört süre sınıfı ve sıralı bucket'lar taşır. Day/week/month çıktısı sırasıyla 288/336/360 bucket ile sınırlıdır. No-data bucket `response_time_ms=null`, `classification=UNKNOWN` olur; DOWN olarak doldurulmaz. Projection configured raw-tail bütçesinden gerideyse sınırsız raw tarama yerine retry edilebilir `503 history_projection_lagging` döner.
 
 ### 8.4 Prediction
 

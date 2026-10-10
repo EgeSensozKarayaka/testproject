@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { cp, mkdtemp, rm } from 'node:fs/promises';
+import { cp, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -50,13 +50,13 @@ databaseSuite('history and retention foundation migration', () => {
     const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'site-monitor-history-migrations-'));
     legacyMigrations = path.join(temporaryRoot, 'migrations');
     await cp(path.resolve('database/migrations'), legacyMigrations, { recursive: true });
-    await Promise.all([
-      rm(path.join(legacyMigrations, '000021_history_retention_foundation.sql')),
-      rm(path.join(legacyMigrations, '000022_housekeeping_runtime.sql')),
-      rm(path.join(legacyMigrations, '000023_rollup_replica_serialization.sql')),
-      rm(path.join(legacyMigrations, '000024_retention_projection_gate.sql')),
-      rm(path.join(legacyMigrations, '000025_source_scan_horizon.sql')),
-    ]);
+    const migrationFiles = await readdir(legacyMigrations);
+    await Promise.all(
+      migrationFiles
+        .filter((file) => /^\d{6}_[a-z0-9_]+\.sql$/u.test(file))
+        .filter((file) => Number.parseInt(file.slice(0, 6), 10) > 20)
+        .map(async (file) => rm(path.join(legacyMigrations, file))),
+    );
     const legacy = await runMigrations(pool, {
       appBuild: 'history-foundation-v20',
       directory: legacyMigrations,
@@ -183,7 +183,7 @@ databaseSuite('history and retention foundation migration', () => {
   it('backfills every durable run reference before rewiring foreign keys', async () => {
     const migration = await runMigrations(pool, { appBuild: 'history-foundation-v21' });
     expect(migration).toEqual({
-      applied: [21, 22, 23, 24, 25],
+      applied: Array.from({ length: TARGET_SCHEMA_REVISION - 20 }, (_, index) => index + 21),
       currentRevision: TARGET_SCHEMA_REVISION,
     });
 

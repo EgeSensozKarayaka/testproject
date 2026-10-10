@@ -29,6 +29,7 @@ export const problemCodeSchema = z.enum([
   'rate_limit_exceeded',
   'internal_error',
   'dependency_unavailable',
+  'history_projection_lagging',
   'schema_incompatible',
 ]);
 

@@ -1,10 +1,10 @@
 # Geçmiş, Rollup, Availability ve Housekeeping Mimarisi
 
-**Durum:** Aşama 12 nihai mimarisi — uygulama dilimi 1 tamamlandı
+**Durum:** Aşama 12 nihai mimarisi — uygulama dilimleri 1–3 tamamlandı
 
 **Tarih:** 2026-10-10 17:27 +06:00
 
-**Son uygulama güncellemesi:** 2026-10-10 17:44 +06:00
+**Son uygulama güncellemesi:** 2026-10-10 18:29 +06:00
 
 **Kapsam:** FR-HIST-001–008, AC-011, AC-035, AC-060–065, NFR-DATA-002
 
@@ -395,10 +395,10 @@ Referans dataset en az 500 check × 30 saniye × 35 gün eşdeğer dağılım ta
 
 1. **Revision 21 + saf aggregation — tamamlandı (17:44):** run evidence ve FK/retention düzeltmesi, checkpoint/range/manifest şeması, duration/bucket domain fonksiyonları ve migration güvenlik testleri.
 2. **Housekeeping runtime — tamamlandı (17:52):** source discovery, bounded minute/hour recompute, partition/default guard, retention/purge loop'ları, readiness ve restart/iki-replica testleri.
-3. **Private API:** canonical OpenAPI history/incident düzeltmeleri, owner-scoped service/routes, cursor, projection-lag davranışı ve contract testleri.
+3. **Private API — tamamlandı (18:29):** canonical OpenAPI history/incident sözleşmesi, owner-scoped service/routes, tombstone erişimi, filter-bound cursor, bounded raw-tail overlay ve projection-lag davranışı.
 4. **Kapanış kanıtı:** correctness matrisi, 20/200/500 rollup profili, 35 günlük history capacity/plan raporu, full CI ve durum belgeleri.
 
-Her dilim ayrı küçük commit olur. Revision 21–25 mevcut migration dosyalarını değiştirmeden forward-only uygulandı. Source scan horizon gecikmesi veya pending rebuild backlog'u varken retention fail-closed ertelenir. Retention, önce detach+manifest kaydı oluşturur; fiziksel drop ancak 24 saatlik geri dönüş grace süresi dolduğunda ayrı bir turda gerçekleşir.
+Her dilim ayrı küçük commit olur. Revision 21–26 mevcut migration dosyalarını değiştirmeden forward-only uygulandı. Revision 26 API'ye housekeeping tablolarında doğrudan SELECT vermeden owner-scoped projection durumu döndüren dar `security_api.history_projection_status` sınırını ekledi. Source scan horizon gecikmesi veya pending rebuild backlog'u varken retention fail-closed ertelenir. Retention, önce detach+manifest kaydı oluşturur; fiziksel drop ancak 24 saatlik geri dönüş grace süresi dolduğunda ayrı bir turda gerçekleşir.
 
 ## 15. Bilinçli Olarak Kapsam Dışında
 

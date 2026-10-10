@@ -5374,11 +5374,15 @@ export const openApiOperations = {
             'from',
             'to',
             'resolution',
+            'bucket_seconds',
+            'generated_at',
+            'data_through',
             'availability_ratio',
             'coverage_ratio',
             'observed_up_ms',
             'observed_down_ms',
             'unknown_ms',
+            'provisional_ms',
             'buckets',
           ],
           properties: {
@@ -5402,6 +5406,18 @@ export const openApiOperations = {
               type: 'string',
               enum: ['minute', 'hour'],
             },
+            bucket_seconds: {
+              type: 'integer',
+              minimum: 1,
+            },
+            generated_at: {
+              type: 'string',
+              format: 'date-time',
+            },
+            data_through: {
+              type: 'string',
+              format: 'date-time',
+            },
             availability_ratio: {
               type: ['number', 'null'],
               minimum: 0,
@@ -5424,6 +5440,10 @@ export const openApiOperations = {
               type: 'string',
               pattern: '^[0-9]+$',
             },
+            provisional_ms: {
+              type: 'string',
+              pattern: '^[0-9]+$',
+            },
             buckets: {
               type: 'array',
               items: {
@@ -5437,6 +5457,10 @@ export const openApiOperations = {
                   'coverage_ratio',
                   'classification',
                   'sample_count',
+                  'observed_up_ms',
+                  'observed_down_ms',
+                  'unknown_ms',
+                  'provisional_ms',
                 ],
                 properties: {
                   from: {
@@ -5469,12 +5493,97 @@ export const openApiOperations = {
                     type: 'integer',
                     minimum: 0,
                   },
+                  observed_up_ms: {
+                    type: 'string',
+                    pattern: '^[0-9]+$',
+                  },
+                  observed_down_ms: {
+                    type: 'string',
+                    pattern: '^[0-9]+$',
+                  },
+                  unknown_ms: {
+                    type: 'string',
+                    pattern: '^[0-9]+$',
+                  },
+                  provisional_ms: {
+                    type: 'string',
+                    pattern: '^[0-9]+$',
+                  },
                 },
               },
             },
           },
         },
         '404': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '503': {
           type: 'object',
           additionalProperties: false,
           required: [
@@ -6958,6 +7067,14 @@ export const openApiOperations = {
             type: 'string',
             enum: ['OPEN', 'CLOSED'],
           },
+          started_before: {
+            type: 'string',
+            format: 'date-time',
+          },
+          ended_after: {
+            type: 'string',
+            format: 'date-time',
+          },
         },
         additionalProperties: false,
       },
@@ -6965,7 +7082,7 @@ export const openApiOperations = {
         '200': {
           type: 'object',
           additionalProperties: false,
-          required: ['data', 'page'],
+          required: ['data', 'page', 'generated_at'],
           properties: {
             data: {
               type: 'array',
@@ -6975,6 +7092,8 @@ export const openApiOperations = {
                 required: [
                   'id',
                   'check_id',
+                  'check_name',
+                  'group_id_at_open',
                   'status',
                   'observation_mode',
                   'started_at',
@@ -6992,6 +7111,22 @@ export const openApiOperations = {
                   check_id: {
                     type: 'string',
                     format: 'uuid',
+                  },
+                  check_name: {
+                    type: 'string',
+                    minLength: 1,
+                    maxLength: 120,
+                  },
+                  group_id_at_open: {
+                    oneOf: [
+                      {
+                        type: 'string',
+                        format: 'uuid',
+                      },
+                      {
+                        type: 'null',
+                      },
+                    ],
                   },
                   status: {
                     type: 'string',
@@ -7025,26 +7160,12 @@ export const openApiOperations = {
                     enum: ['RECOVERED', 'CONFIG_CHANGED', 'CHECK_DELETED', 'ADMINISTRATIVE', null],
                   },
                   observed_duration_ms: {
-                    oneOf: [
-                      {
-                        type: 'string',
-                        pattern: '^[0-9]+$',
-                      },
-                      {
-                        type: 'null',
-                      },
-                    ],
+                    type: 'string',
+                    pattern: '^[0-9]+$',
                   },
                   wall_duration_ms: {
-                    oneOf: [
-                      {
-                        type: 'string',
-                        pattern: '^[0-9]+$',
-                      },
-                      {
-                        type: 'null',
-                      },
-                    ],
+                    type: 'string',
+                    pattern: '^[0-9]+$',
                   },
                 },
               },
@@ -7061,6 +7182,10 @@ export const openApiOperations = {
                   type: 'boolean',
                 },
               },
+            },
+            generated_at: {
+              type: 'string',
+              format: 'date-time',
             },
           },
         },
@@ -7093,6 +7218,8 @@ export const openApiOperations = {
           required: [
             'id',
             'check_id',
+            'check_name',
+            'group_id_at_open',
             'status',
             'observation_mode',
             'started_at',
@@ -7101,6 +7228,7 @@ export const openApiOperations = {
             'closure_reason',
             'observed_duration_ms',
             'wall_duration_ms',
+            'generated_at',
             'segments',
           ],
           properties: {
@@ -7111,6 +7239,22 @@ export const openApiOperations = {
             check_id: {
               type: 'string',
               format: 'uuid',
+            },
+            check_name: {
+              type: 'string',
+              minLength: 1,
+              maxLength: 120,
+            },
+            group_id_at_open: {
+              oneOf: [
+                {
+                  type: 'string',
+                  format: 'uuid',
+                },
+                {
+                  type: 'null',
+                },
+              ],
             },
             status: {
               type: 'string',
@@ -7144,26 +7288,16 @@ export const openApiOperations = {
               enum: ['RECOVERED', 'CONFIG_CHANGED', 'CHECK_DELETED', 'ADMINISTRATIVE', null],
             },
             observed_duration_ms: {
-              oneOf: [
-                {
-                  type: 'string',
-                  pattern: '^[0-9]+$',
-                },
-                {
-                  type: 'null',
-                },
-              ],
+              type: 'string',
+              pattern: '^[0-9]+$',
             },
             wall_duration_ms: {
-              oneOf: [
-                {
-                  type: 'string',
-                  pattern: '^[0-9]+$',
-                },
-                {
-                  type: 'null',
-                },
-              ],
+              type: 'string',
+              pattern: '^[0-9]+$',
+            },
+            generated_at: {
+              type: 'string',
+              format: 'date-time',
             },
             segments: {
               type: 'array',

@@ -1,11 +1,16 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 18:11 +06:00
+**Son güncelleme:** 2026-10-10 18:29 +06:00
 
-**Genel durum:** Aşama 0–11 tamamlandı; Aşama 12 uygulama dilimleri 1–2 tamamlandı, private history/incident API sırada
+**Genel durum:** Aşama 0–11 tamamlandı; Aşama 12 uygulama dilimleri 1–3 tamamlandı, kapasite kapanışı sırada
 
 ## Tamamlanan
 
+- Owner-scoped `GET /checks/{id}/history`, `GET /incidents` ve `GET /incidents/{id}` private API'si; source-aligned 288/336/360 bucket, rollup+bounded raw/open tail, DB-zamanı anchor, tombstone erişimi, kısa private cache ve fail-closed projection lag/timeout davranışı
+- Incident journal'da current/tombstone check adı, immutable group-at-open filtresi, status/time overlap, signed/filter-bound snapshot cursor, exact observed/wall duration ve leading/intermediate/trailing `UNOBSERVED` gap sentezi
+- Revision 26 ile API rolüne housekeeping queue/checkpoint SELECT'i vermeden owner-scoped source horizon ve pending range durumunu döndüren dar `security_api.history_projection_status` fonksiyonu
+- Aşama 12 dilim 3 tam kalite kapısı: format, 58-operation contract drift, lint, strict workspace typecheck, **30 dosyada 217/217 unit**, **15 dosyada 87/87 gerçek PostgreSQL/socket/process integration** ve bütün production build'leri geçti; 500-check monitor regresyonu **58.35 check/s** ölçtü
+- Yerel PostgreSQL Revision 26'ya yükseltildi ve ikinci migration koşusu idempotent kaldı; güncel migrate/API container'ları build edildi, API readiness `200`, oturumsuz history/incident route'ları beklenen `401` döndürdü
 - Ayrı `housekeeping-worker` process/container'ı, dar `security_api` sınırı ve dört bağımsız bounded loop: source discovery, minute/hour rollup, partition/default guard ve retention/purge
 - Revision 22–25 ile atomik full-tuple cursor+range enqueue, sessiz sistem scan horizon'u, source-of-truth minute recompute, sum/count hour aggregation, üç aylık partition horizon, DEFAULT görünürlüğü, projection-backlog retention kapısı, detach→24 saat grace→drop manifest'i ve replica-safe çözünürlük lane kilidi
 - İzole PostgreSQL housekeeping kabulü **3/3** geçti: iki replica + process restart yakınsaması, exact üç minute/tek hour sonucu, duplicate discovery yokluğu, DEFAULT guard, bounded purge, partition detach grace ve direct-DML yasağı
@@ -160,7 +165,7 @@
 ## Bilinçli Olarak Henüz Yapılmayan
 
 - Notification recipient/policy yönetim arayüzü (backend ve worker tamam; yönetim frontend'i Aşama 14 kapsamındadır)
-- History/incident private API implementasyonu ve grafikler
+- History grafikleri ve incident journal yönetim arayüzü (private backend API tamam)
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
 - Predictor analiz algoritması/model lifecycle'ı
 - MFA/passkey, OAuth/OIDC, organizasyon/üyelik/rol modeli ve kullanıcıya açık session/device yönetimi
@@ -183,4 +188,4 @@
 
 ## Sıradaki İş
 
-Aşama 12 uygulama dilimi 3 başlatılacaktır: canonical private history/incident OpenAPI sözleşmesi, owner-scoped service/routes, cursor ve projection-lag davranışı. Kapasite kapanışı sonraki ayrı dilimdir.
+Aşama 12 kapasite kapanışı başlatılacaktır: 20/200/500 rollup profili, 35 günlük deterministic history dataset/sorgu planı ve housekeeper yükü altında private API izolasyonu.

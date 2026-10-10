@@ -637,4 +637,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 12 uygulama dilimi 2** tamamlanmıştır. Revision 22–25; ayrı `housekeeping-worker`, atomik full-tuple source discovery, sessiz sistemler için ayrı scan horizon'u, bounded minute/hour recompute, iki-replica çözünürlük lane'i, partition/default guard, projection-backlog retention kapısı ve bounded detach/grace/drop + row purge akışını uygular. Restart, iki replica, DEFAULT visibility, least privilege ve retention manifest'i gerçek PostgreSQL üzerinde doğrulanmıştır.
 
-**Sıradaki çalışma Aşama 12 uygulama dilimi 3'tür:** private history/incident OpenAPI düzeltmeleri, owner-scoped service/routes, signed cursor ve projection-lag fail-closed davranışı.
+**Aşama 12 uygulama dilimi 3** tamamlanmıştır. Revision 26 dar projection-status fonksiyonunu; private API ise source-aligned day/week/month sorgularını, rollup+bounded raw/open tail birleşimini, tombstone erişimini, signed/filter-bound incident cursor'ını ve observed/unobserved segment sentezini uygular. Cross-owner kimlikler `404`, aşırı projection lag/timeout kontrollü `503` olur.
+
+**Sıradaki çalışma Aşama 12 kapanış dilimidir:** 20/200/500 rollup throughput profili, 35 günlük deterministic dataset üzerinde month query/partition planı ve eşzamanlı API-housekeeper izolasyonu.

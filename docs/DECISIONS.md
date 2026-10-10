@@ -840,3 +840,13 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Retention'ı wall-clock cutoff'a göre koşulsuz çalıştırmak; yalnız pending range sayısına bakmak; silme sonrası backup'tan rollup onarmayı normal akış saymak.
 - **Gerekçe:** Saklama süresini birkaç tur uzatmak, doğru history üretmek için gerekli kaynağı silmekten daha güvenlidir.
 - **Sonuçlar:** Büyük backlog sırasında partition ve row purge gecikir ve metric/logda görünür. Batch limitinden az satır okuyan başarılı tarama horizon'u ilerletir; hiç yeni run üretmeyen paused sistem kilitlenmez. Backlog boşaldığında otomatik devam eder; API/monitor/notification readiness bundan etkilenmez.
+
+## D-090 — Private history eski projection'ı gizlemek yerine bounded raw tail veya kontrollü 503 kullanır
+
+- **Tarih:** 2026-10-10 18:29 +06:00
+- **Durum:** Accepted — Revision 26 ve private API PostgreSQL testleriyle doğrulandı
+- **Bağlam:** Sorgunun bütün 30 günlük ham veriye fallback etmesi ay görünümünü veri büyüklüğüne bağlar; yalnız rollup okumak ise source scanner veya rebuild backlog'u sırasında eksik bucket'ı doğruymuş gibi gösterebilir. API rolüne housekeeping queue tablolarında doğrudan SELECT vermek de görev sınırını gereksiz genişletir.
+- **Karar:** Day/week için son 15 dakika, month için son 2 saat raw accepted run/finalized/open interval kaynaklarından transaction içinde yeniden hesaplanır; daha eski bölüm rollup'tan gelir. Source scan horizon'u veya check'e ait pending/failed range bu tail'in gerisindeyse endpoint retry edilebilir `503 history_projection_lagging` verir. API yalnız owner context'ini kullanan dar `security_api.history_projection_status` fonksiyonunu çağırır; rebuild queue SELECT yetkisi almaz.
+- **Alternatifler:** Her istekte tüm raw pencereyi taramak; projection lag'i yok saymak; global checkpoint tablolarını API rolüne açmak; housekeeper readiness'ini bütün API readiness'ine bağlamak.
+- **Gerekçe:** Sabit sorgu maliyeti, doğru no-data semantiği, least privilege ve housekeeper arızasının yalnız history özelliğine indirgenmesini birlikte korumak.
+- **Sonuçlar:** History tek read-only `REPEATABLE READ` transaction, DB zamanı ve bounded statement timeout kullanır. Tombstone sahibi geçmişi okuyabilir; cross-owner check/incident/filter kimlikleri `404` olur. History kısa private cache alır, incident journal `no-store` kalır; dashboard ve worker readiness projection backlog'undan etkilenmez.

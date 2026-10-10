@@ -12,6 +12,7 @@ const PROBLEM_TITLES: Record<ProblemCode, string> = {
   authentication_required: 'Authentication required',
   csrf_failed: 'CSRF validation failed',
   dependency_unavailable: 'Dependency unavailable',
+  history_projection_lagging: 'History projection is catching up',
   idempotency_in_progress: 'Idempotent operation in progress',
   idempotency_key_reused: 'Idempotency key reused',
   internal_error: 'Internal server error',

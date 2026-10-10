@@ -1,6 +1,7 @@
 import {
   loadAuthRuntimeConfig,
   loadDatabaseUrl,
+  loadHistoryRuntimeConfig,
   loadResourceRuntimeConfig,
   loadRuntimeConfig,
 } from '@site-monitor/config';
@@ -11,6 +12,7 @@ import { buildApiApplication } from './app.js';
 import { AuthService } from './auth-service.js';
 import { CheckService } from './check-service.js';
 import { GroupService } from './group-service.js';
+import { HistoryService } from './history-service.js';
 import { MaintenanceService } from './maintenance-service.js';
 import { NotificationService } from './notification-service.js';
 
@@ -35,12 +37,17 @@ const authService = await AuthService.create(database, {
   rateLimitKey: authConfig.rateLimitKey,
 });
 const resourceConfig = loadResourceRuntimeConfig();
+const historyConfig = loadHistoryRuntimeConfig();
 const checkService = new CheckService(database, {
   checkLimit: resourceConfig.checksPerOwnerLimit,
   securityKey: authConfig.rateLimitKey,
 });
 const groupService = new GroupService(database, {
   groupLimit: resourceConfig.groupsPerOwnerLimit,
+  securityKey: authConfig.rateLimitKey,
+});
+const historyService = new HistoryService(database, {
+  ...historyConfig,
   securityKey: authConfig.rateLimitKey,
 });
 const maintenanceService = new MaintenanceService(database, {
@@ -60,6 +67,7 @@ const app = buildApiApplication({
   checkService,
   cookieSecure: authConfig.cookieSecure,
   groupService,
+  historyService,
   logger,
   maintenanceService,
   notificationService,

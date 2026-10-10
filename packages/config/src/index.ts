@@ -88,6 +88,36 @@ export function loadResourceRuntimeConfig(
   };
 }
 
+export interface HistoryRuntimeConfig {
+  cursorTtlSeconds: number;
+  hourRawTailSeconds: number;
+  minuteRawTailSeconds: number;
+  retryAfterSeconds: number;
+  statementTimeoutMs: number;
+}
+
+export function loadHistoryRuntimeConfig(
+  environment: NodeJS.ProcessEnv = process.env,
+): HistoryRuntimeConfig {
+  const parsed = z
+    .object({
+      HISTORY_CURSOR_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).default(900),
+      HISTORY_HOUR_RAW_TAIL_SECONDS: z.coerce.number().int().min(3_600).max(21_600).default(7_200),
+      HISTORY_MINUTE_RAW_TAIL_SECONDS: z.coerce.number().int().min(300).max(3_600).default(900),
+      HISTORY_RETRY_AFTER_SECONDS: z.coerce.number().int().min(1).max(60).default(5),
+      HISTORY_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(100).max(10_000).default(2_000),
+    })
+    .parse(environment);
+
+  return {
+    cursorTtlSeconds: parsed.HISTORY_CURSOR_TTL_SECONDS,
+    hourRawTailSeconds: parsed.HISTORY_HOUR_RAW_TAIL_SECONDS,
+    minuteRawTailSeconds: parsed.HISTORY_MINUTE_RAW_TAIL_SECONDS,
+    retryAfterSeconds: parsed.HISTORY_RETRY_AFTER_SECONDS,
+    statementTimeoutMs: parsed.HISTORY_STATEMENT_TIMEOUT_MS,
+  };
+}
+
 export interface AuthRuntimeConfig {
   cookieSecure: boolean;
   csrfKey: Buffer;

@@ -905,6 +905,10 @@ export interface components {
       /** @enum {string} */
       classification: 'UP' | 'DOWN' | 'UNKNOWN' | 'PROVISIONAL' | 'MIXED';
       sample_count: number;
+      observed_up_ms: components['schemas']['NonNegativeIntegerString'];
+      observed_down_ms: components['schemas']['NonNegativeIntegerString'];
+      unknown_ms: components['schemas']['NonNegativeIntegerString'];
+      provisional_ms: components['schemas']['NonNegativeIntegerString'];
     };
     HistoryResponse: {
       check_id: components['schemas']['Uuid'];
@@ -914,11 +918,15 @@ export interface components {
       to: components['schemas']['Instant'];
       /** @enum {string} */
       resolution: 'minute' | 'hour';
+      bucket_seconds: number;
+      generated_at: components['schemas']['Instant'];
+      data_through: components['schemas']['Instant'];
       availability_ratio: number | null;
       coverage_ratio: number;
       observed_up_ms: components['schemas']['NonNegativeIntegerString'];
       observed_down_ms: components['schemas']['NonNegativeIntegerString'];
       unknown_ms: components['schemas']['NonNegativeIntegerString'];
+      provisional_ms: components['schemas']['NonNegativeIntegerString'];
       buckets: components['schemas']['HistoryBucket'][];
     };
     PredictionModel: {
@@ -945,6 +953,8 @@ export interface components {
     Incident: {
       id: components['schemas']['Uuid'];
       check_id: components['schemas']['Uuid'];
+      check_name: string;
+      group_id_at_open: components['schemas']['Uuid'] | null;
       status: components['schemas']['IncidentState'];
       observation_mode: components['schemas']['ObservationMode'];
       started_at: components['schemas']['Instant'];
@@ -952,8 +962,8 @@ export interface components {
       ended_at: components['schemas']['Instant'] | null;
       /** @enum {string|null} */
       closure_reason: 'RECOVERED' | 'CONFIG_CHANGED' | 'CHECK_DELETED' | 'ADMINISTRATIVE' | null;
-      observed_duration_ms: components['schemas']['NonNegativeIntegerString'] | null;
-      wall_duration_ms: components['schemas']['NonNegativeIntegerString'] | null;
+      observed_duration_ms: components['schemas']['NonNegativeIntegerString'];
+      wall_duration_ms: components['schemas']['NonNegativeIntegerString'];
     };
     IncidentSegment: {
       starts_at: components['schemas']['Instant'];
@@ -964,6 +974,8 @@ export interface components {
     IncidentDetail: {
       id: components['schemas']['Uuid'];
       check_id: components['schemas']['Uuid'];
+      check_name: string;
+      group_id_at_open: components['schemas']['Uuid'] | null;
       status: components['schemas']['IncidentState'];
       observation_mode: components['schemas']['ObservationMode'];
       started_at: components['schemas']['Instant'];
@@ -971,13 +983,15 @@ export interface components {
       ended_at: components['schemas']['Instant'] | null;
       /** @enum {string|null} */
       closure_reason: 'RECOVERED' | 'CONFIG_CHANGED' | 'CHECK_DELETED' | 'ADMINISTRATIVE' | null;
-      observed_duration_ms: components['schemas']['NonNegativeIntegerString'] | null;
-      wall_duration_ms: components['schemas']['NonNegativeIntegerString'] | null;
+      observed_duration_ms: components['schemas']['NonNegativeIntegerString'];
+      wall_duration_ms: components['schemas']['NonNegativeIntegerString'];
+      generated_at: components['schemas']['Instant'];
       segments: components['schemas']['IncidentSegment'][];
     };
     IncidentPage: {
       data: components['schemas']['Incident'][];
       page: components['schemas']['PageMeta'];
+      generated_at: components['schemas']['Instant'];
     };
     /** @enum {string} */
     MaintenanceState: 'UPCOMING' | 'ACTIVE' | 'ENDED' | 'CANCELLED';
@@ -1270,6 +1284,7 @@ export interface components {
     /** @description Required dependency or schema is unavailable */
     ServiceUnavailable: {
       headers: {
+        'Retry-After'?: number;
         [name: string]: unknown;
       };
       content: {
@@ -1876,6 +1891,7 @@ export interface operations {
         };
       };
       404: components['responses']['NotFoundProblem'];
+      503: components['responses']['ServiceUnavailable'];
     };
   };
   getCheckPrediction: {
@@ -2049,6 +2065,10 @@ export interface operations {
         check_id?: components['schemas']['Uuid'];
         group_id?: components['schemas']['Uuid'];
         status?: components['schemas']['IncidentState'];
+        /** @description Return incidents that start before this exclusive UTC boundary. */
+        started_before?: components['schemas']['Instant'];
+        /** @description Return incidents whose wall-clock span ends after this exclusive UTC boundary. */
+        ended_after?: components['schemas']['Instant'];
       };
       header?: never;
       path?: never;

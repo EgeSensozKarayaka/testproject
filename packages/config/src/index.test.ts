@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   loadDatabaseUrl,
   loadHousekeepingRuntimeConfig,
+  loadHistoryRuntimeConfig,
   loadMonitorRuntimeConfig,
   loadProbeRuntimeConfig,
   loadResourceRuntimeConfig,
@@ -24,6 +25,23 @@ describe('configuration', () => {
     expect(() => loadDatabaseUrl({ DATABASE_URL: 'https://example.com' })).toThrow(
       'DATABASE_URL must use the postgres or postgresql scheme',
     );
+  });
+});
+
+describe('history API configuration', () => {
+  it('uses bounded raw-tail and query defaults', () => {
+    expect(loadHistoryRuntimeConfig({})).toEqual({
+      cursorTtlSeconds: 900,
+      hourRawTailSeconds: 7_200,
+      minuteRawTailSeconds: 900,
+      retryAfterSeconds: 5,
+      statementTimeoutMs: 2_000,
+    });
+  });
+
+  it('rejects an unbounded raw tail or statement timeout', () => {
+    expect(() => loadHistoryRuntimeConfig({ HISTORY_MINUTE_RAW_TAIL_SECONDS: '3601' })).toThrow();
+    expect(() => loadHistoryRuntimeConfig({ HISTORY_STATEMENT_TIMEOUT_MS: '10001' })).toThrow();
   });
 });
 
