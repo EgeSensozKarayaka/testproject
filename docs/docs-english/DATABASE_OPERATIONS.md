@@ -19,44 +19,44 @@ Indexes are added in migrations with explicit names and query justifications. Th
 
 ### 2.1 Main Index Matrix
 
-| Query / Invariant | Table | Index / Constraint |
+| Query / Invariant             | Table                      | Index / Constraint                                                                                    |
 | ----------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Login lookup | `auth.users` | unique B-tree `(email_normalized)` |
-| Session exact digest | `auth.sessions` | unique B-tree `(token_digest)`; cleanup `(expires_at)` |
-| User check list | `app.checks` | `(owner_id, lifecycle_state, created_at DESC, id)` INCLUDE `(name,group_id,execution_state)` |
-| Group check list | `app.checks` | `(owner_id, group_id, lifecycle_state, id)` |
-| Scheduler due scan | `app.checks` | partial `(next_run_at,id)` WHERE LIVE+ACTIVE |
-| Pending manual reconciliation | `app.checks` | partial `(manual_requested_at,id)` WHERE non-null and LIVE |
-| Composite ownership | Every tenant parent | unique `(owner_id,id)` |
-| Dashboard state join | `check_current_states` | PK `(check_id)`, unique `(owner_id,check_id)`; `(owner_id,health_state,updated_at DESC)` |
-| Job claim | `check_jobs` | partial `(available_at,priority DESC,created_at,id)` WHERE `PENDING` |
-| Lease recovery | `check_jobs` | partial `(lease_expires_at,id)` WHERE `LEASED/RUNNING` |
-| Single active job | `check_jobs` | unique partial `(check_id)` WHERE `PENDING/LEASED/RUNNING` |
-| Job history | `check_jobs` | `(owner_id,check_id,created_at DESC,id)` |
-| Attempt order | `check_job_attempts` | unique `(job_id,attempt_number)` and `(job_id,fencing_token)` |
-| Run history | Every run partition | `(owner_id,check_id,finished_at DESC,id)` INCLUDE `(outcome,total_ms,status_code,accepted_for_state)` |
-| Rollup source scan | Every run partition | partial `(finished_at,check_id)` WHERE `accepted_for_state` |
-| Partition time scan | Large partition | BRIN `(finished_at)` only if size/plan evidence proves beneficial |
-| Single open incident | `incidents` | unique partial `(check_id)` WHERE `status='OPEN'` |
-| Incident journal | `incidents` | `(owner_id,check_id,started_at DESC,id)` and `(owner_id,status,started_at DESC)` |
-| Single open segment | `incident_segments` | unique partial `(incident_id)` WHERE `ended_at IS NULL` |
-| Incident segments | `incident_segments` | `(owner_id,incident_id,started_at,id)` |
-| Active maintenance | `maintenance_windows` | partial `(owner_id,check_id,starts_at,ends_at)` and group equivalent WHERE SCHEDULED |
-| Maintenance expiration | `maintenance_windows` | partial `(ends_at,id)` WHERE SCHEDULED |
-| Maintenance owner list | `maintenance_windows` | `(owner_id,starts_at DESC,id DESC)` |
-| Recipient lookup | `recipients` | unique `(owner_id,email_normalized)` |
-| Policy scope | `policies` | unique NULLS NOT DISTINCT `(owner_id,group_id)` |
-| Intent evaluation | `notification.intents` | partial `(maintenance_until,created_at,id)` WHERE pending/deferred |
-| Intent idempotency | `notification.intents` | unique `(incident_id,event_kind)` |
-| Delivery claim | `notification.deliveries` | partial `(available_at,id)` WHERE pending/retry; lease expiry equivalent |
-| Delivery idempotency | `notification.deliveries` | unique `(incident_id,event_kind,recipient_id)` |
-| Outbox claim | `outbox_dispatches` | partial `(available_at,event_id,destination)` WHERE pending/retry |
-| Public lookup | `public_status.snapshots` | unique `(slug_digest)` |
-| Component ordering | `public_status.components` | unique `(page_id,position)` + check/group partial unique |
-| History rollup | Rollup partition | PK `(bucket_start,check_id,probe_generation)` + `(owner_id,check_id,bucket_start)` |
-| Prediction claim | `analysis_jobs` | active partial unique `(check_id)` + pending `(available_at,id)` |
-| Latest score | Score partition | `(owner_id,check_id,computed_at DESC,id)` |
-| Audit list | Audit partition | `(owner_id,occurred_at DESC,id)` |
+| Login lookup                  | `auth.users`               | unique B-tree `(email_normalized)`                                                                    |
+| Session exact digest          | `auth.sessions`            | unique B-tree `(token_digest)`; cleanup `(expires_at)`                                                |
+| User check list               | `app.checks`               | `(owner_id, lifecycle_state, created_at DESC, id)` INCLUDE `(name,group_id,execution_state)`          |
+| Group check list              | `app.checks`               | `(owner_id, group_id, lifecycle_state, id)`                                                           |
+| Scheduler due scan            | `app.checks`               | partial `(next_run_at,id)` WHERE LIVE+ACTIVE                                                          |
+| Pending manual reconciliation | `app.checks`               | partial `(manual_requested_at,id)` WHERE non-null and LIVE                                            |
+| Composite ownership           | Every tenant parent        | unique `(owner_id,id)`                                                                                |
+| Dashboard state join          | `check_current_states`     | PK `(check_id)`, unique `(owner_id,check_id)`; `(owner_id,health_state,updated_at DESC)`              |
+| Job claim                     | `check_jobs`               | partial `(available_at,priority DESC,created_at,id)` WHERE `PENDING`                                  |
+| Lease recovery                | `check_jobs`               | partial `(lease_expires_at,id)` WHERE `LEASED/RUNNING`                                                |
+| Single active job             | `check_jobs`               | unique partial `(check_id)` WHERE `PENDING/LEASED/RUNNING`                                            |
+| Job history                   | `check_jobs`               | `(owner_id,check_id,created_at DESC,id)`                                                              |
+| Attempt order                 | `check_job_attempts`       | unique `(job_id,attempt_number)` and `(job_id,fencing_token)`                                         |
+| Run history                   | Every run partition        | `(owner_id,check_id,finished_at DESC,id)` INCLUDE `(outcome,total_ms,status_code,accepted_for_state)` |
+| Rollup source scan            | Every run partition        | partial `(finished_at,check_id)` WHERE `accepted_for_state`                                           |
+| Partition time scan           | Large partition            | BRIN `(finished_at)` only if size/plan evidence proves beneficial                                     |
+| Single open incident          | `incidents`                | unique partial `(check_id)` WHERE `status='OPEN'`                                                     |
+| Incident journal              | `incidents`                | `(owner_id,check_id,started_at DESC,id)` and `(owner_id,status,started_at DESC)`                      |
+| Single open segment           | `incident_segments`        | unique partial `(incident_id)` WHERE `ended_at IS NULL`                                               |
+| Incident segments             | `incident_segments`        | `(owner_id,incident_id,started_at,id)`                                                                |
+| Active maintenance            | `maintenance_windows`      | partial `(owner_id,check_id,starts_at,ends_at)` and group equivalent WHERE SCHEDULED                  |
+| Maintenance expiration        | `maintenance_windows`      | partial `(ends_at,id)` WHERE SCHEDULED                                                                |
+| Maintenance owner list        | `maintenance_windows`      | `(owner_id,starts_at DESC,id DESC)`                                                                   |
+| Recipient lookup              | `recipients`               | unique `(owner_id,email_normalized)`                                                                  |
+| Policy scope                  | `policies`                 | unique NULLS NOT DISTINCT `(owner_id,group_id)`                                                       |
+| Intent evaluation             | `notification.intents`     | partial `(maintenance_until,created_at,id)` WHERE pending/deferred                                    |
+| Intent idempotency            | `notification.intents`     | unique `(incident_id,event_kind)`                                                                     |
+| Delivery claim                | `notification.deliveries`  | partial `(available_at,id)` WHERE pending/retry; lease expiry equivalent                              |
+| Delivery idempotency          | `notification.deliveries`  | unique `(incident_id,event_kind,recipient_id)`                                                        |
+| Outbox claim                  | `outbox_dispatches`        | partial `(available_at,event_id,destination)` WHERE pending/retry                                     |
+| Public lookup                 | `public_status.snapshots`  | unique `(slug_digest)`                                                                                |
+| Component ordering            | `public_status.components` | unique `(page_id,position)` + check/group partial unique                                              |
+| History rollup                | Rollup partition           | PK `(bucket_start,check_id,probe_generation)` + `(owner_id,check_id,bucket_start)`                    |
+| Prediction claim              | `analysis_jobs`            | active partial unique `(check_id)` + pending `(available_at,id)`                                      |
+| Latest score                  | Score partition            | `(owner_id,check_id,computed_at DESC,id)`                                                             |
+| Audit list                    | Audit partition            | `(owner_id,occurred_at DESC,id)`                                                                      |
 
 Foreign key columns are additionally indexed if cascade/parent mutation queries show actual usage. Because PostgreSQL does not automatically create child indexes for foreign keys, migration reviews explicitly verify this.
 
@@ -98,11 +98,11 @@ Thus, even if the reconciler is delayed by a few seconds, the UI will not displa
 
 ### 2.5 History Query
 
-| Interval | Primary Source | Graph Resolution |
-| ------------- | -------------------------------------- | ------------------ |
-| Last 24 hours | Minute rollup | 1–5 minutes |
-| Last 7 days | API bucket aggregate from minute rollup | 15–60 minutes |
-| Last 30/31 days | Hour rollup | 1–6 hours |
+| Interval        | Primary Source                          | Graph Resolution |
+| --------------- | --------------------------------------- | ---------------- |
+| Last 24 hours   | Minute rollup                           | 1–5 minutes      |
+| Last 7 days     | API bucket aggregate from minute rollup | 15–60 minutes    |
+| Last 30/31 days | Hour rollup                             | 1–6 hours        |
 
 Requests are strictly bounded by `owner_id + check_id + [from,to)`. The `bucket_start` condition is mandatory for partition pruning. The first and last partial buckets are clipped directly with finalized health interval/minute data; full buckets come from rollups. Open health intervals are appended at query time up to `min(now,to)`.
 
@@ -121,14 +121,14 @@ If the denominator is zero, availability is `null`, not `0%`. UNKNOWN and provis
 
 ### 3.1 Partition Matrix
 
-| Parent | Key | Interval | Default Retention |
-| ----------------------------- | -------------- | ------ | --------------------------------- |
-| `monitoring.check_runs` | `finished_at` | Monthly | 90 days raw |
-| `monitoring.health_intervals` | `started_at` | Monthly | 400 days |
-| `monitoring.rollups_minute` | `bucket_start` | Monthly | 35 days |
-| `monitoring.rollups_hour` | `bucket_start` | Yearly | 400 days |
-| `prediction.scores` | `computed_at` | Monthly | 90 days |
-| `audit.events` | `occurred_at` | Monthly | 400 days, customizable by policy |
+| Parent                        | Key            | Interval | Default Retention                |
+| ----------------------------- | -------------- | -------- | -------------------------------- |
+| `monitoring.check_runs`       | `finished_at`  | Monthly  | 90 days raw                      |
+| `monitoring.health_intervals` | `started_at`   | Monthly  | 400 days                         |
+| `monitoring.rollups_minute`   | `bucket_start` | Monthly  | 35 days                          |
+| `monitoring.rollups_hour`     | `bucket_start` | Yearly   | 400 days                         |
+| `prediction.scores`           | `computed_at`  | Monthly  | 90 days                          |
+| `audit.events`                | `occurred_at`  | Monthly  | 400 days, customizable by policy |
 
 Partition names explicitly carry UTC boundaries: e.g., `check_runs_2026_10`. Queries target the parent table; the application does not generate partition names.
 
@@ -189,23 +189,23 @@ These are not production SLO guarantees, but rather an acceptance / performance 
 
 Defaults can be extended via deployment configuration; the minimum product requirement of one month of history is preserved.
 
-| Data | Default Retention | Purge Method |
-| ---------------------------- | ---------------------: | ---------------------------------------- |
-| Raw accepted/rejected runs | 90 days | Partition detach/drop |
-| Finalized health intervals | 400 days | Partition detach/drop |
-| Minute rollup | 35 days | Partition detach/drop |
-| Hour rollup | 400 days | Partition detach/drop |
-| Completed jobs/attempts | 30 days | Bounded batch delete |
-| Open jobs | Until terminal | Retention does not apply |
-| Incidents and segments | 400 days | Bounded owner/check batch |
-| Notification intent/delivery | 400 days | Bounded batch; subject to audit requirements |
-| Completed outbox/dispatch | 30 days | Bounded batch |
-| Dead outbox/dispatch | Until operator resolves | Never automatically deleted |
-| Session/one-time tokens | Expiry/revocation + 30 days | Bounded batch |
-| API idempotency receipts | Default 24 hours | Bounded delete using expiry index |
-| Public snapshots | Current only | Transactional replace/delete |
-| Prediction scores | 90 days | Partition detach/drop |
-| Audit events | 400 days | Partition; deployment policy override |
+| Data                         |           Default Retention | Purge Method                                 |
+| ---------------------------- | --------------------------: | -------------------------------------------- |
+| Raw accepted/rejected runs   |                     90 days | Partition detach/drop                        |
+| Finalized health intervals   |                    400 days | Partition detach/drop                        |
+| Minute rollup                |                     35 days | Partition detach/drop                        |
+| Hour rollup                  |                    400 days | Partition detach/drop                        |
+| Completed jobs/attempts      |                     30 days | Bounded batch delete                         |
+| Open jobs                    |              Until terminal | Retention does not apply                     |
+| Incidents and segments       |                    400 days | Bounded owner/check batch                    |
+| Notification intent/delivery |                    400 days | Bounded batch; subject to audit requirements |
+| Completed outbox/dispatch    |                     30 days | Bounded batch                                |
+| Dead outbox/dispatch         |     Until operator resolves | Never automatically deleted                  |
+| Session/one-time tokens      | Expiry/revocation + 30 days | Bounded batch                                |
+| API idempotency receipts     |            Default 24 hours | Bounded delete using expiry index            |
+| Public snapshots             |                Current only | Transactional replace/delete                 |
+| Prediction scores            |                     90 days | Partition detach/drop                        |
+| Audit events                 |                    400 days | Partition; deployment policy override        |
 
 Purges utilize small batches, statement timeouts, and progress checkpoints. Autovacuum pressure is monitored. Partition dropping is preferred over row deletions wherever possible. Because account deletion cannot drop a partition shared by multiple owners, it uses bounded deletes indexed on `(owner_id, time, id)`; the owner tombstone is retained until completion.
 
@@ -286,13 +286,13 @@ Seeds are re-runnable using idempotent upserts or fixed namespace identifiers. T
 
 ### 7.1 Initial Production Targets
 
-| Target | Value | Note |
-| --------------- | ------------------------------------------------: | -------------------------------------------------------- |
-| RPO | Maximum 5 minutes | Via managed WAL/PITR; validated at deployment |
-| RTO | Maximum 60 minutes | Must be tested against data size and provider restore latency |
-| PITR window | 14 days | For accidental migration or user errors |
-| Daily snapshot | 35 days | Encrypted and automated |
-| Restore drill | At least quarterly and prior to destructive migrations | Isolated environment |
+| Target         |                                                  Value | Note                                                          |
+| -------------- | -----------------------------------------------------: | ------------------------------------------------------------- |
+| RPO            |                                      Maximum 5 minutes | Via managed WAL/PITR; validated at deployment                 |
+| RTO            |                                     Maximum 60 minutes | Must be tested against data size and provider restore latency |
+| PITR window    |                                                14 days | For accidental migration or user errors                       |
+| Daily snapshot |                                                35 days | Encrypted and automated                                       |
+| Restore drill  | At least quarterly and prior to destructive migrations | Isolated environment                                          |
 
 These values are not considered "met" until infrastructure is provisioned; they must be verified with provider evidence during deployment acceptance. Local Compose is not a production continuity solution.
 

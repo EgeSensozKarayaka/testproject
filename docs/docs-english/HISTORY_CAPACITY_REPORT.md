@@ -66,9 +66,9 @@ At a 30-second cadence, 500 checks running over 35 days equal **50,400,000 raw p
 
 | Benchmark Metric                   |              Result |
 | ---------------------------------- | ------------------: |
-| Dataset creation + `ANALYZE`       |       16,690.11 ms  |
+| Dataset creation + `ANALYZE`       |        16,690.11 ms |
 | `EXPLAIN (ANALYZE, BUFFERS)`       |            4.568 ms |
-| `HistoryService.getHistory(month)` |           25.32 ms  |
+| `HistoryService.getHistory(month)` |            25.32 ms |
 | Output buckets returned            |                 360 |
 | Partitions scanned                 | `rollups_hour_2026` |
 | Partition count                    |                   1 |
@@ -81,12 +81,12 @@ The database query plan utilized owner/check/time composite indexes and pruned a
 
 In addition to the target check for the month query, 64 checks were initialized with 60-minute repair ranges. While the housekeeper processed 3,840 minute buckets across its dedicated 2-connection pool, 40 concurrent month queries were submitted via the API's distinct 4-connection pool.
 
-| API Metric Sample    |   Result | Regression Budget |
-| -------------------- | -------: | ----------------: |
-| Idle p95             | 17.79 ms |                 — |
-| Under load p95       | 15.20 ms |       < 1,500 ms  |
-| Under load Max       | 15.59 ms |       < 3,000 ms  |
-| Successful requests  |       40 |             40/40 |
+| API Metric Sample   |   Result | Regression Budget |
+| ------------------- | -------: | ----------------: |
+| Idle p95            | 17.79 ms |                 — |
+| Under load p95      | 15.20 ms |        < 1,500 ms |
+| Under load Max      | 15.59 ms |        < 3,000 ms |
+| Successful requests |       40 |             40/40 |
 
 Neither connection pool limit was breached. The benchmark verifies that private history reads proceed uninhibited while bounded housekeeping jobs run on the same PostgreSQL instance; it does not simulate isolated physical database clusters.
 

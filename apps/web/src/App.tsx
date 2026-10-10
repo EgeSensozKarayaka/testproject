@@ -77,7 +77,8 @@ function AuthCard({ onLogin }: { onLogin: (session: SessionView) => void }) {
         {mode === 'login' && 'Manage your checks, incidents, and service health from one place.'}
         {mode === 'register' &&
           'Create your account; your workspace will be ready after verification.'}
-        {mode === 'forgot' && 'Enter your email address. If an account matches, we will send a secure link.'}
+        {mode === 'forgot' &&
+          'Enter your email address. If an account matches, we will send a secure link.'}
       </p>
 
       <form onSubmit={(event) => void submit(event)}>

@@ -28,26 +28,26 @@ There is no fixed product limit such as 50 checks. The scheduler and worker proc
 
 ## 2. Key Decisions
 
-| Area | Decision |
-| --- | --- |
-| Architectural form | Modular monolith with distinct processes |
-| Frontend | React + TypeScript + Vite |
-| Backend | Node.js + TypeScript + Fastify |
-| Database | PostgreSQL |
-| SQL access | Typed repository layer; Kysely preferred |
-| API | REST + OpenAPI |
-| Live updates | Server-Sent Events (SSE) |
-| Job queue | PostgreSQL-backed durable jobs and lease mechanism |
+| Area                  | Decision                                                            |
+| --------------------- | ------------------------------------------------------------------- |
+| Architectural form    | Modular monolith with distinct processes                            |
+| Frontend              | React + TypeScript + Vite                                           |
+| Backend               | Node.js + TypeScript + Fastify                                      |
+| Database              | PostgreSQL                                                          |
+| SQL access            | Typed repository layer; Kysely preferred                            |
+| API                   | REST + OpenAPI                                                      |
+| Live updates          | Server-Sent Events (SSE)                                            |
+| Job queue             | PostgreSQL-backed durable jobs and lease mechanism                  |
 | Scheduler correctness | Fixed cadence, heartbeat, fencing token, and stale-result rejection |
-| Email | Node.js notification worker + transactional outbox + SMTP adapter |
-| Local email | Mailpit |
-| Prediction | Out of delivery scope; isolated research draft |
-| User model | Email/password account and user-based ownership |
-| Session | Secure HTTP-only cookie session |
-| Availability | Time-weighted state duration + separate data coverage |
-| Local execution | Docker Compose |
-| Redis | Not used in initial release |
-| Microservices | Not used in initial release |
+| Email                 | Node.js notification worker + transactional outbox + SMTP adapter   |
+| Local email           | Mailpit                                                             |
+| Prediction            | Out of delivery scope; isolated research draft                      |
+| User model            | Email/password account and user-based ownership                     |
+| Session               | Secure HTTP-only cookie session                                     |
+| Availability          | Time-weighted state duration + separate data coverage               |
+| Local execution       | Docker Compose                                                      |
+| Redis                 | Not used in initial release                                         |
+| Microservices         | Not used in initial release                                         |
 
 The goal of these choices is to provide process isolation, resilience, and horizontal scaling without introducing unnecessary distributed systems complexity.
 

@@ -33,19 +33,19 @@ The PostgreSQL transactional outbox is the persistent source of delivery. `LISTE
 }
 ```
 
-| Field               | Rule                                                                                                           |
-| ------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `event_id`          | UUIDv7; immutable global event identifier and consumer idempotency key.                                       |
-| `event_type`        | Lowercase dotted name defined in this catalog.                                                                 |
-| `schema_version`    | Payload version for the same event type; initial version is `1`.                                               |
-| `occurred_at`       | UTC timestamp of the domain event. In delayed writes, it may be older than `recorded_at`.                      |
+| Field               | Rule                                                                                                              |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `event_id`          | UUIDv7; immutable global event identifier and consumer idempotency key.                                           |
+| `event_type`        | Lowercase dotted name defined in this catalog.                                                                    |
+| `schema_version`    | Payload version for the same event type; initial version is `1`.                                                  |
+| `occurred_at`       | UTC timestamp of the domain event. In delayed writes, it may be older than `recorded_at`.                         |
 | `recorded_at`       | UTC timestamp when the outbox row was written in the same transaction; mapped to DB `created_at` in the envelope. |
-| `owner_id`          | Mandatory UUID for private events; `null` for system-wide events.                                              |
-| `aggregate_type/id` | Root for event ordering and re-reading.                                                                        |
-| `aggregate_version` | Decimal string for versioned aggregates; may be `null` for projection/system events.                            |
-| `correlation_id`    | Identifier of the initiating HTTP request, scheduled job, or reconciliation chain.                             |
-| `causation_id`      | Direct causing event/command identifier; `null` at the external root.                                          |
-| `payload`           | Event-specific, minimal, and versioned data.                                                                   |
+| `owner_id`          | Mandatory UUID for private events; `null` for system-wide events.                                                 |
+| `aggregate_type/id` | Root for event ordering and re-reading.                                                                           |
+| `aggregate_version` | Decimal string for versioned aggregates; may be `null` for projection/system events.                              |
+| `correlation_id`    | Identifier of the initiating HTTP request, scheduled job, or reconciliation chain.                                |
+| `causation_id`      | Direct causing event/command identifier; `null` at the external root.                                             |
+| `payload`           | Event-specific, minimal, and versioned data.                                                                      |
 
 Adding new optional fields to the envelope is backward-compatible. Removing an existing field, changing its type/meaning, or making it required necessitates a new `schema_version`.
 
@@ -153,12 +153,12 @@ Raw public tokens never enter events. `page_revision` is a decimal string used f
 
 The implemented Stage 3 schema admits only four durable destinations; Stage 4 does not expand this list secretly:
 
-| DB Destination | Responsibility                                                                        |
-| -------------- | ------------------------------------------------------------------------------------- |
+| DB Destination | Responsibility                                                                         |
+| -------------- | -------------------------------------------------------------------------------------- |
 | `REALTIME`     | Private query invalidation, public snapshot regeneration, and SSE projection signaling |
-| `NOTIFICATION` | Incident/maintenance/policy evaluation, intent, and delivery generation               |
-| `PREDICTION`   | Coalesced analysis requests; does not block the main pipeline if disabled or degraded |
-| `AUDIT`        | Redacted, immutable audit trail                                                       |
+| `NOTIFICATION` | Incident/maintenance/policy evaluation, intent, and delivery generation                |
+| `PREDICTION`   | Coalesced analysis requests; does not block the main pipeline if disabled or degraded  |
+| `AUDIT`        | Redacted, immutable audit trail                                                        |
 
 The scheduler's source of truth is `monitoring.check_jobs`, the history/rollup source of truth is the run/interval tables, and the maintenance conclusion source of truth is the maintenance table + persistent reconciliation jobs; these are not new outbox destination names. Catalog events such as `check.job_available` represent observable/auditable domain facts, but job claiming is never bound to outbox delivery.
 
@@ -179,15 +179,15 @@ Defining a destination in the catalog does not imply that the consumer is ready 
 
 Internal events are not transmitted one-to-one to the browser. The realtime projector coalesces events into the following external families based on owner/page allowlists:
 
-| Internal Family               | Private SSE                             | Public SSE                                            |
-| ----------------------------- | --------------------------------------- | ----------------------------------------------------- |
+| Internal Family               | Private SSE                             | Public SSE                                                |
+| ----------------------------- | --------------------------------------- | --------------------------------------------------------- |
 | Check config/health/freshness | `check.changed`, `check.status_changed` | `status_page.updated` only if it is a published component |
 | Group/config                  | `group.changed`, `group.status_changed` | `status_page.updated` only if it is a published component |
-| Incident                      | `incident.changed`                      | `status_page.updated` only if visibility is permitted |
-| Maintenance                   | `maintenance.changed`                   | `status_page.updated` only if component is published  |
-| Notification                  | `notification.changed`                  | Never                                                 |
-| Public config                 | `public_page.changed`                   | `status_page.updated` or stream closure               |
-| Prediction                    | `prediction.changed`                    | Never by default; if allowlisted, in a future version |
+| Incident                      | `incident.changed`                      | `status_page.updated` only if visibility is permitted     |
+| Maintenance                   | `maintenance.changed`                   | `status_page.updated` only if component is published      |
+| Notification                  | `notification.changed`                  | Never                                                     |
+| Public config                 | `public_page.changed`                   | `status_page.updated` or stream closure                   |
+| Prediction                    | `prediction.changed`                    | Never by default; if allowlisted, in a future version     |
 
 The SSE payload is not the event source of truth; a client that misses events reconciles via REST snapshots.
 

@@ -52,11 +52,11 @@ Because this host simultaneously ran IDE tooling and Docker Desktop, these figur
 
 ## 5. Benchmark Results
 
-| Checks | Owners |  Scheduler | Dispatch + Persist | End-to-End | Throughput (checks/s) | Claim Lag p95 | Execution/Persist p95 | Peak Active | Peak DB Busy |   CPU Time | Peak RSS |
-| -----: | -----: | ---------: | -----------------: | ---------: | --------------------: | ------------: | --------------------: | ----------: | -----------: | ---------: | -------: |
-|     20 |      2 |   214.6 ms |           265.6 ms |   480.2 ms |               41.65/s |      199.8 ms |               62.6 ms |           7 |            8 |     250 ms | 105.7 MiB|
-|    200 |      4 | 1,864.2 ms |         1,707.2 ms | 3,571.4 ms |               56.00/s |    1,843.8 ms |               60.1 ms |           6 |            7 |   1,360 ms | 127.0 MiB|
-|    500 |      8 | 4,595.1 ms |         4,138.0 ms | 8,733.1 ms |               57.25/s |    4,554.0 ms |               60.2 ms |           6 |            7 |   3,078 ms | 139.4 MiB|
+| Checks | Owners |  Scheduler | Dispatch + Persist | End-to-End | Throughput (checks/s) | Claim Lag p95 | Execution/Persist p95 | Peak Active | Peak DB Busy | CPU Time |  Peak RSS |
+| -----: | -----: | ---------: | -----------------: | ---------: | --------------------: | ------------: | --------------------: | ----------: | -----------: | -------: | --------: |
+|     20 |      2 |   214.6 ms |           265.6 ms |   480.2 ms |               41.65/s |      199.8 ms |               62.6 ms |           7 |            8 |   250 ms | 105.7 MiB |
+|    200 |      4 | 1,864.2 ms |         1,707.2 ms | 3,571.4 ms |               56.00/s |    1,843.8 ms |               60.1 ms |           6 |            7 | 1,360 ms | 127.0 MiB |
+|    500 |      8 | 4,595.1 ms |         4,138.0 ms | 8,733.1 ms |               57.25/s |    4,554.0 ms |               60.2 ms |           6 |            7 | 3,078 ms | 139.4 MiB |
 
 Across all profiles:
 

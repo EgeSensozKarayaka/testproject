@@ -184,16 +184,16 @@ The payload never contains target URLs, emails, expected bodies, response bodies
 
 The worker validates only the internal event family; the API projection mapper determines the external event type:
 
-| Internal Event Family                                          | External Private Event                   | Read Behavior                                                                             |
-| -------------------------------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------- |
-| check create/metadata/probe/schedule/pause/resume/group/delete | `check.changed`                          | Current check list/detail query invalidation; minimal tombstone invalidation on delete    |
-| observation/health/freshness/incident state                    | `check.status_changed`                   | Reads current check status projection within an owner-scoped transaction                  |
-| group create/change/delete or member status impact             | `group.changed` / `group.status_changed` | Rereads group configuration and computed status                                           |
-| incident lifecycle                                             | `incident.changed`                       | Rereads incident journal/detail projection                                                |
-| maintenance lifecycle                                          | `maintenance.changed`                    | Reads current window state within owner scope                                             |
-| recipient/policy/delivery                                      | `notification.changed`                   | Reads resource state excluding sensitive addresses                                        |
-| public config                                                  | `public_page.changed`                    | Private management view only; not a public broadcast                                       |
-| prediction                                                     | `prediction.changed`                     | Optional port; errors do not disrupt other families                                       |
+| Internal Event Family                                          | External Private Event                   | Read Behavior                                                                          |
+| -------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------- |
+| check create/metadata/probe/schedule/pause/resume/group/delete | `check.changed`                          | Current check list/detail query invalidation; minimal tombstone invalidation on delete |
+| observation/health/freshness/incident state                    | `check.status_changed`                   | Reads current check status projection within an owner-scoped transaction               |
+| group create/change/delete or member status impact             | `group.changed` / `group.status_changed` | Rereads group configuration and computed status                                        |
+| incident lifecycle                                             | `incident.changed`                       | Rereads incident journal/detail projection                                             |
+| maintenance lifecycle                                          | `maintenance.changed`                    | Reads current window state within owner scope                                          |
+| recipient/policy/delivery                                      | `notification.changed`                   | Reads resource state excluding sensitive addresses                                     |
+| public config                                                  | `public_page.changed`                    | Private management view only; not a public broadcast                                   |
+| prediction                                                     | `prediction.changed`                     | Optional port; errors do not disrupt other families                                    |
 
 When a wake-up arrives and no active stream exists for that owner on the local replica, no projection database query is executed. If active streams exist, jobs are coalesced using the key `(owner_id, external_family, resource_id)`. For the same key, only the highest version is retained; `version=null` represents a query invalidation and cannot be superseded.
 
@@ -434,7 +434,7 @@ The public production adapter connects to the shared Stage 13 transport in the i
 | Duplicate/out-of-order      | Stale version is discarded or query is invalidated                     |
 | Listener disconnect         | Reaches current state via resync + reconnect + snapshot                |
 | Worker outage               | Core product functions; polling updates; backlog drains on recovery    |
-| Slow consumer               | Connection-isolated overflow/resync; other clients and API unaffected   |
+| Slow consumer               | Connection-isolated overflow/resync; other clients and API unaffected  |
 | Session expiry/logout       | Stream terminates within bounded window; reconnect receives 401        |
 | Heartbeat/stale connection  | 15s comment; aborts and reconnects after 45s of silence                |
 | Unsupported schema          | Not written to wire; triggers dead-letter, alarm, and resync           |

@@ -37,7 +37,8 @@ export function PublicStatusPage({ token }: { token: string }) {
           setError('');
         }
       } catch (cause) {
-        if (active) setError(cause instanceof Error ? cause.message : 'Failed to load status page.');
+        if (active)
+          setError(cause instanceof Error ? cause.message : 'Failed to load status page.');
       }
     }
     void load();
@@ -129,9 +130,7 @@ export function PublicStatusPage({ token }: { token: string }) {
                     <li key={`${incident.started_at}-${incident.ended_at}`}>
                       <span>{instant(incident.started_at)}</span>
                       <span>
-                        {incident.ended_at
-                          ? `Resolved: ${instant(incident.ended_at)}`
-                          : 'Ongoing'}
+                        {incident.ended_at ? `Resolved: ${instant(incident.ended_at)}` : 'Ongoing'}
                       </span>
                     </li>
                   ))}

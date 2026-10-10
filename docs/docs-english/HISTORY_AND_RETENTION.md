@@ -120,12 +120,12 @@ Revision 21 introduced the following foundation without mutating already-applied
 
 `monitoring.run_evidence` provides the bounded run summary required over extended lifespans by current state, incident, and health-interval lineage:
 
-| Field | Description |
-| ----------------------------------------- | ------------------------------------------ |
+| Field                                     | Description                                    |
+| ----------------------------------------- | ---------------------------------------------- |
 | `owner_id, check_id, finished_at, id`     | Composite primary key and original run locator |
-| `outcome`, `failure_category`, `total_ms` | Bounded evidence summary                   |
-| `recorded_at`                             | Initial persistence timestamp              |
-| `created_at`                              | Evidence row timestamp                     |
+| `outcome`, `failure_category`, `total_ms` | Bounded evidence summary                       |
+| `recorded_at`                             | Initial persistence timestamp                  |
+| `created_at`                              | Evidence row timestamp                         |
 
 Every accepted stateful run idempotently writes an evidence row within its state effect transaction. Run locator foreign keys from `check_current_states`, `incidents`, `incident_segments`, `open_health_intervals`, and `health_intervals` are re-pointed to this compact table. The migration first backfills evidence for existing references, verifies row counts and missing locators for each reference type, and only then updates foreign key constraints.
 
@@ -284,18 +284,18 @@ The `observed_duration_ms` value of a closed incident is immutable. For an open 
 
 ### 9.1 Default Retention
 
-| Data | Minimum Retention | Purge Mechanism |
-| ------------------------- | ---------------------: | -------------------------------------- |
-| Raw check runs | 90 days | Monthly partition detach/drop |
-| Finalized health interval | 400 days | Monthly partition detach/drop |
-| Minute rollup | 35 days | Monthly partition detach/drop |
-| Hour rollup | 400 days | Yearly partition detach/drop |
-| Incident / segment | 400 days | Bounded owner/time delete |
-| Terminal job / attempt | 30 days | Bounded delete; decoupled from run FK |
-| Unreferenced run evidence | 2-day grace | Bounded anti-join delete |
-| Referenced run evidence | Until reference removed | Protected by FK |
-| Completed outbox | 30 days | Bounded delete |
-| DEAD outbox | Until operator resolves | Never automatically deleted |
+| Data                      |       Minimum Retention | Purge Mechanism                       |
+| ------------------------- | ----------------------: | ------------------------------------- |
+| Raw check runs            |                 90 days | Monthly partition detach/drop         |
+| Finalized health interval |                400 days | Monthly partition detach/drop         |
+| Minute rollup             |                 35 days | Monthly partition detach/drop         |
+| Hour rollup               |                400 days | Yearly partition detach/drop          |
+| Incident / segment        |                400 days | Bounded owner/time delete             |
+| Terminal job / attempt    |                 30 days | Bounded delete; decoupled from run FK |
+| Unreferenced run evidence |             2-day grace | Bounded anti-join delete              |
+| Referenced run evidence   | Until reference removed | Protected by FK                       |
+| Completed outbox          |                 30 days | Bounded delete                        |
+| DEAD outbox               | Until operator resolves | Never automatically deleted           |
 
 Because of partition granularity, retention is an enforced minimum: a monthly partition is dropped only after its entire boundary expires, and a yearly hour partition is dropped only once fully expired. As a result, physical data retention may exceed the configured day count, but will never fall short. This storage overhead is consciously preferred over risking dashboard inaccuracy and is surfaced in status and metrics.
 

@@ -4,7 +4,7 @@
 **Date:** 2026-10-10 11:02 +06:00  
 **Basis:** `REQUIREMENTS.md`, `ACCEPTANCE_CRITERIA.md`, `DOMAIN_MODEL.md`, `STATE_MACHINES.md`, `DATABASE_SCHEMA.md`, `EVENT_CATALOG.md`, `CHECKS_AND_GROUPS.md`, `CHECK_ENGINE.md`  
 **Pure domain package:** `packages/domain`  
-**Persistent executor:** `apps/monitor-worker` — Connected to Stage 9 atomic observation transaction and verified on real PostgreSQL  
+**Persistent executor:** `apps/monitor-worker` — Connected to Stage 9 atomic observation transaction and verified on real PostgreSQL
 
 ## 1. Purpose
 
@@ -207,20 +207,20 @@ Even if health remains unchanged, an accepted observation increments state versi
 
 ## 7. Health Transition Matrix
 
-| Initial State | Observation | Result | Candidate | Incident | Timeline |
-| --- | --- | --- | --- | --- | --- |
-| UNKNOWN | PASS | UP | Clean | None | UNKNOWN closes, UP opens |
-| UNKNOWN | FAIL | SUSPECT | First FAIL | None | UNKNOWN closes, PROVISIONAL opens |
-| UP | PASS | UP | Clean | None | UP interval continues |
-| UP | FAIL | SUSPECT | First FAIL | None | UP closes, PROVISIONAL opens |
-| SUSPECT | PASS | UP | Cleared | None | PROVISIONAL finalized as UP in history, new UP opens |
-| SUSPECT | FAIL | DOWN | Confirmed | Opens at first FAIL timestamp | PROVISIONAL finalized as DOWN in history, new DOWN opens |
-| DOWN + OPEN/OBSERVED | FAIL | DOWN | None | Same incident/segment | DOWN interval continues |
-| DOWN + OPEN/OBSERVED | PASS | UP | None | Closes as RECOVERED | DOWN closes, UP opens |
-| STALE + OPEN/UNOBSERVED | FAIL | DOWN | None | Segment continues for same incident | UNKNOWN closes, DOWN opens |
-| STALE + OPEN/UNOBSERVED | PASS | UP | None | Closes as RECOVERED | UNKNOWN closes, UP opens |
-| STALE, no incident | FAIL | SUSPECT | New candidate | None | UNKNOWN closes, PROVISIONAL opens |
-| STALE, no incident | PASS | UP | Clean | None | UNKNOWN closes, UP opens |
+| Initial State           | Observation | Result  | Candidate     | Incident                            | Timeline                                                 |
+| ----------------------- | ----------- | ------- | ------------- | ----------------------------------- | -------------------------------------------------------- |
+| UNKNOWN                 | PASS        | UP      | Clean         | None                                | UNKNOWN closes, UP opens                                 |
+| UNKNOWN                 | FAIL        | SUSPECT | First FAIL    | None                                | UNKNOWN closes, PROVISIONAL opens                        |
+| UP                      | PASS        | UP      | Clean         | None                                | UP interval continues                                    |
+| UP                      | FAIL        | SUSPECT | First FAIL    | None                                | UP closes, PROVISIONAL opens                             |
+| SUSPECT                 | PASS        | UP      | Cleared       | None                                | PROVISIONAL finalized as UP in history, new UP opens     |
+| SUSPECT                 | FAIL        | DOWN    | Confirmed     | Opens at first FAIL timestamp       | PROVISIONAL finalized as DOWN in history, new DOWN opens |
+| DOWN + OPEN/OBSERVED    | FAIL        | DOWN    | None          | Same incident/segment               | DOWN interval continues                                  |
+| DOWN + OPEN/OBSERVED    | PASS        | UP      | None          | Closes as RECOVERED                 | DOWN closes, UP opens                                    |
+| STALE + OPEN/UNOBSERVED | FAIL        | DOWN    | None          | Segment continues for same incident | UNKNOWN closes, DOWN opens                               |
+| STALE + OPEN/UNOBSERVED | PASS        | UP      | None          | Closes as RECOVERED                 | UNKNOWN closes, UP opens                                 |
+| STALE, no incident      | FAIL        | SUSPECT | New candidate | None                                | UNKNOWN closes, PROVISIONAL opens                        |
+| STALE, no incident      | PASS        | UP      | Clean         | None                                | UNKNOWN closes, UP opens                                 |
 
 Impossible snapshot scenarios (`DOWN` without an open incident, open incident marked `OBSERVED` without an open segment, candidate present when health is not `SUSPECT`) are never patched fail-open. The engine raises a typed `DOMAIN_INVARIANT_VIOLATION`; the transaction rolls back, no FAIL is recorded against the target, and an operator alarm is triggered.
 
@@ -314,14 +314,14 @@ There is exactly one open interval per check in the `open_health_intervals` tabl
 
 ### 10.2 Provisional Resolution
 
-| Subsequent Event | Final PROVISIONAL Class |
-| --- | --- |
-| FAIL meeting threshold | DOWN |
-| PASS | UP |
-| Freshness expiry | UNKNOWN |
-| Pause | UNKNOWN |
-| Probe reset | UNKNOWN |
-| Delete | End of history; open row is removed |
+| Subsequent Event       | Final PROVISIONAL Class             |
+| ---------------------- | ----------------------------------- |
+| FAIL meeting threshold | DOWN                                |
+| PASS                   | UP                                  |
+| Freshness expiry       | UNKNOWN                             |
+| Pause                  | UNKNOWN                             |
+| Probe reset            | UNKNOWN                             |
+| Delete                 | End of history; open row is removed |
 
 `PROVISIONAL` is never a final classification in `health_intervals`. Consequently, monthly availability queries never erroneously attribute indeterminate periods to UP or DOWN.
 
@@ -395,14 +395,14 @@ Group health is not a separate mutable aggregate or table. It is derived as a qu
 DOWN > SUSPECT > UNKNOWN > UP
 ```
 
-| Child Check Outcomes | Group Health |
-| --- | --- |
-| At least one DOWN | DOWN |
-| No DOWN, at least one SUSPECT | SUSPECT |
-| No DOWN or SUSPECT, at least one UNKNOWN | UNKNOWN |
-| All ACTIVE children are UP | UP |
-| No ACTIVE children, paused checks present | UNKNOWN |
-| No live children exist | UNKNOWN; all counters are 0 |
+| Child Check Outcomes                      | Group Health                |
+| ----------------------------------------- | --------------------------- |
+| At least one DOWN                         | DOWN                        |
+| No DOWN, at least one SUSPECT             | SUSPECT                     |
+| No DOWN or SUSPECT, at least one UNKNOWN  | UNKNOWN                     |
+| All ACTIVE children are UP                | UP                          |
+| No ACTIVE children, paused checks present | UNKNOWN                     |
+| No live children exist                    | UNKNOWN; all counters are 0 |
 
 `up + suspect + down + unknown` equals the count of active checks; `paused` is tracked separately. The current OpenAPI contract represents an empty group via zeroed counter values. A separate `empty` property will only be introduced upon deliberate contract versioning.
 
@@ -420,16 +420,16 @@ Maintenance summaries remain decoupled from health. Placeholder maintenance fiel
 
 The engine does not write directly to the durable outbox; it returns a minimal, redacted list of facts. The Stage 9 adapter binds IDs/versions and writes envelope/dispatch records in the same transaction solely for persistently activated destinations.
 
-| Fact | Trigger Condition |
-| --- | --- |
-| `check.observation_accepted` | Every accepted run |
-| `check.observation_rejected` | Persisted run excluded from state mutations |
-| `check.health_changed` | When persisted observed health actually changes |
-| `check.freshness_changed` | When transitioning FRESH ↔ STALE |
-| `incident.opened` | When threshold is crossed for the first time |
-| `incident.observation_suspended` | When open segment closes due to gap or pause |
-| `incident.observation_resumed` | When an UNOBSERVED incident is observed again via FAIL |
-| `incident.closed` | On recovery, config change, or deletion terminal closure |
+| Fact                             | Trigger Condition                                        |
+| -------------------------------- | -------------------------------------------------------- |
+| `check.observation_accepted`     | Every accepted run                                       |
+| `check.observation_rejected`     | Persisted run excluded from state mutations              |
+| `check.health_changed`           | When persisted observed health actually changes          |
+| `check.freshness_changed`        | When transitioning FRESH ↔ STALE                         |
+| `incident.opened`                | When threshold is crossed for the first time             |
+| `incident.observation_suspended` | When open segment closes due to gap or pause             |
+| `incident.observation_resumed`   | When an UNOBSERVED incident is observed again via FAIL   |
+| `incident.closed`                | On recovery, config change, or deletion terminal closure |
 
 Repeated DOWN FAILs do not produce duplicate `incident.opened` or DOWN notification facts. `maintenance_suppressed` is an event-time diagnostic field, not a dispatch decision. While the adapter may attach a maintenance snapshot when persisting events, the notification worker re-evaluates the durable source of truth prior to dispatch.
 

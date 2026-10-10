@@ -32,24 +32,24 @@ ACTIVE ──PauseCheck──> PAUSED
 PAUSED ──ResumeCheck─> ACTIVE
 ```
 
-| Current | Event | Next | Side Effects |
-| --- | --- | --- | --- |
-| ACTIVE | Pause | PAUSED | Increments schedule generation, cancels queued jobs, invalidates running results for state updates, clears failure candidate, suspends active incident segments. |
-| PAUSED | Pause | PAUSED | Idempotent no-op; resource version does not increment unnecessarily. |
-| PAUSED | Resume | ACTIVE | Increments schedule generation, enqueues immediate scheduled probe, preserves effective health as UNKNOWN until fresh observation. |
-| ACTIVE | Resume | ACTIVE | Idempotent no-op. |
-| LIVE | Delete | DELETED | Halts scheduling, cancels pending jobs, closes open incident with `CHECK_DELETED`, removes public page projections. |
-| DELETED | Any mutation | DELETED | Returns `resource_not_found` or terminal conflict error. |
+| Current | Event        | Next    | Side Effects                                                                                                                                                     |
+| ------- | ------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ACTIVE  | Pause        | PAUSED  | Increments schedule generation, cancels queued jobs, invalidates running results for state updates, clears failure candidate, suspends active incident segments. |
+| PAUSED  | Pause        | PAUSED  | Idempotent no-op; resource version does not increment unnecessarily.                                                                                             |
+| PAUSED  | Resume       | ACTIVE  | Increments schedule generation, enqueues immediate scheduled probe, preserves effective health as UNKNOWN until fresh observation.                               |
+| ACTIVE  | Resume       | ACTIVE  | Idempotent no-op.                                                                                                                                                |
+| LIVE    | Delete       | DELETED | Halts scheduling, cancels pending jobs, closes open incident with `CHECK_DELETED`, removes public page projections.                                              |
+| DELETED | Any mutation | DELETED | Returns `resource_not_found` or terminal conflict error.                                                                                                         |
 
 ## 3. Manual Run Modes
 
 Manual execution is not a check state; it is an attribute of a check job.
 
-| Check Status | Manual Mode | State Effect | Cadence Effect |
-| --- | --- | --- | --- |
-| LIVE + ACTIVE | STATEFUL | Participates in health/incident state machines. | None |
-| LIVE + PAUSED | DIAGNOSTIC | Persisted to history; does not alter health, incidents, availability, or alerts. | None |
-| DELETED | None | Request rejected. | None |
+| Check Status  | Manual Mode | State Effect                                                                     | Cadence Effect |
+| ------------- | ----------- | -------------------------------------------------------------------------------- | -------------- |
+| LIVE + ACTIVE | STATEFUL    | Participates in health/incident state machines.                                  | None           |
+| LIVE + PAUSED | DIAGNOSTIC  | Persisted to history; does not alter health, incidents, availability, or alerts. | None           |
+| DELETED       | None        | Request rejected.                                                                | None           |
 
 If a check has active or queued jobs, concurrent manual run requests coalesce into a single `manual_requested = true` intent flag. Upon job completion, at most one manual job is enqueued.
 
@@ -67,14 +67,14 @@ PENDING ──claim──> LEASED ──start──> RUNNING ──result persis
    └─retry budget exhausted / permanent internal error──> DEAD
 ```
 
-| State | Allowed Operations | Notes |
-| --- | --- | --- |
-| PENDING | Claim, cancel | Claim atomically assigns lease and monotonic fencing token. |
-| LEASED | Start, heartbeat, release, expire, cancellation request | Brief window prior to outbound HTTP connection. Remains active until cancellation acknowledgement. |
-| RUNNING | Heartbeat, persist result, lose lease, cancellation request | Worker receives abort signal on lease loss or cancellation request; preserves partial unique invariant until acknowledged. |
-| COMPLETED | None | Target may return PASS or FAIL; both represent successful job execution. |
-| CANCELLED | None | Job discarded due to pause, delete, or config invalidation. |
-| DEAD | Operator/reconciliation inspection | Internal infrastructure errors exhausted retry budget; does not emit target failure observations. |
+| State     | Allowed Operations                                          | Notes                                                                                                                      |
+| --------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| PENDING   | Claim, cancel                                               | Claim atomically assigns lease and monotonic fencing token.                                                                |
+| LEASED    | Start, heartbeat, release, expire, cancellation request     | Brief window prior to outbound HTTP connection. Remains active until cancellation acknowledgement.                         |
+| RUNNING   | Heartbeat, persist result, lose lease, cancellation request | Worker receives abort signal on lease loss or cancellation request; preserves partial unique invariant until acknowledged. |
+| COMPLETED | None                                                        | Target may return PASS or FAIL; both represent successful job execution.                                                   |
+| CANCELLED | None                                                        | Job discarded due to pause, delete, or config invalidation.                                                                |
+| DEAD      | Operator/reconciliation inspection                          | Internal infrastructure errors exhausted retry budget; does not emit target failure observations.                          |
 
 Expired leases return jobs to `PENDING`. Subsequent claims receive higher fencing tokens. While stale attempt results may be archived as diagnostic check runs, they fail observation acceptance rules.
 
@@ -113,14 +113,14 @@ FRESH ──fresh_until elapsed───> STALE
 FRESH ──pause/config reset────> STALE
 ```
 
-| Current | Trigger | Next | Domain Effect |
-| --- | --- | --- | --- |
-| STALE | Accepted PASS/FAIL | FRESH | Recomputes `fresh_until` deadline. |
-| FRESH | Accepted PASS/FAIL | FRESH | Advances `fresh_until` deadline. |
-| FRESH | Clock > fresh_until | STALE | Clears failure candidate, closes open incident segment at `fresh_until`, timeline transitions to UNKNOWN. |
-| Any | Pause | STALE | State becomes unobserved. |
-| Any | Probe config changed | STALE | Obsoletes past observations. |
-| FRESH | Interval changed | FRESH or STALE | Recomputes `fresh_until` against latest accepted run and new interval. |
+| Current | Trigger              | Next           | Domain Effect                                                                                             |
+| ------- | -------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
+| STALE   | Accepted PASS/FAIL   | FRESH          | Recomputes `fresh_until` deadline.                                                                        |
+| FRESH   | Accepted PASS/FAIL   | FRESH          | Advances `fresh_until` deadline.                                                                          |
+| FRESH   | Clock > fresh_until  | STALE          | Clears failure candidate, closes open incident segment at `fresh_until`, timeline transitions to UNKNOWN. |
+| Any     | Pause                | STALE          | State becomes unobserved.                                                                                 |
+| Any     | Probe config changed | STALE          | Obsoletes past observations.                                                                              |
+| FRESH   | Interval changed     | FRESH or STALE | Recomputes `fresh_until` against latest accepted run and new interval.                                    |
 
 `last_observed_health` is preserved. Effective health presented to clients:
 
@@ -132,23 +132,23 @@ effective_health = freshness == STALE ? UNKNOWN : last_observed_health
 
 Only accepted stateful observations trigger health state transitions.
 
-| Last Observed Health | Outcome | Next Health | Candidate | Incident Action |
-| --- | --- | --- | --- | --- |
-| UNKNOWN | PASS | UP | None | None |
-| UNKNOWN | FAIL | SUSPECT | Initiated | None |
-| UP | PASS | UP | None | None |
-| UP | FAIL | SUSPECT | Initiated | None |
-| SUSPECT | PASS | UP | Cleared | Provisional interval finalized as UP. |
-| SUSPECT | FAIL | DOWN | Confirmed | Opens incident; start time backdated to first FAIL. |
-| DOWN | FAIL | DOWN | None | Active incident segment continues. |
-| DOWN | PASS | UP | None | Active segment and incident closed with `RECOVERED`. |
+| Last Observed Health | Outcome | Next Health | Candidate | Incident Action                                      |
+| -------------------- | ------- | ----------- | --------- | ---------------------------------------------------- |
+| UNKNOWN              | PASS    | UP          | None      | None                                                 |
+| UNKNOWN              | FAIL    | SUSPECT     | Initiated | None                                                 |
+| UP                   | PASS    | UP          | None      | None                                                 |
+| UP                   | FAIL    | SUSPECT     | Initiated | None                                                 |
+| SUSPECT              | PASS    | UP          | Cleared   | Provisional interval finalized as UP.                |
+| SUSPECT              | FAIL    | DOWN        | Confirmed | Opens incident; start time backdated to first FAIL.  |
+| DOWN                 | FAIL    | DOWN        | None      | Active incident segment continues.                   |
+| DOWN                 | PASS    | UP          | None      | Active segment and incident closed with `RECOVERED`. |
 
 When an active incident is `UNOBSERVED`, effective health is UNKNOWN:
 
-| Open Incident | New Accepted Outcome | Behavior |
-| --- | --- | --- |
-| UNOBSERVED | FAIL | Health transitions to DOWN, opens new observed segment under existing incident; zero duplicate alerts emitted. |
-| UNOBSERVED | PASS | Health transitions to UP, closes incident with `RECOVERED`. |
+| Open Incident | New Accepted Outcome | Behavior                                                                                                       |
+| ------------- | -------------------- | -------------------------------------------------------------------------------------------------------------- |
+| UNOBSERVED    | FAIL                 | Health transitions to DOWN, opens new observed segment under existing incident; zero duplicate alerts emitted. |
+| UNOBSERVED    | PASS                 | Health transitions to UP, closes incident with `RECOVERED`.                                                    |
 
 ### Provisional SUSPECT Timeline Semantics
 
@@ -176,17 +176,17 @@ NONE
                             └─check deleted──────> CLOSED/CHECK_DELETED
 ```
 
-| Current | Event | Next | Segment Behavior | Outbox Event |
-| --- | --- | --- | --- | --- |
-| None | Second consecutive FAIL | OPEN/OBSERVED | Opens initial segment backdated to first FAIL. | `incident.opened` |
-| OPEN/OBSERVED | FAIL | Same | Active segment continues. | None |
-| OPEN/OBSERVED | PASS | CLOSED/RECOVERED | Closes active segment at PASS timestamp. | `incident.closed:RECOVERED` |
-| OPEN/OBSERVED | Freshness stale | OPEN/UNOBSERVED | Closes active segment at `fresh_until`. | `incident.observation_suspended` |
-| OPEN/OBSERVED | Pause | OPEN/UNOBSERVED | Closes active segment at pause timestamp. | `incident.observation_suspended` |
-| OPEN/UNOBSERVED | FAIL | OPEN/OBSERVED | Opens new segment at FAIL timestamp. | `incident.observation_resumed` |
-| OPEN/UNOBSERVED | PASS | CLOSED/RECOVERED | No new segment opened. | `incident.closed:RECOVERED` |
-| OPEN | Probe config changed | CLOSED/CONFIG_CHANGED | Closes active segment at edit timestamp. | `incident.closed:CONFIG_CHANGED` |
-| OPEN | Check deleted | CLOSED/CHECK_DELETED | Closes active segment at deletion timestamp. | `incident.closed:CHECK_DELETED` |
+| Current         | Event                   | Next                  | Segment Behavior                               | Outbox Event                     |
+| --------------- | ----------------------- | --------------------- | ---------------------------------------------- | -------------------------------- |
+| None            | Second consecutive FAIL | OPEN/OBSERVED         | Opens initial segment backdated to first FAIL. | `incident.opened`                |
+| OPEN/OBSERVED   | FAIL                    | Same                  | Active segment continues.                      | None                             |
+| OPEN/OBSERVED   | PASS                    | CLOSED/RECOVERED      | Closes active segment at PASS timestamp.       | `incident.closed:RECOVERED`      |
+| OPEN/OBSERVED   | Freshness stale         | OPEN/UNOBSERVED       | Closes active segment at `fresh_until`.        | `incident.observation_suspended` |
+| OPEN/OBSERVED   | Pause                   | OPEN/UNOBSERVED       | Closes active segment at pause timestamp.      | `incident.observation_suspended` |
+| OPEN/UNOBSERVED | FAIL                    | OPEN/OBSERVED         | Opens new segment at FAIL timestamp.           | `incident.observation_resumed`   |
+| OPEN/UNOBSERVED | PASS                    | CLOSED/RECOVERED      | No new segment opened.                         | `incident.closed:RECOVERED`      |
+| OPEN            | Probe config changed    | CLOSED/CONFIG_CHANGED | Closes active segment at edit timestamp.       | `incident.closed:CONFIG_CHANGED` |
+| OPEN            | Check deleted           | CLOSED/CHECK_DELETED  | Closes active segment at deletion timestamp.   | `incident.closed:CHECK_DELETED`  |
 
 Total `observed_duration` equals the sum of closed segments plus the elapsed duration of active open segments. Unobserved gap periods never increment observed downtime duration.
 
@@ -201,18 +201,18 @@ Timeline interval classifications:
 
 Transitions:
 
-| Event | Timeline Effect |
-| --- | --- |
-| First accepted PASS | UP starting from timestamp. |
-| First accepted FAIL | PROVISIONAL starting from timestamp. |
-| Second consecutive FAIL | Resolves PROVISIONAL -> DOWN from candidate start timestamp. |
-| PASS following SUSPECT | Resolves PROVISIONAL -> UP from candidate start timestamp. |
-| PASS following DOWN | DOWN terminates at PASS timestamp; UP commences. |
-| Exceeding `fresh_until` | Known interval terminates; UNKNOWN commences. |
-| Pause command | UNKNOWN commences at pause timestamp. |
-| Resume command | UNKNOWN until first accepted observation. |
-| Probe config edit | UNKNOWN commencing at edit timestamp. |
-| Delete command | Historical queries terminate at deletion; retention policies govern archiving. |
+| Event                   | Timeline Effect                                                                |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| First accepted PASS     | UP starting from timestamp.                                                    |
+| First accepted FAIL     | PROVISIONAL starting from timestamp.                                           |
+| Second consecutive FAIL | Resolves PROVISIONAL -> DOWN from candidate start timestamp.                   |
+| PASS following SUSPECT  | Resolves PROVISIONAL -> UP from candidate start timestamp.                     |
+| PASS following DOWN     | DOWN terminates at PASS timestamp; UP commences.                               |
+| Exceeding `fresh_until` | Known interval terminates; UNKNOWN commences.                                  |
+| Pause command           | UNKNOWN commences at pause timestamp.                                          |
+| Resume command          | UNKNOWN until first accepted observation.                                      |
+| Probe config edit       | UNKNOWN commencing at edit timestamp.                                          |
+| Delete command          | Historical queries terminate at deletion; retention policies govern archiving. |
 
 Availability percentages are computed exclusively from finalized UP and DOWN durations. Open PROVISIONAL intervals are displayed as "pending classification" and excluded from availability denominators until resolved.
 
@@ -226,12 +226,12 @@ SCHEDULED ──cancel──> CANCELLED
 
 Time-derived effective state:
 
-| Condition | Effective State |
-| --- | --- |
-| Cancelled | CANCELLED |
-| now < starts_at | UPCOMING |
-| starts_at <= now < ends_at | ACTIVE |
-| now >= ends_at | ENDED |
+| Condition                  | Effective State |
+| -------------------------- | --------------- |
+| Cancelled                  | CANCELLED       |
+| now < starts_at            | UPCOMING        |
+| starts_at <= now < ends_at | ACTIVE          |
+| now >= ends_at             | ENDED           |
 
 Effective maintenance evaluation for a check:
 
@@ -268,15 +268,15 @@ PENDING ──claim──> PROCESSING ──provider success──> SENT
                        └─no longer eligible────────> CANCELLED
 ```
 
-| State | Description |
-| --- | --- |
-| PENDING | Queued for outbound delivery. |
-| PROCESSING | Acquired under lease by a notification worker instance. |
-| RETRY_WAIT | Suspended in backoff sleep until next retry window. |
-| SENT | Confirmed successful dispatch with provider receipt timestamp. |
-| FAILED | Terminal error or retry budget exhausted. |
+| State            | Description                                                                      |
+| ---------------- | -------------------------------------------------------------------------------- |
+| PENDING          | Queued for outbound delivery.                                                    |
+| PROCESSING       | Acquired under lease by a notification worker instance.                          |
+| RETRY_WAIT       | Suspended in backoff sleep until next retry window.                              |
+| SENT             | Confirmed successful dispatch with provider receipt timestamp.                   |
+| FAILED           | Terminal error or retry budget exhausted.                                        |
 | DELIVERY_UNKNOWN | Ambiguous SMTP response; requires operator inspection to prevent duplicate spam. |
-| CANCELLED | Obsoleted prior to transmission due to incident resolution or policy deletion. |
+| CANCELLED        | Obsoleted prior to transmission due to incident resolution or policy deletion.   |
 
 A RECOVERY notification is never dispatched unless a corresponding DOWN notification reached `SENT`. Incidents with `DELIVERY_UNKNOWN` DOWN deliveries do not trigger automated recovery emails.
 
@@ -307,13 +307,13 @@ DRAFT ──publish──> PUBLISHED ──disable──> DISABLED
 
 Prediction metrics do not represent health states. Derived effective status:
 
-| Condition | Projected Status |
-| --- | --- |
-| Predictor disabled | DISABLED |
-| No scores generated | UNAVAILABLE |
-| `now < valid_until` | CURRENT |
-| `now >= valid_until` | STALE |
-| Analysis error | UNAVAILABLE or last score projected as STALE |
+| Condition            | Projected Status                             |
+| -------------------- | -------------------------------------------- |
+| Predictor disabled   | DISABLED                                     |
+| No scores generated  | UNAVAILABLE                                  |
+| `now < valid_until`  | CURRENT                                      |
+| `now >= valid_until` | STALE                                        |
+| Analysis error       | UNAVAILABLE or last score projected as STALE |
 
 Predictions never dispatch events to Check health or Incident state machines. Only explicitly enabled predictive warning policies can generate notification intents.
 
@@ -325,14 +325,14 @@ Group health is a dynamic projection derived from member check snapshots:
 DOWN > SUSPECT > UNKNOWN > UP
 ```
 
-| Member Check Set | Group Health Projection |
-| --- | --- |
-| At least one fresh DOWN | DOWN |
-| Zero DOWN, at least one fresh SUSPECT | SUSPECT |
-| Zero DOWN/SUSPECT, at least one stale/UNKNOWN | UNKNOWN |
-| All included checks fresh UP | UP |
-| Zero active checks, paused checks present | Health UNKNOWN, execution PAUSED |
-| Zero checks attached | Health UNKNOWN, empty flag true |
+| Member Check Set                              | Group Health Projection          |
+| --------------------------------------------- | -------------------------------- |
+| At least one fresh DOWN                       | DOWN                             |
+| Zero DOWN, at least one fresh SUSPECT         | SUSPECT                          |
+| Zero DOWN/SUSPECT, at least one stale/UNKNOWN | UNKNOWN                          |
+| All included checks fresh UP                  | UP                               |
+| Zero active checks, paused checks present     | Health UNKNOWN, execution PAUSED |
+| Zero checks attached                          | Health UNKNOWN, empty flag true  |
 
 Paused and deleted checks are excluded from health calculations. Group maintenance status is evaluated independently as `NONE`, `PARTIAL`, or `FULL`.
 

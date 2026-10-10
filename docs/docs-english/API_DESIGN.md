@@ -56,15 +56,15 @@ OpenAPI and runtime schemas cannot be turned into two independently maintained m
 
 ### 3.2 Header Contract
 
-| Header            | Direction        | Rule                                                                                                                                  |
-| ----------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Header            | Direction        | Rule                                                                                                                                     |
+| ----------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `X-Request-Id`    | request/response | Only canonical UUID is accepted; if missing or invalid, the server generates a UUIDv7 and returns the same trusted ID in every response. |
-| `ETag`            | response         | Strong tag derived from `resource_version` on mutable singular resources: `"rv-<decimal>"`.                                           |
-| `If-Match`        | request          | Mandatory on mutable resource update/delete/commands; `428` if missing, `412` if stale.                                               |
-| `Idempotency-Key` | request          | Mandatory on selected create and command endpoints; 8–128 printable ASCII, scoped to user + operation.                                |
-| `X-CSRF-Token`    | request          | Mandatory on all unsafe methods with cookie auth.                                                                                     |
-| `Retry-After`     | response         | Seconds where possible on transient `409 idempotency_in_progress`, `429`, and `503` responses.                                         |
-| `Location`        | response         | Canonical URI of the resource created with `201`.                                                                                     |
+| `ETag`            | response         | Strong tag derived from `resource_version` on mutable singular resources: `"rv-<decimal>"`.                                              |
+| `If-Match`        | request          | Mandatory on mutable resource update/delete/commands; `428` if missing, `412` if stale.                                                  |
+| `Idempotency-Key` | request          | Mandatory on selected create and command endpoints; 8–128 printable ASCII, scoped to user + operation.                                   |
+| `X-CSRF-Token`    | request          | Mandatory on all unsafe methods with cookie auth.                                                                                        |
+| `Retry-After`     | response         | Seconds where possible on transient `409 idempotency_in_progress`, `429`, and `503` responses.                                           |
+| `Location`        | response         | Canonical URI of the resource created with `201`.                                                                                        |
 
 Pagination cursors, raw SQL versions, internal job leases, or fencing tokens are not returned to the browser.
 
@@ -141,102 +141,102 @@ Dashboard snapshots are paginated. The cursor is bound to the `snapshot_at` valu
 
 ### 7.1 Health
 
-| Method and path     | Auth | Success   | Purpose                                                    |
-| ------------------- | ---- | --------- | ---------------------------------------------------------- |
-| `GET /health/live`  | None | `200`     | Process is alive; does not check dependencies.             |
-| `GET /health/ready` | None | `200/503` | DB schema compatibility and mandatory dependency readiness.|
+| Method and path     | Auth | Success   | Purpose                                                     |
+| ------------------- | ---- | --------- | ----------------------------------------------------------- |
+| `GET /health/live`  | None | `200`     | Process is alive; does not check dependencies.              |
+| `GET /health/ready` | None | `200/503` | DB schema compatibility and mandatory dependency readiness. |
 
 Health responses do not use problem details; they return a compact, static `ServiceHealth` object for orchestrators.
 
 ### 7.2 Auth and User
 
-| Method and path                                 | Success | Notes                                                                   |
-| ----------------------------------------------- | ------- | ----------------------------------------------------------------------- |
-| `POST /api/v1/auth/register`                    | `202`   | Generic result without leaking email existence; idempotent.             |
-| `POST /api/v1/auth/login`                       | `200`   | Establishes session cookie; errors are always generic credential problems.|
-| `POST /api/v1/auth/logout`                      | `204`   | Revokes the current session; safe to repeat.                            |
-| `GET /api/v1/auth/session`                      | `200`   | User/session summary and CSRF bootstrap info.                           |
-| `POST /api/v1/auth/email-verifications`         | `202`   | Request new verification email; enumeration-safe.                       |
-| `POST /api/v1/auth/email-verifications/confirm` | `204`   | Consume single-use token.                                               |
-| `POST /api/v1/auth/password-resets`             | `202`   | Enumeration-safe reset request.                                         |
-| `POST /api/v1/auth/password-resets/confirm`     | `204`   | Token + new password; revokes all existing sessions.                    |
-| `GET /api/v1/me`                                | `200`   | Private user profile.                                                   |
-| `PATCH /api/v1/me`                              | `200`   | `If-Match`; allowlisted profile fields only.                            |
+| Method and path                                 | Success | Notes                                                                      |
+| ----------------------------------------------- | ------- | -------------------------------------------------------------------------- |
+| `POST /api/v1/auth/register`                    | `202`   | Generic result without leaking email existence; idempotent.                |
+| `POST /api/v1/auth/login`                       | `200`   | Establishes session cookie; errors are always generic credential problems. |
+| `POST /api/v1/auth/logout`                      | `204`   | Revokes the current session; safe to repeat.                               |
+| `GET /api/v1/auth/session`                      | `200`   | User/session summary and CSRF bootstrap info.                              |
+| `POST /api/v1/auth/email-verifications`         | `202`   | Request new verification email; enumeration-safe.                          |
+| `POST /api/v1/auth/email-verifications/confirm` | `204`   | Consume single-use token.                                                  |
+| `POST /api/v1/auth/password-resets`             | `202`   | Enumeration-safe reset request.                                            |
+| `POST /api/v1/auth/password-resets/confirm`     | `204`   | Token + new password; revokes all existing sessions.                       |
+| `GET /api/v1/me`                                | `200`   | Private user profile.                                                      |
+| `PATCH /api/v1/me`                              | `200`   | `If-Match`; allowlisted profile fields only.                               |
 
 ### 7.3 Dashboard, Check, and Group
 
-| Method and path                            | Success | Notes                                                                                                     |
-| ------------------------------------------ | ------- | --------------------------------------------------------------------------------------------------------- |
-| `GET /api/v1/dashboard`                    | `200`   | Current-state snapshot with cursor; group summaries and check status cards.                               |
-| `GET /api/v1/checks`                       | `200`   | Filter: group, execution, health, freshness; cursor.                                                      |
-| `POST /api/v1/checks`                      | `201`   | `Idempotency-Key`; Location + ETag.                                                                       |
-| `GET /api/v1/checks/{check_id}`            | `200`   | Private check configuration; live status is in dashboard/list projections.                                |
-| `PATCH /api/v1/checks/{check_id}`          | `200`   | `If-Match`; metadata/probe/schedule differences are translated into separate application commands.       |
-| `DELETE /api/v1/checks/{check_id}`         | `204`   | `If-Match`; soft-delete domain flow.                                                                     |
-| `POST /api/v1/checks/{check_id}/pause`     | `200`   | `If-Match`; returns updated check.                                                                        |
-| `POST /api/v1/checks/{check_id}/resume`    | `200`   | `If-Match`; schedules the earliest possible run.                                                              |
-| `POST /api/v1/checks/{check_id}/runs`      | `202`   | `If-Match` + `Idempotency-Key`; `ENQUEUED` or `COALESCED`, stateful/diagnostic based on ACTIVE/PAUSED mode.|
-| `GET /api/v1/checks/{check_id}/runs`       | `200`   | Diagnostic run history with cursor; no body.                                                              |
-| `GET /api/v1/checks/{check_id}/history`    | `200`   | `period` enum day/week/month; response-time, availability, coverage, and no-data.                         |
-| `GET /api/v1/checks/{check_id}/prediction` | `200`   | Not an error if predictor is absent: `UNAVAILABLE/STALE/INSUFFICIENT_DATA`.                               |
-| `GET /api/v1/groups`                       | `200`   | Group list with cursor and derived health.                                                                |
-| `POST /api/v1/groups`                      | `201`   | `Idempotency-Key`; ETag.                                                                                  |
-| `GET /api/v1/groups/{group_id}`            | `200`   | Group configuration; derived status is in dashboard/list projections.                                     |
-| `PATCH /api/v1/groups/{group_id}`          | `200`   | `If-Match`.                                                                                               |
-| `DELETE /api/v1/groups/{group_id}`         | `204`   | `If-Match`; checks become ungrouped.                                                                      |
+| Method and path                            | Success | Notes                                                                                                       |
+| ------------------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------- |
+| `GET /api/v1/dashboard`                    | `200`   | Current-state snapshot with cursor; group summaries and check status cards.                                 |
+| `GET /api/v1/checks`                       | `200`   | Filter: group, execution, health, freshness; cursor.                                                        |
+| `POST /api/v1/checks`                      | `201`   | `Idempotency-Key`; Location + ETag.                                                                         |
+| `GET /api/v1/checks/{check_id}`            | `200`   | Private check configuration; live status is in dashboard/list projections.                                  |
+| `PATCH /api/v1/checks/{check_id}`          | `200`   | `If-Match`; metadata/probe/schedule differences are translated into separate application commands.          |
+| `DELETE /api/v1/checks/{check_id}`         | `204`   | `If-Match`; soft-delete domain flow.                                                                        |
+| `POST /api/v1/checks/{check_id}/pause`     | `200`   | `If-Match`; returns updated check.                                                                          |
+| `POST /api/v1/checks/{check_id}/resume`    | `200`   | `If-Match`; schedules the earliest possible run.                                                            |
+| `POST /api/v1/checks/{check_id}/runs`      | `202`   | `If-Match` + `Idempotency-Key`; `ENQUEUED` or `COALESCED`, stateful/diagnostic based on ACTIVE/PAUSED mode. |
+| `GET /api/v1/checks/{check_id}/runs`       | `200`   | Diagnostic run history with cursor; no body.                                                                |
+| `GET /api/v1/checks/{check_id}/history`    | `200`   | `period` enum day/week/month; response-time, availability, coverage, and no-data.                           |
+| `GET /api/v1/checks/{check_id}/prediction` | `200`   | Not an error if predictor is absent: `UNAVAILABLE/STALE/INSUFFICIENT_DATA`.                                 |
+| `GET /api/v1/groups`                       | `200`   | Group list with cursor and derived health.                                                                  |
+| `POST /api/v1/groups`                      | `201`   | `Idempotency-Key`; ETag.                                                                                    |
+| `GET /api/v1/groups/{group_id}`            | `200`   | Group configuration; derived status is in dashboard/list projections.                                       |
+| `PATCH /api/v1/groups/{group_id}`          | `200`   | `If-Match`.                                                                                                 |
+| `DELETE /api/v1/groups/{group_id}`         | `204`   | `If-Match`; checks become ungrouped.                                                                        |
 
 Allowlisted fields for `PATCH /api/v1/checks/{check_id}`: `name`, `url`, `group_id`, `interval_seconds`, `timeout_ms`, `expected_status_code`, `expected_body_substring`. If a field is omitted, it remains unchanged; clearing a nullable field requires an explicit `null`. `execution_state` is not modified via PATCH; pause/resume commands are used instead.
 
 ### 7.4 Incidents and History
 
-| Method and path                       | Success | Notes                                                |
-| ------------------------------------- | ------- | ---------------------------------------------------- |
-| `GET /api/v1/incidents`               | `200`   | Filter: check/group/status/time range; cursor.       |
-| `GET /api/v1/incidents/{incident_id}` | `200`   | Segments and observed duration; data-gap distinction.|
+| Method and path                       | Success | Notes                                                 |
+| ------------------------------------- | ------- | ----------------------------------------------------- |
+| `GET /api/v1/incidents`               | `200`   | Filter: check/group/status/time range; cursor.        |
+| `GET /api/v1/incidents/{incident_id}` | `200`   | Segments and observed duration; data-gap distinction. |
 
 Incidents are not created or closed by users in the standard flow. There is no administrative close endpoint in the initial release; if needed, that would be a new audited product decision.
 
 ### 7.5 Maintenance
 
-| Method and path                                  | Success | Notes                                                    |
-| ------------------------------------------------ | ------- | -------------------------------------------------------- |
-| `GET /api/v1/maintenance-windows`                | `200`   | check/group/state/time filters; cursor.                  |
-| `POST /api/v1/maintenance-windows`               | `201`   | Targets exactly check or group; idempotent.              |
-| `GET /api/v1/maintenance-windows/{window_id}`    | `200`   | Half-open UTC interval.                                  |
-| `PATCH /api/v1/maintenance-windows/{window_id}`  | `200`   | `If-Match`; active window edge-cases are domain commands.|
-| `DELETE /api/v1/maintenance-windows/{window_id}` | `204`   | `If-Match`; cancel instead of physical delete.           |
+| Method and path                                  | Success | Notes                                                     |
+| ------------------------------------------------ | ------- | --------------------------------------------------------- |
+| `GET /api/v1/maintenance-windows`                | `200`   | check/group/state/time filters; cursor.                   |
+| `POST /api/v1/maintenance-windows`               | `201`   | Targets exactly check or group; idempotent.               |
+| `GET /api/v1/maintenance-windows/{window_id}`    | `200`   | Half-open UTC interval.                                   |
+| `PATCH /api/v1/maintenance-windows/{window_id}`  | `200`   | `If-Match`; active window edge-cases are domain commands. |
+| `DELETE /api/v1/maintenance-windows/{window_id}` | `204`   | `If-Match`; cancel instead of physical delete.            |
 
 ### 7.6 Notification Settings
 
-| Method and path                                                    | Success | Notes                                                                      |
-| ------------------------------------------------------------------ | ------- | -------------------------------------------------------------------------- |
-| `GET /api/v1/notification-recipients`                              | `200`   | Private addresses only to owner; with cursor.                              |
-| `POST /api/v1/notification-recipients`                             | `201`   | Creates verification email intent; idempotent.                             |
-| `DELETE /api/v1/notification-recipients/{recipient_id}`            | `204`   | `If-Match`.                                                                |
-| `POST /api/v1/notification-recipients/{recipient_id}/verification` | `202`   | Verification email resend; rate-limited.                                   |
-| `POST /api/v1/notification-recipient-verifications/confirm`        | `204`   | Consume token; no session required.                                        |
-| `GET /api/v1/notification-policies/default`                        | `200`   | User default policy.                                                       |
-| `PUT /api/v1/notification-policies/default`                        | `200`   | `If-Match`; complete replacement.                                          |
-| `GET /api/v1/groups/{group_id}/notification-policy`                | `200`   | With `INHERIT/ACTIVE/DISABLED` resolution.                                 |
-| `PUT /api/v1/groups/{group_id}/notification-policy`                | `200`   | `If-Match`; recipient ID list must belong to the same owner and be verified.|
+| Method and path                                                    | Success | Notes                                                                        |
+| ------------------------------------------------------------------ | ------- | ---------------------------------------------------------------------------- |
+| `GET /api/v1/notification-recipients`                              | `200`   | Private addresses only to owner; with cursor.                                |
+| `POST /api/v1/notification-recipients`                             | `201`   | Creates verification email intent; idempotent.                               |
+| `DELETE /api/v1/notification-recipients/{recipient_id}`            | `204`   | `If-Match`.                                                                  |
+| `POST /api/v1/notification-recipients/{recipient_id}/verification` | `202`   | Verification email resend; rate-limited.                                     |
+| `POST /api/v1/notification-recipient-verifications/confirm`        | `204`   | Consume token; no session required.                                          |
+| `GET /api/v1/notification-policies/default`                        | `200`   | User default policy.                                                         |
+| `PUT /api/v1/notification-policies/default`                        | `200`   | `If-Match`; complete replacement.                                            |
+| `GET /api/v1/groups/{group_id}/notification-policy`                | `200`   | With `INHERIT/ACTIVE/DISABLED` resolution.                                   |
+| `PUT /api/v1/groups/{group_id}/notification-policy`                | `200`   | `If-Match`; recipient ID list must belong to the same owner and be verified. |
 
 The account creation transaction creates the default policy row as `DISABLED`, and the group creation transaction creates the group policy row as `INHERIT`. Thus, both `PUT` endpoints operate with a real `resource_version`/ETag rather than a synthetic "non-existent resource" version. The default policy cannot be `INHERIT`. In `ACTIVE` mode, `notify_down` and `notify_recovery` are booleans; in `INHERIT`/`DISABLED` mode, they are null and the recipient list is empty.
 
 ### 7.7 Public Page Management and Public Reading
 
-| Method and path                                         | Success | Notes                                                                               |
-| ------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------- |
-| `GET /api/v1/public-pages`                              | `200`   | Private config list with cursor.                                                    |
-| `POST /api/v1/public-pages`                             | `201`   | Creates draft; idempotent.                                                          |
-| `GET /api/v1/public-pages/{page_id}`                    | `200`   | Private config + components.                                                        |
-| `PATCH /api/v1/public-pages/{page_id}`                  | `200`   | `If-Match`; title/description.                                                      |
-| `PUT /api/v1/public-pages/{page_id}/components`         | `200`   | `If-Match`; atomic replacement of ordered allowlist.                                |
-| `POST /api/v1/public-pages/{page_id}/publish`           | `200`   | `If-Match` + idempotency; raw token returns only once in this/rotation response.     |
-| `POST /api/v1/public-pages/{page_id}/disable`           | `200`   | `If-Match`; snapshot/link invalidated immediately.                                  |
-| `POST /api/v1/public-pages/{page_id}/rotate-link`       | `200`   | `If-Match` + idempotency; old token invalidated in the same transaction.            |
-| `DELETE /api/v1/public-pages/{page_id}`                 | `204`   | `If-Match`; closes public access atomically.                                        |
-| `GET /api/public/v1/status-pages/{public_token}`        | `200`   | No auth; public snapshot only.                                                      |
-| `GET /api/public/v1/status-pages/{public_token}/events` | SSE     | No auth; events only from the same snapshot allowlist.                              |
+| Method and path                                         | Success | Notes                                                                            |
+| ------------------------------------------------------- | ------- | -------------------------------------------------------------------------------- |
+| `GET /api/v1/public-pages`                              | `200`   | Private config list with cursor.                                                 |
+| `POST /api/v1/public-pages`                             | `201`   | Creates draft; idempotent.                                                       |
+| `GET /api/v1/public-pages/{page_id}`                    | `200`   | Private config + components.                                                     |
+| `PATCH /api/v1/public-pages/{page_id}`                  | `200`   | `If-Match`; title/description.                                                   |
+| `PUT /api/v1/public-pages/{page_id}/components`         | `200`   | `If-Match`; atomic replacement of ordered allowlist.                             |
+| `POST /api/v1/public-pages/{page_id}/publish`           | `200`   | `If-Match` + idempotency; raw token returns only once in this/rotation response. |
+| `POST /api/v1/public-pages/{page_id}/disable`           | `200`   | `If-Match`; snapshot/link invalidated immediately.                               |
+| `POST /api/v1/public-pages/{page_id}/rotate-link`       | `200`   | `If-Match` + idempotency; old token invalidated in the same transaction.         |
+| `DELETE /api/v1/public-pages/{page_id}`                 | `204`   | `If-Match`; closes public access atomically.                                     |
+| `GET /api/public/v1/status-pages/{public_token}`        | `200`   | No auth; public snapshot only.                                                   |
+| `GET /api/public/v1/status-pages/{public_token}/events` | SSE     | No auth; events only from the same snapshot allowlist.                           |
 
 The public management response does not return a token digest. If the raw token is lost, it cannot be read back; rotation is required.
 
@@ -304,11 +304,11 @@ Status axes are not combined into a single enum:
 
 `period` is determined based on PostgreSQL time within a single `REPEATABLE READ` transaction and source resolution boundaries:
 
-| Period  | Interval       | Resolution |
-| ------- | -------------- | ---------- |
-| `day`   | Last 24 hours  | minute     |
-| `week`  | Last 7×24 hours| minute     |
-| `month` | Last 30×24 hours| hour      |
+| Period  | Interval         | Resolution |
+| ------- | ---------------- | ---------- |
+| `day`   | Last 24 hours    | minute     |
+| `week`  | Last 7×24 hours  | minute     |
+| `month` | Last 30×24 hours | hour       |
 
 The response carries `from`, `to`, `generated_at`, `data_through`, source `resolution`, actual `bucket_seconds`, `availability_ratio`, `coverage_ratio`, four duration classifications, and ordered buckets. Day/week/month outputs are bounded to 288/336/360 buckets respectively. No-data buckets have `response_time_ms=null`, `classification=UNKNOWN`; they are not filled as DOWN. If the projection lags behind the configured raw-tail budget, a retryable `503 history_projection_lagging` is returned rather than performing unbounded raw table scans.
 

@@ -23,18 +23,18 @@ RLS does not replace authentication. Authentication resolves session tokens to u
 
 End users do not map to PostgreSQL login roles. Database migrations provision functional runtime roles configured with `NOLOGIN` and `NOBYPASSRLS`. In local Docker Compose environments, connections open via a single bootstrap login and immediately execute `SET ROLE` to switch to narrow service roles. In production, each service connects using dedicated credentials granted membership only in its specific `NOLOGIN` role. Superuser connections are strictly forbidden at runtime.
 
-| Role                        | Login            | BYPASSRLS        | Purpose                                                                 | Explicitly Revoked Privileges                           |
-| --------------------------- | ---------------: | ---------------: | ----------------------------------------------------------------------- | ------------------------------------------------------- |
-| `site_monitor_schema_owner` | No               | No               | Owns schemas and objects; assumed solely by migrator via `SET ROLE`    | Runtime login, normal application traffic               |
-| `site_monitor_migrator`     | No               | No               | Acquires advisory locks and applies migrations; switches to owner role  | Application traffic                                     |
-| `site_monitor_api`          | No               | No               | Executes auth bootstrap functions and user-context CRUD under RLS       | DDL, worker queue claims, raw backup dumps              |
-| `site_monitor_monitor`      | No               | No               | Manages scheduler, probe jobs/attempts/runs, health state, rollups       | User credentials/sessions, notifications, public secrets|
-| `site_monitor_notifier`     | No               | No               | Claims intents/deliveries, inspects policies/recipients/maintenance     | User passwords/sessions, check configs, health states   |
-| `site_monitor_predictor`    | No               | No               | Reads security-barrier feature views, writes prediction scores          | Raw URLs, PII, mutating current health or incidents     |
-| `site_monitor_public`       | No               | No               | Executes digest-based public snapshot projection functions              | Direct SELECT on private tables and all mutating actions|
-| `site_monitor_housekeeper`  | No               | No               | Executes narrow procedures for partitioning, retention, and rebuilds    | General DDL and authentication data                     |
-| `site_monitor_realtime`     | No               | No               | Claims/completes REALTIME dispatches and emits redacted wake-up signals | Outbox table access, arbitrary payloads, user data      |
-| `site_monitor_backup`       | Deployment-bound | Controlled/Audit | Performs logical backup and restore jobs outside normal runtime         | Application traffic                                     |
+| Role                        |            Login |        BYPASSRLS | Purpose                                                                 | Explicitly Revoked Privileges                            |
+| --------------------------- | ---------------: | ---------------: | ----------------------------------------------------------------------- | -------------------------------------------------------- |
+| `site_monitor_schema_owner` |               No |               No | Owns schemas and objects; assumed solely by migrator via `SET ROLE`     | Runtime login, normal application traffic                |
+| `site_monitor_migrator`     |               No |               No | Acquires advisory locks and applies migrations; switches to owner role  | Application traffic                                      |
+| `site_monitor_api`          |               No |               No | Executes auth bootstrap functions and user-context CRUD under RLS       | DDL, worker queue claims, raw backup dumps               |
+| `site_monitor_monitor`      |               No |               No | Manages scheduler, probe jobs/attempts/runs, health state, rollups      | User credentials/sessions, notifications, public secrets |
+| `site_monitor_notifier`     |               No |               No | Claims intents/deliveries, inspects policies/recipients/maintenance     | User passwords/sessions, check configs, health states    |
+| `site_monitor_predictor`    |               No |               No | Reads security-barrier feature views, writes prediction scores          | Raw URLs, PII, mutating current health or incidents      |
+| `site_monitor_public`       |               No |               No | Executes digest-based public snapshot projection functions              | Direct SELECT on private tables and all mutating actions |
+| `site_monitor_housekeeper`  |               No |               No | Executes narrow procedures for partitioning, retention, and rebuilds    | General DDL and authentication data                      |
+| `site_monitor_realtime`     |               No |               No | Claims/completes REALTIME dispatches and emits redacted wake-up signals | Outbox table access, arbitrary payloads, user data       |
+| `site_monitor_backup`       | Deployment-bound | Controlled/Audit | Performs logical backup and restore jobs outside normal runtime         | Application traffic                                      |
 
 Role Invariants:
 
@@ -117,24 +117,24 @@ Possessing an RLS policy grants zero access unless corresponding table permissio
 
 `R` = Read, `I` = Insert, `U` = Update, `D` = Delete, `X` = Execute function/view only.
 
-| Data Domain            | API                    | Monitor                  | Notifier                 | Predictor                | Public | Housekeeper         |
-| ---------------------- | ---------------------- | ------------------------ | ------------------------ | ------------------------ | ------ | ------------------- |
-| User Profiles          | R/U (RLS)              | –                        | –                        | –                        | –      | purge X             |
-| Passwords/Sessions     | X + restricted RLS     | –                        | –                        | –                        | –      | cleanup X           |
-| Checks/Groups          | R/I/U/D (RLS)          | R + schedule U           | restricted R view        | feature view             | –      | purge X             |
-| Maintenance Windows    | R/I/narrow U + proj X  | R + proj X               | R + proj X               | –                        | –      | cleanup X           |
-| Jobs/Attempts          | R where needed (RLS)   | R/I/U                    | –                        | –                        | –      | cleanup X           |
-| Runs/Health Intervals  | R (RLS)                | R/I/U                    | restricted R view        | feature view             | –      | partition/rebuild X |
-| Incidents/Segments     | R (RLS)                | R/I/U                    | restricted R             | feature view             | –      | cleanup X           |
-| Recipients/Policies    | R/I/U/D (RLS)          | –                        | R                        | –                        | –      | cleanup X           |
-| Intents/Deliveries     | R (RLS)                | –                        | R/I/U                    | –                        | –      | cleanup X           |
-| Idempotency Receipts   | R/I (owner RLS)        | –                        | –                        | –                        | –      | expired D           |
-| Outbox/Dispatch Lines  | –                      | destination R/I/U        | destination R/I/U        | destination R/I/U        | –      | cleanup X           |
-| Public Config          | R/I/U/D (RLS)          | snapshot refresh event   | –                        | –                        | –      | cleanup X           |
-| Public Snapshots       | R/I/U/D (RLS/internal) | refresh X                | –                        | –                        | X      | cleanup X           |
-| Metric Rollups         | R (RLS)                | R/I/U                    | –                        | R via view               | –      | rebuild X           |
-| Predictions            | R (RLS)                | queue X                  | –                        | R/I/U                    | –      | cleanup X           |
-| Audit Log              | R (by product policy)  | I                        | I                        | I                        | –      | partition X         |
+| Data Domain           | API                    | Monitor                | Notifier          | Predictor         | Public | Housekeeper         |
+| --------------------- | ---------------------- | ---------------------- | ----------------- | ----------------- | ------ | ------------------- |
+| User Profiles         | R/U (RLS)              | –                      | –                 | –                 | –      | purge X             |
+| Passwords/Sessions    | X + restricted RLS     | –                      | –                 | –                 | –      | cleanup X           |
+| Checks/Groups         | R/I/U/D (RLS)          | R + schedule U         | restricted R view | feature view      | –      | purge X             |
+| Maintenance Windows   | R/I/narrow U + proj X  | R + proj X             | R + proj X        | –                 | –      | cleanup X           |
+| Jobs/Attempts         | R where needed (RLS)   | R/I/U                  | –                 | –                 | –      | cleanup X           |
+| Runs/Health Intervals | R (RLS)                | R/I/U                  | restricted R view | feature view      | –      | partition/rebuild X |
+| Incidents/Segments    | R (RLS)                | R/I/U                  | restricted R      | feature view      | –      | cleanup X           |
+| Recipients/Policies   | R/I/U/D (RLS)          | –                      | R                 | –                 | –      | cleanup X           |
+| Intents/Deliveries    | R (RLS)                | –                      | R/I/U             | –                 | –      | cleanup X           |
+| Idempotency Receipts  | R/I (owner RLS)        | –                      | –                 | –                 | –      | expired D           |
+| Outbox/Dispatch Lines | –                      | destination R/I/U      | destination R/I/U | destination R/I/U | –      | cleanup X           |
+| Public Config         | R/I/U/D (RLS)          | snapshot refresh event | –                 | –                 | –      | cleanup X           |
+| Public Snapshots      | R/I/U/D (RLS/internal) | refresh X              | –                 | –                 | X      | cleanup X           |
+| Metric Rollups        | R (RLS)                | R/I/U                  | –                 | R via view        | –      | rebuild X           |
+| Predictions           | R (RLS)                | queue X                | –                 | R/I/U             | –      | cleanup X           |
+| Audit Log             | R (by product policy)  | I                      | I                 | I                 | –      | partition X         |
 
 If column-level grants prove complex to maintain, identical boundaries are enforced via narrow views and security-definer procedures. Temporary broad schema grants are strictly rejected.
 
@@ -144,12 +144,12 @@ User-context RLS cannot evaluate until an incoming session token resolves to an 
 
 ### 6.1 Bootstrap Functions
 
-| Function                  | Inputs           | Returned Data Payload                                  | Security Defenses                                     |
-| ------------------------- | ---------------- | ------------------------------------------------------ | ----------------------------------------------------- |
-| `resolve_session`         | Token digest     | Owner ID, session ID, expiry, status, password version | Exact digest match; revoked/expired tokens return zero|
-| `lookup_login_credential` | Normalized email | User ID, hash, user/password status/version            | API execution only; external errors remain generic    |
-| `consume_one_time_token`  | Purpose + digest | Owner ID and atomic consumption status                 | Row-level lock; enforces single-use consumption       |
-| `read_public_snapshot`    | Slug digest      | Public payload and generation timestamp only           | Returns only `PUBLISHED` snapshots                    |
+| Function                  | Inputs           | Returned Data Payload                                  | Security Defenses                                      |
+| ------------------------- | ---------------- | ------------------------------------------------------ | ------------------------------------------------------ |
+| `resolve_session`         | Token digest     | Owner ID, session ID, expiry, status, password version | Exact digest match; revoked/expired tokens return zero |
+| `lookup_login_credential` | Normalized email | User ID, hash, user/password status/version            | API execution only; external errors remain generic     |
+| `consume_one_time_token`  | Purpose + digest | Owner ID and atomic consumption status                 | Row-level lock; enforces single-use consumption        |
+| `read_public_snapshot`    | Slug digest      | Public payload and generation timestamp only           | Returns only `PUBLISHED` snapshots                     |
 
 ### 6.2 Security-Definer Rules
 

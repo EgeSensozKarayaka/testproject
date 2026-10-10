@@ -448,7 +448,9 @@ export function MonitoringDashboard({
                 <h2 id="overview-title">System status</h2>
                 <p>Current health, incident, and maintenance summary of loaded checks.</p>
               </div>
-              <span className="count-pill">{checks.length} {checks.length === 1 ? 'check' : 'checks'} loaded</span>
+              <span className="count-pill">
+                {checks.length} {checks.length === 1 ? 'check' : 'checks'} loaded
+              </span>
             </div>
 
             <dl className="overview-grid" aria-label="System status summary">
@@ -565,7 +567,9 @@ export function MonitoringDashboard({
                 <h2 id="groups-title">Groups</h2>
                 <p>Organize checks by service or product boundaries.</p>
               </div>
-              <span className="count-pill">{groups.length} {groups.length === 1 ? 'group' : 'groups'}</span>
+              <span className="count-pill">
+                {groups.length} {groups.length === 1 ? 'group' : 'groups'}
+              </span>
             </div>
 
             <details className="create-box">
@@ -585,9 +589,7 @@ export function MonitoringDashboard({
             {groups.length === 0 ? (
               <div className="empty-state">
                 <h3>No groups yet</h3>
-                <p>
-                  Groups are optional. You can assign checks to a group later.
-                </p>
+                <p>Groups are optional. You can assign checks to a group later.</p>
               </div>
             ) : (
               <ul className="resource-grid group-grid">
@@ -647,11 +649,11 @@ export function MonitoringDashboard({
                                 className="danger"
                                 disabled={busyKey === `group:delete:${group.id}`}
                                 onClick={() =>
-                                   void perform(
-                                     `group:delete:${group.id}`,
-                                     () => monitoringApi.deleteGroup(session, group),
-                                     'Group deleted; associated checks are now ungrouped.',
-                                   )
+                                  void perform(
+                                    `group:delete:${group.id}`,
+                                    () => monitoringApi.deleteGroup(session, group),
+                                    'Group deleted; associated checks are now ungrouped.',
+                                  )
                                 }
                                 type="button"
                               >
@@ -701,7 +703,9 @@ export function MonitoringDashboard({
                 <p>Manage targets and request manual runs when needed.</p>
               </div>
               <div className="heading-actions">
-                <span className="count-pill">{checks.length} {checks.length === 1 ? 'check' : 'checks'}</span>
+                <span className="count-pill">
+                  {checks.length} {checks.length === 1 ? 'check' : 'checks'}
+                </span>
                 <button
                   className="primary compact"
                   onClick={() => setShowCheckForm((value) => !value)}
@@ -824,7 +828,8 @@ export function MonitoringDashboard({
                         </dl>
                         {check.execution_state === 'PAUSED' && (
                           <p className="hint diagnostic-note">
-                            Manual runs while paused are diagnostic only; they do not alter card health or incident streams.
+                            Manual runs while paused are diagnostic only; they do not alter card
+                            health or incident streams.
                           </p>
                         )}
                         <div className="card-actions check-actions">
@@ -854,9 +859,7 @@ export function MonitoringDashboard({
                             }
                             type="button"
                           >
-                            {check.execution_state === 'PAUSED'
-                              ? 'Diagnostic run'
-                              : 'Run now'}
+                            {check.execution_state === 'PAUSED' ? 'Diagnostic run' : 'Run now'}
                           </button>
                           <button
                             className="ghost"

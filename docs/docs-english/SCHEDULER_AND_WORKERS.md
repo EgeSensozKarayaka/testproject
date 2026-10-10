@@ -60,22 +60,22 @@ Stage 9 evaluates event facts according to the routing policy in the catalog. It
 
 ## 3. Requirements Traceability
 
-| Requirement     | Stage 9 Fulfillment                                                                          |
-| --------------- | -------------------------------------------------------------------------------------------- |
-| AC-023–028      | Pause/resume, manual stateful/diagnostic, generation, and coalescing rules                   |
-| AC-030/031      | Single active job invariant, cancellation acknowledgement, and concurrency testing           |
-| AC-032/033      | PostgreSQL claim, attempt guard, lease, and monotonic fencing token                          |
-| AC-034          | Process kill, lease expiry, and retry/reclaim                                                |
-| AC-035/036      | Fixed cadence, single catch-up job, no backfill; manual does not alter cadence               |
-| AC-037          | Probing outside transactions; global/owner/host concurrency and independent cancellation     |
-| AC-040–048      | Connecting Stage 8 reducer to the real PostgreSQL observation transaction                    |
-| AC-062          | Deadline reconciler and read-time freshness ensuring gaps are not treated as DOWN           |
-| AC-080/081      | 20/200/500 check profiles and measured queue lag using the exact same algorithm              |
-| AC-082/083      | Bounded concurrency and owner-fair candidate ordering                                        |
-| AC-084          | Entire schedule/job/state truth is durably persisted in PostgreSQL                          |
-| AC-100–102      | Stage 7 secure probe engine and redacted worker boundaries                                   |
-| NFR-REL-001–004 | Crash recovery, idempotent results, atomic state, and external service isolation             |
-| NFR-OPS-001/002 | Worker identity, health, structured logs, and queue/freshness metrics                        |
+| Requirement     | Stage 9 Fulfillment                                                                      |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| AC-023–028      | Pause/resume, manual stateful/diagnostic, generation, and coalescing rules               |
+| AC-030/031      | Single active job invariant, cancellation acknowledgement, and concurrency testing       |
+| AC-032/033      | PostgreSQL claim, attempt guard, lease, and monotonic fencing token                      |
+| AC-034          | Process kill, lease expiry, and retry/reclaim                                            |
+| AC-035/036      | Fixed cadence, single catch-up job, no backfill; manual does not alter cadence           |
+| AC-037          | Probing outside transactions; global/owner/host concurrency and independent cancellation |
+| AC-040–048      | Connecting Stage 8 reducer to the real PostgreSQL observation transaction                |
+| AC-062          | Deadline reconciler and read-time freshness ensuring gaps are not treated as DOWN        |
+| AC-080/081      | 20/200/500 check profiles and measured queue lag using the exact same algorithm          |
+| AC-082/083      | Bounded concurrency and owner-fair candidate ordering                                    |
+| AC-084          | Entire schedule/job/state truth is durably persisted in PostgreSQL                       |
+| AC-100–102      | Stage 7 secure probe engine and redacted worker boundaries                               |
+| NFR-REL-001–004 | Crash recovery, idempotent results, atomic state, and external service isolation         |
+| NFR-OPS-001/002 | Worker identity, health, structured logs, and queue/freshness metrics                    |
 
 ## 4. Existing Foundation and Gaps to Close
 
@@ -388,13 +388,13 @@ The hostname is parsed from the snapshot URL but is never logged or used as a me
 
 Baseline reference values:
 
-| Config                          | Default | Constraint / Semantics             |
-| ------------------------------- | ------: | ---------------------------------- |
-| `MONITOR_GLOBAL_CONCURRENCY`    |      64 | Total probes per process           |
-| `MONITOR_PER_OWNER_CONCURRENCY` |      32 | Per-owner upper bound per process  |
-| `MONITOR_PER_HOST_CONCURRENCY`  |       4 | Per-host upper bound per process   |
-| `MONITOR_CANDIDATE_BATCH_SIZE`  |     128 | Per dispatcher scan batch          |
-| `MONITOR_SCHEDULE_BATCH_SIZE`   |      64 | Per due materialization round      |
+| Config                          | Default | Constraint / Semantics            |
+| ------------------------------- | ------: | --------------------------------- |
+| `MONITOR_GLOBAL_CONCURRENCY`    |      64 | Total probes per process          |
+| `MONITOR_PER_OWNER_CONCURRENCY` |      32 | Per-owner upper bound per process |
+| `MONITOR_PER_HOST_CONCURRENCY`  |       4 | Per-host upper bound per process  |
+| `MONITOR_CANDIDATE_BATCH_SIZE`  |     128 | Per dispatcher scan batch         |
+| `MONITOR_SCHEDULE_BATCH_SIZE`   |      64 | Per due materialization round     |
 
 Values must be positive, mutually consistent, and validated fail-fast at startup. There is no hardcoded product limit of `50`.
 
@@ -486,17 +486,17 @@ Never persisted:
 
 The adapter translates the Stage 8 plan according to the following mappings:
 
-| Effect                   | SQL Behavior                                                                       |
-| ------------------------ | ---------------------------------------------------------------------------------- |
-| Current state            | Explicit column update on locked row; `state_version` must match plan              |
-| Finalize interval        | Insert into partitioned history first; positive half-open interval required        |
-| Set/rotate open interval | Explicit update/upsert on the same check primary key                               |
-| Open incident            | Insert incident and initial segment with run foreign keys                          |
-| Update incident failure  | Update latest failure and resource version                                         |
-| Suspend incident         | Close segment + record observed duration + transition to UNOBSERVED                |
-| Resume incident          | Insert new open segment + transition to OBSERVED                                   |
-| Close incident           | Close active segment if present; transition incident to terminal                   |
-| Event facts              | Canonical catalog payloads + corresponding destination dispatches                  |
+| Effect                   | SQL Behavior                                                                |
+| ------------------------ | --------------------------------------------------------------------------- |
+| Current state            | Explicit column update on locked row; `state_version` must match plan       |
+| Finalize interval        | Insert into partitioned history first; positive half-open interval required |
+| Set/rotate open interval | Explicit update/upsert on the same check primary key                        |
+| Open incident            | Insert incident and initial segment with run foreign keys                   |
+| Update incident failure  | Update latest failure and resource version                                  |
+| Suspend incident         | Close segment + record observed duration + transition to UNOBSERVED         |
+| Resume incident          | Insert new open segment + transition to OBSERVED                            |
+| Close incident           | Close active segment if present; transition incident to terminal            |
+| Event facts              | Canonical catalog payloads + corresponding destination dispatches           |
 
 The adapter never introduces transitions that were not produced by the reducer. In particular, repeated DOWN FAIL observations do not create duplicate incidents or redundant DOWN notification events.
 

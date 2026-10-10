@@ -78,16 +78,16 @@ Frequently evolving state machines are persisted as `text NOT NULL` guarded by e
 
 ### 3.7 Separation of Authoritative Records from Projections
 
-| Data Domain                           | Nature                          | Reconstructible from History?                                                  |
-| ------------------------------------- | ------------------------------- | -----------------------------------------------------------------------------: |
-| Check / Group / User Configuration    | Authoritative Source of Truth   | No                                                                             |
-| Jobs, Attempts, Accepted/Rejected Runs| Operational Log Record          | No                                                                             |
-| Incidents and Observed Segments       | Domain Lifecycle Record         | Theoretically derivable from raw runs; treated as authoritative in normal ops  |
-| Check Current State                   | Dynamic Projection              | Yes                                                                            |
-| Open Health Intervals                 | Dynamic Projection / Work State | Yes                                                                            |
-| Minute / Hour Rollups                 | Precomputed Aggregation         | Yes                                                                            |
-| Public Status Snapshots               | Allowlisted Public Projection   | Yes                                                                            |
-| Prediction Scores                     | Advisory Feature Output         | Yes (if model inputs are retained)                                             |
+| Data Domain                            | Nature                          |                                                 Reconstructible from History? |
+| -------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------: |
+| Check / Group / User Configuration     | Authoritative Source of Truth   |                                                                            No |
+| Jobs, Attempts, Accepted/Rejected Runs | Operational Log Record          |                                                                            No |
+| Incidents and Observed Segments        | Domain Lifecycle Record         | Theoretically derivable from raw runs; treated as authoritative in normal ops |
+| Check Current State                    | Dynamic Projection              |                                                                           Yes |
+| Open Health Intervals                  | Dynamic Projection / Work State |                                                                           Yes |
+| Minute / Hour Rollups                  | Precomputed Aggregation         |                                                                           Yes |
+| Public Status Snapshots                | Allowlisted Public Projection   |                                                                           Yes |
+| Prediction Scores                      | Advisory Feature Output         |                                            Yes (if model inputs are retained) |
 
 Projection updates commit atomically within the same database transaction as the triggering domain write and outbox event. Asynchronous rebuilds operate as distinct, idempotent recovery procedures.
 
@@ -117,17 +117,17 @@ Application objects are never created in the default `public` schema; `CREATE` p
 
 ## 5. Aggregate Root and Transaction Boundaries
 
-| Domain Operation             | Root Entity Locked              | Written in Same Atomic Transaction                                                             |
-| ---------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Create / Update Check        | `app.checks`                    | Check row, initial current state, audit log, outbox event                                      |
-| Pause / Resume / Delete      | `app.checks` + current state    | Generation counters, cadence anchors, active interval/incident modes, job cancellation, outbox|
-| Scheduler Job Enqueue        | Due check record                | `next_run_at`, check job, coalesced manual intent consumption                                  |
-| Job Claim / Reclaim          | `monitoring.check_jobs` + check | Worker lease, job attempt, monotonic fencing token                                             |
-| Probe Observation Acceptance | Check + current state + job     | Immutable run, state update, health interval, incident/segment, outbox, terminal job transition|
-| Freshness Reconciliation     | Current state + check           | Active interval close/open, incident unobserved transition, state version increment, outbox    |
-| Maintenance Window Mutation  | Maintenance window record       | Resource version, audit event, reconciliation outbox event                                     |
-| Notification Materialization | Notification intent record      | Policy resolution snapshot and per-recipient delivery tasks                                    |
-| Public Page Configuration    | Public status page record       | Component mappings, page revision increment, allowlist snapshot refresh, audit event           |
+| Domain Operation             | Root Entity Locked              | Written in Same Atomic Transaction                                                              |
+| ---------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Create / Update Check        | `app.checks`                    | Check row, initial current state, audit log, outbox event                                       |
+| Pause / Resume / Delete      | `app.checks` + current state    | Generation counters, cadence anchors, active interval/incident modes, job cancellation, outbox  |
+| Scheduler Job Enqueue        | Due check record                | `next_run_at`, check job, coalesced manual intent consumption                                   |
+| Job Claim / Reclaim          | `monitoring.check_jobs` + check | Worker lease, job attempt, monotonic fencing token                                              |
+| Probe Observation Acceptance | Check + current state + job     | Immutable run, state update, health interval, incident/segment, outbox, terminal job transition |
+| Freshness Reconciliation     | Current state + check           | Active interval close/open, incident unobserved transition, state version increment, outbox     |
+| Maintenance Window Mutation  | Maintenance window record       | Resource version, audit event, reconciliation outbox event                                      |
+| Notification Materialization | Notification intent record      | Policy resolution snapshot and per-recipient delivery tasks                                     |
+| Public Page Configuration    | Public status page record       | Component mappings, page revision increment, allowlist snapshot refresh, audit event            |
 
 Every stateful probe observation acceptance transaction atomically compares the check's current `probe_generation`, `schedule_generation`, and latest fencing token. Runs with mismatched tokens are persisted as `accepted_for_state = false` without mutating current state or incidents.
 

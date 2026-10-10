@@ -23,10 +23,10 @@ WebSockets are deliberately omitted; the product does not require continuous bid
 
 ## 2. Endpoints and Authorization
 
-| Endpoint                                                | Authorization          | Scope                                                            |
-| ------------------------------------------------------- | ---------------------- | ---------------------------------------------------------------- |
-| `GET /api/v1/events`                                    | Valid session cookie   | Private projection events belonging strictly to session owner    |
-| `GET /api/public/v1/status-pages/{public_token}/events` | Public status token    | Published allowlist component projections for this status page   |
+| Endpoint                                                | Authorization        | Scope                                                          |
+| ------------------------------------------------------- | -------------------- | -------------------------------------------------------------- |
+| `GET /api/v1/events`                                    | Valid session cookie | Private projection events belonging strictly to session owner  |
+| `GET /api/public/v1/status-pages/{public_token}/events` | Public status token  | Published allowlist component projections for this status page |
 
 The public endpoint is reserved in canonical contracts. Production routes, public REST snapshots, token lifecycle management, and allowlist page revisions activate in Stage 15. Stage 13 implements shared public-safe transport ports without exposing half-formed public streams prior to snapshots.
 

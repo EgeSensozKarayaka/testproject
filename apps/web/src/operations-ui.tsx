@@ -64,11 +64,7 @@ function HistoryChart({ history }: { history: HistoryResponse }) {
   }
 
   return (
-    <div
-      className="history-chart"
-      role="img"
-      aria-label={`Response time chart, peak ${max} ms`}
-    >
+    <div className="history-chart" role="img" aria-label={`Response time chart, peak ${max} ms`}>
       <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
         <line x1="0" x2={width} y1={height - 10} y2={height - 10} />
         <polyline points={points} />
@@ -454,7 +450,9 @@ export function OperationsWorkspace({
             <p className="eyebrow">Email</p>
             <h2 id="notifications-title">Notification settings</h2>
           </div>
-          <span className="count-pill">{recipients.length} {recipients.length === 1 ? 'address' : 'addresses'}</span>
+          <span className="count-pill">
+            {recipients.length} {recipients.length === 1 ? 'address' : 'addresses'}
+          </span>
         </div>
         <form className="inline-form" onSubmit={(event) => void createRecipient(event)}>
           <label>
@@ -588,7 +586,9 @@ export function OperationsWorkspace({
             <h2 id="public-page-title">Public status page</h2>
             <p>Only selected published fields are shown; URLs are hidden by default.</p>
           </div>
-          <span className="count-pill">{publicPages.length} {publicPages.length === 1 ? 'page' : 'pages'}</span>
+          <span className="count-pill">
+            {publicPages.length} {publicPages.length === 1 ? 'page' : 'pages'}
+          </span>
         </div>
         <form
           className="inline-form public-page-form"
@@ -632,7 +632,8 @@ export function OperationsWorkspace({
                 <div>
                   <strong>{page.title}</strong>
                   <span>
-                    {page.components.length} {page.components.length === 1 ? 'component' : 'components'} ·{' '}
+                    {page.components.length}{' '}
+                    {page.components.length === 1 ? 'component' : 'components'} ·{' '}
                     {page.state === 'PUBLISHED'
                       ? 'Published'
                       : page.state === 'DISABLED'

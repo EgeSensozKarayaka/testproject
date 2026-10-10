@@ -141,13 +141,13 @@ In production, serving the frontend and API behind a reverse proxy on the same o
 
 ### 7.2 Lifetimes
 
-| Rule                      |   Default | Meaning                                                    |
-| ------------------------- | --------: | ---------------------------------------------------------- |
-| Absolute session lifetime |    7 days | Non-extendable upper limit from the moment of login        |
-| Idle timeout              |  24 hours | Inactivity period following `last_seen_at`/`created_at`    |
-| Last-seen touch           | 5 minutes | Minimum interval preventing writes on every request        |
-| Rotation period           |  24 hours | New token/session row during active usage                  |
-| Rotation grace            | 30 seconds| Prevents in-flight parallel requests from receiving false 401s |
+| Rule                      |    Default | Meaning                                                        |
+| ------------------------- | ---------: | -------------------------------------------------------------- |
+| Absolute session lifetime |     7 days | Non-extendable upper limit from the moment of login            |
+| Idle timeout              |   24 hours | Inactivity period following `last_seen_at`/`created_at`        |
+| Last-seen touch           |  5 minutes | Minimum interval preventing writes on every request            |
+| Rotation period           |   24 hours | New token/session row during active usage                      |
+| Rotation grace            | 30 seconds | Prevents in-flight parallel requests from receiving false 401s |
 
 Lifetimes can be shortened via configuration; exceeding these upper bounds in production requires an explicit decision. Database time is the source of truth.
 
@@ -263,24 +263,24 @@ Because the API can run across multiple replicas, auth abuse limits are not kept
 
 Proposed revision 8 table `auth.rate_limit_counters`:
 
-| Column           | Meaning                                               |
-| ---------------- | ----------------------------------------------------- |
-| `policy_key`     | Versioned allowlist policy name                       |
-| `subject_digest` | HMAC-SHA-256 digest instead of raw email/IP/user      |
-| `window_start`   | Window start timestamp calculated using DB time        |
-| `attempt_count`  | Atomically incrementing counter                       |
-| `expires_at`     | Bounded retention for housekeeper cleanup             |
+| Column           | Meaning                                          |
+| ---------------- | ------------------------------------------------ |
+| `policy_key`     | Versioned allowlist policy name                  |
+| `subject_digest` | HMAC-SHA-256 digest instead of raw email/IP/user |
+| `window_start`   | Window start timestamp calculated using DB time  |
+| `attempt_count`  | Atomically incrementing counter                  |
+| `expires_at`     | Bounded retention for housekeeper cleanup        |
 
 The primary key is `(policy_key, subject_digest, window_start)`. The API receives no direct table privileges; `security_api.consume_rate_limit(...)` increments the counter and returns allowed/retry-after in a single statement. On storage errors, auth mutations fail-closed.
 
 Initial values are deployment configuration:
 
-| Flow                       | Network Scope       | Subject Scope              |
-| -------------------------- | ------------------- | -------------------------- |
-| Login                      | 30 / 15 minutes     | 10 / 15 minutes / email    |
-| Register                   | 5 / hour            | 3 / 24 hours / email       |
-| Verification/reset request | 10 / hour           | 3 / hour / email           |
-| Token confirm              | 30 / hour           | 10 / hour / token digest   |
+| Flow                       | Network Scope       | Subject Scope                    |
+| -------------------------- | ------------------- | -------------------------------- |
+| Login                      | 30 / 15 minutes     | 10 / 15 minutes / email          |
+| Register                   | 5 / hour            | 3 / 24 hours / email             |
+| Verification/reset request | 10 / hour           | 3 / hour / email                 |
+| Token confirm              | 30 / hour           | 10 / hour / token digest         |
 | Authenticated auth/session | 120 / minute / user | Route-specific additional limits |
 
 Network scope is the HMAC of the canonical IPv4 or IPv6 `/64` prefix after trusted proxy resolution. Raw IP/email addresses are never written to counter tables or logs. Counter retention is at most 48 hours. `429 rate_limit_exceeded` uses exact `Retry-After` headers and the standard problem-details envelope; it does not vary based on account existence.
@@ -318,22 +318,22 @@ Upon approval, `000008_auth_and_ownership.sql` is added without altering past mi
 
 ### 12.2 Narrow Security Functions
 
-| Function                             | Responsibility                                                      |
-| ------------------------------------ | ------------------------------------------------------------------- |
-| `lookup_login_credential`            | Minimal login verifier details; existing function hardened          |
-| `register_account`                   | User + credential + verify token + mail job + receipt + audit       |
+| Function                             | Responsibility                                                       |
+| ------------------------------------ | -------------------------------------------------------------------- |
+| `lookup_login_credential`            | Minimal login verifier details; existing function hardened           |
+| `register_account`                   | User + credential + verify token + mail job + receipt + audit        |
 | `issue_account_challenge`            | Enumeration-safe verify/reset challenge rotation and mail job        |
-| `confirm_email_verification`         | Token consumption + account activation + audit                      |
-| `complete_password_reset`            | Token consumption + credential version + revoke all sessions + audit|
-| `create_session`                     | Session creation with expected credential version + audit           |
-| `record_login_denial`                | PII-free, bounded failed auth audit with allowlisted reason         |
-| `resolve_session`                    | Absolute/idle/status/version/grace validations                      |
-| `touch_or_rotate_session`            | Rate-limited touch and race-safe rotation                           |
-| `revoke_session`                     | Idempotent revocation of current session                            |
-| `update_current_user_profile`        | Narrow profile mutation with owner + expected resource version      |
+| `confirm_email_verification`         | Token consumption + account activation + audit                       |
+| `complete_password_reset`            | Token consumption + credential version + revoke all sessions + audit |
+| `create_session`                     | Session creation with expected credential version + audit            |
+| `record_login_denial`                | PII-free, bounded failed auth audit with allowlisted reason          |
+| `resolve_session`                    | Absolute/idle/status/version/grace validations                       |
+| `touch_or_rotate_session`            | Rate-limited touch and race-safe rotation                            |
+| `revoke_session`                     | Idempotent revocation of current session                             |
+| `update_current_user_profile`        | Narrow profile mutation with owner + expected resource version       |
 | `consume_rate_limit`                 | Cross-replica atomic counter and retry-after                         |
 | `read/write_anonymous_idempotency`   | Owner-null receipt with exact HMAC scope; no direct table access     |
-| `claim/complete_transactional_email` | Minimal encrypted job surface for notification worker               |
+| `claim/complete_transactional_email` | Minimal encrypted job surface for notification worker                |
 
 Functions adhere to fixed `search_path`, schema-qualified objects, bounded inputs, minimal return types, explicit `PUBLIC EXECUTE` revocation, and grants restricted to necessary roles. A function accepting a user ID from the API does not treat this value as proof of authentication on its own; it verifies concurrency via expected credential/session version and DB row locking.
 
@@ -416,16 +416,16 @@ Unexpected secret-like header/body values are prevented from being logged via te
 
 ## 17. Error and Dependency Behavior
 
-| Condition                               | External Result                  | Internal Behavior                                        |
-| --------------------------------------- | -------------------------------- | -------------------------------------------------------- |
-| Cookie missing/malformed/expired/revoked| `401 authentication_required`    | Cookie may be cleared; details are not leaked            |
-| Login account missing/incorrect/inactive| `401 invalid_credentials`        | Dummy/real hash path and generic audit                   |
-| Origin/CSRF validation failure          | `403 csrf_failed`                | Safe reason metric; token is not logged                  |
-| Token invalid/expired/consumed          | `422 invalid_or_expired_token`   | Purpose/owner existence is not revealed                  |
-| Rate limit exceeded                     | `429 rate_limit_exceeded`        | `Retry-After`; identical scope semantics                 |
-| Hash capacity saturated                 | `503 dependency_unavailable`     | Retryable; no new session/state is written               |
-| PostgreSQL auth transaction error       | `503` or safe `500`              | Atomic rollback; no cookie is issued                     |
-| SMTP/Mailpit transient error            | Request may already have returned `202` | Durable job retry; auth transaction is not rolled back   |
+| Condition                                | External Result                         | Internal Behavior                                      |
+| ---------------------------------------- | --------------------------------------- | ------------------------------------------------------ |
+| Cookie missing/malformed/expired/revoked | `401 authentication_required`           | Cookie may be cleared; details are not leaked          |
+| Login account missing/incorrect/inactive | `401 invalid_credentials`               | Dummy/real hash path and generic audit                 |
+| Origin/CSRF validation failure           | `403 csrf_failed`                       | Safe reason metric; token is not logged                |
+| Token invalid/expired/consumed           | `422 invalid_or_expired_token`          | Purpose/owner existence is not revealed                |
+| Rate limit exceeded                      | `429 rate_limit_exceeded`               | `Retry-After`; identical scope semantics               |
+| Hash capacity saturated                  | `503 dependency_unavailable`            | Retryable; no new session/state is written             |
+| PostgreSQL auth transaction error        | `503` or safe `500`                     | Atomic rollback; no cookie is issued                   |
+| SMTP/Mailpit transient error             | Request may already have returned `202` | Durable job retry; auth transaction is not rolled back |
 
 Error responses on auth endpoints strictly adhere to `application/problem+json`, request ID tracking, and safe instance conventions.
 

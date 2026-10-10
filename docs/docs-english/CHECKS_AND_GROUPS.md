@@ -211,13 +211,13 @@ Effective health is `UNKNOWN` if `freshness_state=STALE` or check is `PAUSED`; o
 
 Multiple fields can change within a single PATCH; all real modifications result in a single `resource_version` increment and a single transaction. Probe and schedule generations increment by at most 1 if their respective categories are present.
 
-| Change | Resource | Probe gen. | Schedule gen. | Job/schedule and state impact |
-| :--- | ---: | ---: | ---: | :--- |
-| `name` only | +1 | — | — | None |
-| `group_id` | +1 | — | — | Health preserved; future maintenance/policy scope updates to new group |
-| URL/timeout/expected status/body | +1 | +1 | — | Active old jobs canceled/invalidated; candidates cleared; incident `CONFIG_CHANGED`; freshness STALE, health UNKNOWN; scheduled ASAP if ACTIVE |
-| `interval` only | +1 | — | +1 | Active old jobs canceled/invalidated; anchor set to change instant; `next_run_at=now+interval`; health preserved, freshness recalculated |
-| Probe + interval | +1 | +1 | +1 | Probe reset dominates; scheduled ASAP for new semantics if ACTIVE |
+| Change                           | Resource | Probe gen. | Schedule gen. | Job/schedule and state impact                                                                                                                  |
+| :------------------------------- | -------: | ---------: | ------------: | :--------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name` only                      |       +1 |          — |             — | None                                                                                                                                           |
+| `group_id`                       |       +1 |          — |             — | Health preserved; future maintenance/policy scope updates to new group                                                                         |
+| URL/timeout/expected status/body |       +1 |         +1 |             — | Active old jobs canceled/invalidated; candidates cleared; incident `CONFIG_CHANGED`; freshness STALE, health UNKNOWN; scheduled ASAP if ACTIVE |
+| `interval` only                  |       +1 |          — |            +1 | Active old jobs canceled/invalidated; anchor set to change instant; `next_run_at=now+interval`; health preserved, freshness recalculated       |
+| Probe + interval                 |       +1 |         +1 |            +1 | Probe reset dominates; scheduled ASAP for new semantics if ACTIVE                                                                              |
 
 When probe config changes, old last response fields may be retained as diagnostic history, but current effective health becomes UNKNOWN. Open health intervals close at the change instant, open incidents close with `CONFIG_CHANGED`, and pending failure candidates are cleared. On interval changes, `fresh_until = last_accepted_finished_at + new_interval + timeout + scheduler_grace` is recalculated; if in the past, it immediately becomes STALE.
 
@@ -381,18 +381,18 @@ With Stage 9, API and workers share an activation-aware outbox writer. Events/di
 
 ## 18. Error Contract
 
-| Condition | HTTP / code |
-| :--- | :--- |
-| Body/query/header schema or domain validation | `422 validation_failed` or defined `400` for header/cursor |
-| Missing/invalid session | `401 authentication_required` |
-| Resource missing, deleted, or belongs to another owner | `404 resource_not_found` |
-| Group missing, deleted, or cross-owner | `404 resource_not_found` |
-| Quota exhausted | `409 quota_exceeded` |
-| Invalid lifecycle transition | `409 invalid_state_transition` |
-| Idempotency key reused with different request | `409 idempotency_key_reused` |
-| Stale ETag | `412 resource_version_mismatch` |
-| Missing If-Match | `428 precondition_required` |
-| Rate limit | `429 rate_limit_exceeded` + `Retry-After` |
+| Condition                                              | HTTP / code                                                |
+| :----------------------------------------------------- | :--------------------------------------------------------- |
+| Body/query/header schema or domain validation          | `422 validation_failed` or defined `400` for header/cursor |
+| Missing/invalid session                                | `401 authentication_required`                              |
+| Resource missing, deleted, or belongs to another owner | `404 resource_not_found`                                   |
+| Group missing, deleted, or cross-owner                 | `404 resource_not_found`                                   |
+| Quota exhausted                                        | `409 quota_exceeded`                                       |
+| Invalid lifecycle transition                           | `409 invalid_state_transition`                             |
+| Idempotency key reused with different request          | `409 idempotency_key_reused`                               |
+| Stale ETag                                             | `412 resource_version_mismatch`                            |
+| Missing If-Match                                       | `428 precondition_required`                                |
+| Rate limit                                             | `429 rate_limit_exceeded` + `Retry-After`                  |
 
 Field errors carry JSON Pointers but never expose normalized URLs, DB constraints, SQL, stacks, or target response internals. `X-Request-Id` is present on all responses.
 

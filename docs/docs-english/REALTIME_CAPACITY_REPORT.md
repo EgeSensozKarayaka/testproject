@@ -31,15 +31,15 @@ This heavy benchmark is intentionally excluded from default `pnpm run ci` runs. 
 
 ## 3. Benchmark Environment and Methodology
 
-| Component        | Specification                      |
-| ---------------- | ---------------------------------- |
-| Operating System | Windows `10.0.26200`               |
-| CPU              | AMD Ryzen 7 7735HS, 16 logical CPUs|
-| Memory           | 15.2 GiB                           |
-| Node.js          | 24.19.0                            |
-| PostgreSQL       | 18.6, Docker container             |
-| Replicas         | 2 listeners + 2 owner hubs         |
-| REST Concurrency | 20 concurrent reads per profile    |
+| Component        | Specification                       |
+| ---------------- | ----------------------------------- |
+| Operating System | Windows `10.0.26200`                |
+| CPU              | AMD Ryzen 7 7735HS, 16 logical CPUs |
+| Memory           | 15.2 GiB                            |
+| Node.js          | 24.19.0                             |
+| PostgreSQL       | 18.6, Docker container              |
+| Replicas         | 2 listeners + 2 owner hubs          |
+| REST Concurrency | 20 concurrent reads per profile     |
 
 For each check, an owner-scoped record is created in the production schema. The benchmark generates batches of redacted `pg_notify` wake-up payloads; each replica receives events via its dedicated listener connection and routes them to local hubs. Transit latency is measured from notification generation until both replicas receive the exact event set. Concurrently, 20 owner-scoped reads execute against independent query pools.
 

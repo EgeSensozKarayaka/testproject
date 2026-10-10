@@ -13,22 +13,22 @@ The purpose of this phase is not to develop product features, but to establish a
 
 ## 2. Key Decisions
 
-| Area                      | Decision                                                 |
-| ------------------------- | -------------------------------------------------------- |
-| Repository                | Single Git repository, polyglot monorepo                 |
-| Node runtime              | Node.js 24 LTS; exact patch version pinned               |
-| Node package manager      | pnpm 11.25.x; exact version pinned within repository      |
-| Python runtime            | CPython 3.14.x; minor series locked for predictor        |
-| Python dependency manager | `uv`, `pyproject.toml`, and committed `uv.lock`       |
-| Local PostgreSQL base     | PostgreSQL 18.6, Debian Bookworm image                   |
-| Node module system        | ESM                                                      |
-| Node language             | Strict TypeScript                                        |
-| Task orchestration        | pnpm workspace commands; initially no Turborepo/Nx       |
-| Local infrastructure      | Docker Compose v2                                        |
+| Area                      | Decision                                                        |
+| ------------------------- | --------------------------------------------------------------- |
+| Repository                | Single Git repository, polyglot monorepo                        |
+| Node runtime              | Node.js 24 LTS; exact patch version pinned                      |
+| Node package manager      | pnpm 11.25.x; exact version pinned within repository            |
+| Python runtime            | CPython 3.14.x; minor series locked for predictor               |
+| Python dependency manager | `uv`, `pyproject.toml`, and committed `uv.lock`                 |
+| Local PostgreSQL base     | PostgreSQL 18.6, Debian Bookworm image                          |
+| Node module system        | ESM                                                             |
+| Node language             | Strict TypeScript                                               |
+| Task orchestration        | pnpm workspace commands; initially no Turborepo/Nx              |
+| Local infrastructure      | Docker Compose v2                                               |
 | Host development          | Applications hot-reloaded on host, infrastructure in containers |
-| Full-stack verification   | All services in containers via Compose profile           |
+| Full-stack verification   | All services in containers via Compose profile                  |
 | CI target                 | Linux runner; Windows host development compatibility maintained |
-| Main CI                   | GitHub Actions                                           |
+| Main CI                   | GitHub Actions                                                  |
 
 Node.js 24 is officially in LTS status as of the design date. For the Python predictor, rather than the new major released on the same date, the more mature Python 3.14 series in terms of package ecosystem is preferred. Versions are fixed not with the `latest` tag, but via pin files and container tag/digest.
 
@@ -293,19 +293,19 @@ API or worker services do not carry a `depends_on` for the predictor.
 
 Planned services:
 
-| Service                | Default/Profile      | Persistent Volume | Health Dependency                                       |
-| ---------------------- | -------------------- | ----------------- | ------------------------------------------------------- |
-| `postgres`             | Default              | Yes               | Own healthcheck                                         |
-| `mailpit`              | Default              | No                | Own healthcheck                                         |
-| `target-simulator`     | Default              | No                | HTTP healthcheck                                        |
-| `api`                  | `app`                | No                | PostgreSQL ready + migration + dedicated listener ready |
-| `monitor-worker`       | `app`                | No                | PostgreSQL ready + migration complete                   |
-| `notification-worker`  | `app`                | No                | PostgreSQL ready; SMTP readiness does not block startup |
-| `housekeeping-worker`  | `app`                | No                | PostgreSQL ready + migration complete                   |
-| `realtime-worker`      | `app`                | No                | PostgreSQL ready + migration complete                   |
-| `web`                  | `app`                | No                | API liveness; no hard startup dependency required      |
-| `predictor`            | `prediction`         | No                | PostgreSQL ready; core services not dependent on it     |
-| `migrate`              | One-shot profile/job | No                | PostgreSQL ready                                        |
+| Service               | Default/Profile      | Persistent Volume | Health Dependency                                       |
+| --------------------- | -------------------- | ----------------- | ------------------------------------------------------- |
+| `postgres`            | Default              | Yes               | Own healthcheck                                         |
+| `mailpit`             | Default              | No                | Own healthcheck                                         |
+| `target-simulator`    | Default              | No                | HTTP healthcheck                                        |
+| `api`                 | `app`                | No                | PostgreSQL ready + migration + dedicated listener ready |
+| `monitor-worker`      | `app`                | No                | PostgreSQL ready + migration complete                   |
+| `notification-worker` | `app`                | No                | PostgreSQL ready; SMTP readiness does not block startup |
+| `housekeeping-worker` | `app`                | No                | PostgreSQL ready + migration complete                   |
+| `realtime-worker`     | `app`                | No                | PostgreSQL ready + migration complete                   |
+| `web`                 | `app`                | No                | API liveness; no hard startup dependency required       |
+| `predictor`           | `prediction`         | No                | PostgreSQL ready; core services not dependent on it     |
+| `migrate`             | One-shot profile/job | No                | PostgreSQL ready                                        |
 
 Compose rules:
 
@@ -336,15 +336,15 @@ Compose rules:
 
 Local defaults:
 
-| Component        | Port                                 |
-| ---------------- | ------------------------------------ |
-| Web dev server   | `5173`                               |
+| Component        | Port                                     |
+| ---------------- | ---------------------------------------- |
+| Web dev server   | `5173`                                   |
 | Web container    | `15173` (host), `8080` (Compose network) |
 | API              | `13000` (host), `3000` (Compose network) |
-| Target simulator | `4010`                               |
+| Target simulator | `4010`                                   |
 | PostgreSQL       | `15432` (host), `5432` (Compose network) |
-| Mailpit SMTP     | `1025`                               |
-| Mailpit UI       | `8025`                               |
+| Mailpit SMTP     | `1025`                                   |
+| Mailpit UI       | `8025`                                   |
 | Predictor        | `18000` (host), `8000` (Compose network) |
 
 Ports can be overridden via environment variables. The frontend only uses the public API base URL; database or SMTP addresses do not enter the browser build.

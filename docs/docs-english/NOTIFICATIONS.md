@@ -286,7 +286,7 @@ Outcome policy:
 | ------------------------------------------------------------------ | ------------------------------------------------- |
 | Provider `2xx` acceptance                                          | `SENT`                                            |
 | Definite transient error prior to dispatch or `4xx`                | `RETRY_WAIT` with full-jitter exponential backoff |
-| Definite permanent address/policy error or `5xx`                  | `FAILED`                                          |
+| Definite permanent address/policy error or `5xx`                   | `FAILED`                                          |
 | Connection loss/timeout where provider acceptance cannot be proven | `DELIVERY_UNKNOWN`                                |
 | Retry budget exhausted                                             | `FAILED`                                          |
 

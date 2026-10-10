@@ -36,18 +36,18 @@ API errors use a single RFC 9457-compliant envelope with media type `application
 
 Fields:
 
-| Field                 | Requirement | Meaning                                                                                                                    |
-| --------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `type`                | Required    | Stable, resolvable problem type URI. Represents versioned code; never includes request payloads.                           |
-| `title`               | Required    | Short, stable English summary of problem type.                                                                             |
-| `status`              | Required    | Duplicate copy of HTTP status code in payload body.                                                                        |
-| `detail`              | Required    | Safe human-readable explanation for this specific instance; not a programmatic contract.                                   |
-| `instance`            | Required    | Request path sanitized of query parameters, tokens, and secrets. Public tokens are masked as `{redacted}`.                 |
-| `code`                | Required    | Stable `snake_case` machine error code for client decision logic.                                                          |
-| `request_id`          | Required    | Log and support correlation ID; matches response `X-Request-Id` header.                                                    |
+| Field                 | Requirement | Meaning                                                                                                                  |
+| --------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `type`                | Required    | Stable, resolvable problem type URI. Represents versioned code; never includes request payloads.                         |
+| `title`               | Required    | Short, stable English summary of problem type.                                                                           |
+| `status`              | Required    | Duplicate copy of HTTP status code in payload body.                                                                      |
+| `detail`              | Required    | Safe human-readable explanation for this specific instance; not a programmatic contract.                                 |
+| `instance`            | Required    | Request path sanitized of query parameters, tokens, and secrets. Public tokens are masked as `{redacted}`.               |
+| `code`                | Required    | Stable `snake_case` machine error code for client decision logic.                                                        |
+| `request_id`          | Required    | Log and support correlation ID; matches response `X-Request-Id` header.                                                  |
 | `retryable`           | Required    | Indicates whether the exact semantic operation can safely be retried later. Retry safety also depends on idempotency.    |
-| `errors`              | Conditional | Ordered list of validation errors, present only for field or parameter validation failures.                                |
-| `retry_after_seconds` | Conditional | Non-negative integer seconds for retryable transient `409`, `429`, or `503` responses; aligns with `Retry-After` header.   |
+| `errors`              | Conditional | Ordered list of validation errors, present only for field or parameter validation failures.                              |
+| `retry_after_seconds` | Conditional | Non-negative integer seconds for retryable transient `409`, `429`, or `503` responses; aligns with `Retry-After` header. |
 
 `null` values, empty arrays, and debug metadata are omitted. Stack traces, raw SQL queries, database table/role names, filesystem paths, internal dependency payloads, and unhandled exception traces are strictly forbidden in public responses.
 
@@ -72,35 +72,35 @@ Each element of `errors` has the following schema:
 
 ## 4. Stable Problem Codes
 
-| HTTP | `code`                        | Usage Description                                                                                                   | Retry                        |
-| ---- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| 400  | `malformed_json`              | Malformed JSON syntax in request body.                                                                              | No                           |
-| 400  | `invalid_request`             | Request violates schema but cannot be mapped to a specific field.                                                   | No                           |
-| 400  | `invalid_cursor`              | Pagination cursor is corrupt, expired, or issued for a different query.                                             | No                           |
-| 400  | `invalid_precondition`        | Precondition header syntax or header combination is invalid.                                                        | No                           |
-| 401  | `authentication_required`     | Missing, expired, or invalidated session.                                                                           | After re-authentication      |
-| 401  | `invalid_credentials`         | Incorrect credentials; does not reveal whether the username exists.                                                 | No                           |
-| 403  | `csrf_failed`                 | CSRF token or origin validation check failed.                                                                       | After fetching fresh token   |
-| 403  | `operation_forbidden`         | Authenticated user lacks permission for account-level action. Not used for other tenants' resources.                 | No                           |
-| 404  | `resource_not_found`          | Resource does not exist, has been deleted, or belongs to another tenant.                                            | No                           |
-| 404  | `public_page_not_found`       | Public status token is invalid, rotated, disabled, or does not exist.                                               | No                           |
-| 405  | `method_not_allowed`          | Route exists but HTTP method is unsupported.                                                                        | No                           |
-| 406  | `not_acceptable`              | Requested `Accept` header cannot be satisfied.                                                                      | No                           |
-| 409  | `invalid_state_transition`    | Resource cannot accept the command in its current lifecycle state.                                                  | After state changes          |
-| 409  | `idempotency_key_reused`      | Idempotency key reused with a different operation or request fingerprint.                                           | With fresh key               |
-| 409  | `idempotency_in_progress`     | Concurrent transaction with identical key is still processing after bounded wait.                                  | After `Retry-After`          |
-| 409  | `resource_conflict`           | Unique constraint, invariant, or domain conflict.                                                                   | Conditional                  |
-| 409  | `quota_exceeded`              | Configured operational quota reached; check counts are not hardcoded.                                              | When resources freed         |
-| 412  | `resource_version_mismatch`   | `If-Match` does not match current resource `ETag`.                                                                  | Re-read & re-evaluate        |
-| 413  | `payload_too_large`           | Request body, field, or response size limit exceeded.                                                               | No                           |
-| 415  | `unsupported_media_type`      | Unsupported `Content-Type` header.                                                                                  | Once corrected               |
-| 422  | `validation_failed`           | Field, query parameter, or header validation failed.                                                                | Once corrected               |
-| 422  | `unprocessable_configuration` | Schema syntax valid, but cross-field domain rules violated.                                                         | Once corrected               |
-| 428  | `precondition_required`       | Missing mandatory `If-Match` header on a mutable resource.                                                           | Provide header               |
-| 429  | `rate_limit_exceeded`         | Abuse prevention or operational rate limit exceeded.                                                                | After `Retry-After`          |
-| 500  | `internal_error`              | Unexpected internal server error.                                                                                   | Only if idempotent           |
-| 503  | `dependency_unavailable`      | Critical external or internal dependency is temporarily unavailable.                                                | Yes                          |
-| 503  | `schema_incompatible`         | Runtime and database schema compatibility epoch/revision mismatch.                                                  | After deployment/migration   |
+| HTTP | `code`                        | Usage Description                                                                                    | Retry                      |
+| ---- | ----------------------------- | ---------------------------------------------------------------------------------------------------- | -------------------------- |
+| 400  | `malformed_json`              | Malformed JSON syntax in request body.                                                               | No                         |
+| 400  | `invalid_request`             | Request violates schema but cannot be mapped to a specific field.                                    | No                         |
+| 400  | `invalid_cursor`              | Pagination cursor is corrupt, expired, or issued for a different query.                              | No                         |
+| 400  | `invalid_precondition`        | Precondition header syntax or header combination is invalid.                                         | No                         |
+| 401  | `authentication_required`     | Missing, expired, or invalidated session.                                                            | After re-authentication    |
+| 401  | `invalid_credentials`         | Incorrect credentials; does not reveal whether the username exists.                                  | No                         |
+| 403  | `csrf_failed`                 | CSRF token or origin validation check failed.                                                        | After fetching fresh token |
+| 403  | `operation_forbidden`         | Authenticated user lacks permission for account-level action. Not used for other tenants' resources. | No                         |
+| 404  | `resource_not_found`          | Resource does not exist, has been deleted, or belongs to another tenant.                             | No                         |
+| 404  | `public_page_not_found`       | Public status token is invalid, rotated, disabled, or does not exist.                                | No                         |
+| 405  | `method_not_allowed`          | Route exists but HTTP method is unsupported.                                                         | No                         |
+| 406  | `not_acceptable`              | Requested `Accept` header cannot be satisfied.                                                       | No                         |
+| 409  | `invalid_state_transition`    | Resource cannot accept the command in its current lifecycle state.                                   | After state changes        |
+| 409  | `idempotency_key_reused`      | Idempotency key reused with a different operation or request fingerprint.                            | With fresh key             |
+| 409  | `idempotency_in_progress`     | Concurrent transaction with identical key is still processing after bounded wait.                    | After `Retry-After`        |
+| 409  | `resource_conflict`           | Unique constraint, invariant, or domain conflict.                                                    | Conditional                |
+| 409  | `quota_exceeded`              | Configured operational quota reached; check counts are not hardcoded.                                | When resources freed       |
+| 412  | `resource_version_mismatch`   | `If-Match` does not match current resource `ETag`.                                                   | Re-read & re-evaluate      |
+| 413  | `payload_too_large`           | Request body, field, or response size limit exceeded.                                                | No                         |
+| 415  | `unsupported_media_type`      | Unsupported `Content-Type` header.                                                                   | Once corrected             |
+| 422  | `validation_failed`           | Field, query parameter, or header validation failed.                                                 | Once corrected             |
+| 422  | `unprocessable_configuration` | Schema syntax valid, but cross-field domain rules violated.                                          | Once corrected             |
+| 428  | `precondition_required`       | Missing mandatory `If-Match` header on a mutable resource.                                           | Provide header             |
+| 429  | `rate_limit_exceeded`         | Abuse prevention or operational rate limit exceeded.                                                 | After `Retry-After`        |
+| 500  | `internal_error`              | Unexpected internal server error.                                                                    | Only if idempotent         |
+| 503  | `dependency_unavailable`      | Critical external or internal dependency is temporarily unavailable.                                 | Yes                        |
+| 503  | `schema_incompatible`         | Runtime and database schema compatibility epoch/revision mismatch.                                   | After deployment/migration |
 
 This catalog may be expanded in v1. Clients must safely treat unknown error codes as generic instances of their parent HTTP status code class.
 

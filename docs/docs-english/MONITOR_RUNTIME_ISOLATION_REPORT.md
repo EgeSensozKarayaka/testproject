@@ -14,12 +14,12 @@ This benchmark does not assert production hardware-independent SLOs. It is a rep
 
 The test provisions four independent execution surfaces concurrently:
 
-| Surface   | Real Code Path                     | Resource Boundary                           |
-| --------- | ---------------------------------- | ------------------------------------------- |
-| API       | `apps/api/src/index.ts`            | Dedicated Node process and private DB pool  |
-| Monitor A | `apps/monitor-worker/src/index.ts` | Dedicated Node process, max 4 DB connections|
-| Monitor B | `apps/monitor-worker/src/index.ts` | Dedicated Node process, max 4 DB connections|
-| Target    | Authentic local HTTP server        | Responds with `200` after 150 ms delay      |
+| Surface   | Real Code Path                     | Resource Boundary                            |
+| --------- | ---------------------------------- | -------------------------------------------- |
+| API       | `apps/api/src/index.ts`            | Dedicated Node process and private DB pool   |
+| Monitor A | `apps/monitor-worker/src/index.ts` | Dedicated Node process, max 4 DB connections |
+| Monitor B | `apps/monitor-worker/src/index.ts` | Dedicated Node process, max 4 DB connections |
+| Target    | Authentic local HTTP server        | Responds with `200` after 150 ms delay       |
 
 Process-local concurrency limits for each worker instance are configured at global 8, owner 4, and hostname 4. Consequently, aggregate physical concurrency against a single target across both workers has a ceiling of 8. The API does not share database pools with monitor workers.
 
@@ -35,18 +35,18 @@ Process-local concurrency limits for each worker instance are configured at glob
 
 ## 4. Correctness Results
 
-| Metric                      | Result |
-| --------------------------- | -----: |
-| Due checks inserted         |    200 |
-| Completed jobs              |    200 |
-| Job attempts recorded       |    200 |
-| Check runs executed         |    200 |
-| Runs accepted into state    |    200 |
-| Target HTTP requests served |    200 |
-| Distinct active worker IDs  |      2 |
-| Maximum attempt sequence ID |      1 |
-| Active jobs remaining at end|      0 |
-| Peak target concurrency     |      8 |
+| Metric                       | Result |
+| ---------------------------- | -----: |
+| Due checks inserted          |    200 |
+| Completed jobs               |    200 |
+| Job attempts recorded        |    200 |
+| Check runs executed          |    200 |
+| Runs accepted into state     |    200 |
+| Target HTTP requests served  |    200 |
+| Distinct active worker IDs   |      2 |
+| Maximum attempt sequence ID  |      1 |
+| Active jobs remaining at end |      0 |
+| Peak target concurrency      |      8 |
 
 Both worker instances actively processed jobs. No job was claimed more than once, zero retries were needed, duplicate runs were completely absent, and combined hostname concurrency across both processes remained exactly at the expected maximum of 8.
 
@@ -54,10 +54,10 @@ Both worker instances actively processed jobs. No job was claimed more than once
 
 Under peak worker execution, all 40 authenticated list calls and 40 readiness probes returned HTTP `200`. Every listing response accurately returned all 50 checks belonging to the authenticated tenant.
 
-| API Endpoint Sample        | Idle p95    | Under-Load p95 | Under-Load Max | Regression Budget               |
-| -------------------------- | ----------: | -------------: | -------------: | ------------------------------: |
-| `/health/ready`            |     15.4 ms |        18.4 ms |        19.0 ms | p95 < 1000 ms, max < 3000 ms    |
-| `/api/v1/checks?limit=100` |     75.5 ms |        32.1 ms |        33.8 ms | p95 < 1500 ms, max < 3000 ms    |
+| API Endpoint Sample        | Idle p95 | Under-Load p95 | Under-Load Max |            Regression Budget |
+| -------------------------- | -------: | -------------: | -------------: | ---------------------------: |
+| `/health/ready`            |  15.4 ms |        18.4 ms |        19.0 ms | p95 < 1000 ms, max < 3000 ms |
+| `/api/v1/checks?limit=100` |  75.5 ms |        32.1 ms |        33.8 ms | p95 < 1500 ms, max < 3000 ms |
 
 Because the initial call in the 5-sample baseline incurred cold plan compilation and cache warmup overhead, its latency was higher than subsequent under-load percentiles. Therefore, the test does not treat relative degradation ratios as an SLO, but enforces strict absolute runaway ceilings. Machine-readable metrics are emitted as a `MONITOR_ISOLATION` JSON log entry.
 

@@ -45,17 +45,17 @@ This architecture preserves the following invariants:
 
 The PostgreSQL table `app.maintenance_windows` remains the single source of truth:
 
-| Column                     | Rule / Constraint                                                                 |
-| -------------------------- | --------------------------------------------------------------------------------- |
-| `id`                       | UUIDv7 primary key                                                               |
-| `owner_id`                 | Tenant owner; enforces RLS and composite foreign key boundaries                   |
-| `check_id` / `group_id`    | Mutually exclusive; exactly one target populated; immutable after creation        |
-| `note`                     | `varchar(1000) NULL`; user note, omitted from log and event payloads               |
-| `starts_at`, `ends_at`     | UTC timestamps; enforces `ends_at > starts_at`                                    |
-| `state`                    | Persistent command state only: `SCHEDULED` or `CANCELLED`                         |
-| `cancelled_at`             | Populated exclusively for `CANCELLED` windows                                     |
-| `resource_version`         | Monotonic counter providing strong ETag versioning                                |
-| `created_at`, `updated_at` | Database-generated audit timestamps                                              |
+| Column                     | Rule / Constraint                                                          |
+| -------------------------- | -------------------------------------------------------------------------- |
+| `id`                       | UUIDv7 primary key                                                         |
+| `owner_id`                 | Tenant owner; enforces RLS and composite foreign key boundaries            |
+| `check_id` / `group_id`    | Mutually exclusive; exactly one target populated; immutable after creation |
+| `note`                     | `varchar(1000) NULL`; user note, omitted from log and event payloads       |
+| `starts_at`, `ends_at`     | UTC timestamps; enforces `ends_at > starts_at`                             |
+| `state`                    | Persistent command state only: `SCHEDULED` or `CANCELLED`                  |
+| `cancelled_at`             | Populated exclusively for `CANCELLED` windows                              |
+| `resource_version`         | Monotonic counter providing strong ETag versioning                         |
+| `created_at`, `updated_at` | Database-generated audit timestamps                                        |
 
 The historical `name varchar(160) NOT NULL` column conflicted with the nullable `note` specification in OpenAPI contracts. Revision 15 migrated this column to `note varchar(1000) NULL` without data loss. Maintenance windows require no mandatory titles under product requirements.
 
@@ -142,15 +142,15 @@ Deletions enforce strict lock acquisition hierarchies: target resource, affected
 
 HTTP probes execute on schedule throughout maintenance windows. Run history, current health, freshness deadlines, incident tracking, and group rollups reflect real target metrics. Maintenance strictly governs notification dispatch decisions.
 
-| Scenario                                                      | Operational Outcome                                                 |
-| ------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Incident opens and resolves entirely within maintenance       | DOWN and RECOVERY emails suppressed; intents resolve to `CANCELLED` |
-| Incident opens in maintenance and remains open at conclusion  | A single DOWN notification is materialized and dispatched           |
-| DOWN alert sent prior to maintenance; incident persists       | Zero duplicate DOWN emails emitted during maintenance               |
-| Incident with dispatched DOWN recovers during maintenance     | RECOVERY notification deferred until maintenance window ends        |
-| DOWN delivery enqueued but maintenance starts before send     | Deferred during claim-time maintenance recheck                      |
-| One maintenance window ends while an overlapping window runs  | Alert suppression persists; deferred until the latest window ends   |
-| Check becomes `STALE/UNKNOWN` during maintenance              | Freshness and maintenance displayed independently; no fake recovery |
+| Scenario                                                     | Operational Outcome                                                 |
+| ------------------------------------------------------------ | ------------------------------------------------------------------- |
+| Incident opens and resolves entirely within maintenance      | DOWN and RECOVERY emails suppressed; intents resolve to `CANCELLED` |
+| Incident opens in maintenance and remains open at conclusion | A single DOWN notification is materialized and dispatched           |
+| DOWN alert sent prior to maintenance; incident persists      | Zero duplicate DOWN emails emitted during maintenance               |
+| Incident with dispatched DOWN recovers during maintenance    | RECOVERY notification deferred until maintenance window ends        |
+| DOWN delivery enqueued but maintenance starts before send    | Deferred during claim-time maintenance recheck                      |
+| One maintenance window ends while an overlapping window runs | Alert suppression persists; deferred until the latest window ends   |
+| Check becomes `STALE/UNKNOWN` during maintenance             | Freshness and maintenance displayed independently; no fake recovery |
 
 Notification delivery transactions re-evaluate maintenance status immediately prior to dispatching SMTP payloads, safely resolving races between window modifications and delivery claims.
 
