@@ -230,6 +230,10 @@ async function pollWork(): Promise<void> {
   if (pollPromise || stopping) return;
   pollPromise = (async () => {
     try {
+      const reconciled = await incidentStore.reconcileOpenIncidents();
+      if (reconciled > 0) {
+        logger.info({ reconciled_incident_count: reconciled }, 'open incidents reconciled');
+      }
       for (let index = 0; index < 100 && !stopping; index += 1) {
         if (!(await incidentStore.consumeDispatch())) break;
       }

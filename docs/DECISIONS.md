@@ -764,9 +764,9 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-082 — Notification cutover tarihsel outbox replay yerine aktivasyon ve source reconciliation kullanır
 
 - **Tarih:** 2026-10-10 16:27 +06:00
-- **Durum:** Accepted — Aşama 11 nihai mimarisi
+- **Durum:** Accepted — Revision 19/20 cutover ve gerçek PostgreSQL yarış testiyle doğrulandı
 - **Bağlam:** `NOTIFICATION` destination önceki aşamalarda pasiftir. Bütün tarihsel incident event'lerini replay etmek kapanmış kesintiler için gecikmiş e-posta üretir; yalnız aktivasyon sonrası event'lere bakmak mevcut açık incident'ları kaçırır.
 - **Karar:** Worker/preflight deploy edildikten sonra destination forward-only cutover ile aktive edilir. Ardından yalnız source-of-truth'ta hâlâ açık incident'lar için NOTIFICATION-only sentetik `incident.opened` event'leri oluşturulur. Unique incident/event-kind intent kısıtı yarışları tekilleştirir.
 - **Alternatifler:** Tüm tarihsel outbox replay; açık incident'ları yok saymak; process memory backfill listesi; destination'ı worker kodundan önce aktive etmek.
 - **Gerekçe:** Geçmiş spam üretmeden aktivasyon anındaki gerçek durumu kapsamak ve restart güvenli kalmak.
-- **Sonuçlar:** Aktivasyon sonrası consumer kesintisi normal durable backlog oluşturur. Backfill ile canlı event yarışı ikinci DOWN üretemez.
+- **Sonuçlar:** Aktivasyon sonrası consumer kesintisi normal durable backlog oluşturur. Reconciliation event'i `cutover-v1` marker'ı ve partial unique index ile restart-safe tekilleştirilir. İlk Revision 19 preflight'i data-modifying CTE'nin yeni satırını aynı statement içinde base-table rescan ile göremediğini yakaladı; forward-only Revision 20 `RETURNING` satırlarını dispatch kaynağına açıkça dahil etti. Backfill ile canlı event yarışı iki dispatch tüketse bile unique intent/delivery nedeniyle ikinci DOWN üretemez.

@@ -56,7 +56,8 @@ databaseSuite('maintenance cross-resource PostgreSQL boundary', () => {
          (destination, activated_at, activated_by_revision)
        VALUES
          ('REALTIME', statement_timestamp(), 14),
-         ('NOTIFICATION', statement_timestamp(), 15)`,
+         ('NOTIFICATION', statement_timestamp(), 15)
+       ON CONFLICT (destination) DO NOTHING`,
     );
     await schemaPool.query(
       `INSERT INTO auth.users

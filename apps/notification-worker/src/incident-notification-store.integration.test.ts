@@ -163,9 +163,12 @@ databaseSuite('incident notification PostgreSQL runtime', () => {
   it('materializes one DOWN and only the matching SENT lineage recovery', async () => {
     const first = new IncidentNotificationStore(notifierPool, 'notifier:first', 60, 5);
     const second = new IncidentNotificationStore(notifierPool, 'notifier:second', 60, 5);
+    await expect(first.reconcileOpenIncidents()).resolves.toBe(1);
+    await expect(second.reconcileOpenIncidents()).resolves.toBe(0);
     const dispatchResults = await Promise.all([first.consumeDispatch(), second.consumeDispatch()]);
-    expect(dispatchResults.sort()).toEqual([false, true]);
+    expect(dispatchResults).toEqual([true, true]);
     await expect(first.evaluateIntent()).resolves.toBe(true);
+    await expect(second.evaluateIntent()).resolves.toBe(false);
 
     const down = await first.claimDelivery();
     expect(down).toMatchObject({
@@ -209,6 +212,7 @@ databaseSuite('incident notification PostgreSQL runtime', () => {
     const evidence = await schemaPool.query<{
       attempts: string;
       down_deliveries: string;
+      reconciliation_events: string;
       recovery_deliveries: string;
     }>(
       `SELECT
@@ -216,12 +220,16 @@ databaseSuite('incident notification PostgreSQL runtime', () => {
            WHERE incident_id = $1 AND event_kind = 'INCIDENT_OPENED') AS down_deliveries,
          (SELECT count(*)::text FROM notification.deliveries
            WHERE incident_id = $1 AND event_kind = 'INCIDENT_RECOVERED') AS recovery_deliveries,
+         (SELECT count(*)::text FROM infra.outbox_events
+           WHERE aggregate_id = $1
+             AND payload->>'notification_reconciliation' = 'cutover-v1') AS reconciliation_events,
          (SELECT count(*)::text FROM notification.delivery_attempts) AS attempts`,
       [incidentId],
     );
     expect(evidence.rows[0]).toEqual({
       attempts: '2',
       down_deliveries: '1',
+      reconciliation_events: '1',
       recovery_deliveries: '1',
     });
   });

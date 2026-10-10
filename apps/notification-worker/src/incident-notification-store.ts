@@ -42,6 +42,13 @@ export class IncidentNotificationStore {
     private readonly maxDispatchAttempts: number,
   ) {}
 
+  async reconcileOpenIncidents(): Promise<number> {
+    const result = await this.pool.query<{ count: number }>(
+      'SELECT security_api.reconcile_open_incident_notifications() AS count',
+    );
+    return result.rows[0]?.count ?? 0;
+  }
+
   async consumeDispatch(): Promise<boolean> {
     const result = await this.pool.query<ClaimedDispatch>(
       'SELECT * FROM security_api.claim_notification_dispatch($1,$2)',

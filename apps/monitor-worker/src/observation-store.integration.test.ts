@@ -128,7 +128,8 @@ databaseSuite('monitor PostgreSQL observation store', () => {
          ('AUDIT', statement_timestamp(), 14),
          ('NOTIFICATION', statement_timestamp(), 14),
          ('PREDICTION', statement_timestamp(), 14),
-         ('REALTIME', statement_timestamp(), 14)`,
+         ('REALTIME', statement_timestamp(), 14)
+       ON CONFLICT (destination) DO NOTHING`,
     );
     monitorPool = createDatabasePool({
       applicationName: 'observation-monitor-test',
