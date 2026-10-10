@@ -206,6 +206,24 @@ importers:
         specifier: 8.23.1
         version: 8.23.1
 
+  apps/realtime-worker:
+    dependencies:
+      '@site-monitor/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@site-monitor/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@site-monitor/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@site-monitor/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
+      fastify:
+        specifier: 5.12.5
+        version: 5.12.5
+
   apps/target-simulator:
     dependencies:
       '@site-monitor/config':

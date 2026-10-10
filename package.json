@@ -17,7 +17,7 @@
     "db:migrate": "node scripts/database-command.mjs migrate",
     "db:reset": "node scripts/database-command.mjs reset",
     "db:seed": "node scripts/database-command.mjs seed",
-    "dev": "concurrently --kill-others --names web,api,monitor,notification,housekeeping --prefix-colors blue,green,yellow,magenta,cyan \"pnpm --filter @site-monitor/web dev\" \"pnpm --filter @site-monitor/api dev\" \"pnpm --filter @site-monitor/monitor-worker dev\" \"pnpm --filter @site-monitor/notification-worker dev\" \"pnpm --filter @site-monitor/housekeeping-worker dev\"",
+    "dev": "concurrently --kill-others --names web,api,monitor,notification,housekeeping,realtime --prefix-colors blue,green,yellow,magenta,cyan,white \"pnpm --filter @site-monitor/web dev\" \"pnpm --filter @site-monitor/api dev\" \"pnpm --filter @site-monitor/monitor-worker dev\" \"pnpm --filter @site-monitor/notification-worker dev\" \"pnpm --filter @site-monitor/housekeeping-worker dev\" \"pnpm --filter @site-monitor/realtime-worker dev\"",
     "dev:infra": "docker compose up --detach --wait postgres mailpit target-simulator",
     "dev:infra:down": "docker compose down",
     "dev:prediction": "docker compose --profile prediction up --build predictor",

@@ -2,9 +2,9 @@
 
 **Aşama:** 13 — Canlı Güncelleme Altyapısı
 
-**Durum:** Nihai mimari onay adayı; uygulama henüz başlamadı
+**Durum:** Nihai mimari; Dilim 1 relay çekirdeği uygulandı ve doğrulandı
 
-**Tarih:** 2026-10-10 19:12 +06:00
+**Tarih:** 2026-10-10 19:35 +06:00
 
 **Kapsam:** FR-DASH-004–005, FR-PUBLIC-004–005, NFR-PERF-002, AC-013–014, AC-070–074
 
@@ -74,9 +74,9 @@ Mevcut repository şu temeli sağlar:
 - check/group/maintenance/notification producer'larının `REALTIME` destination niyeti;
 - 30 saniyelik polling fallback ve 60 saniyelik görünür-sekme reconciliation kuralı.
 
-Uygulamadan önce kapatılması gereken boşluklar:
+Kalan uygulama boşlukları:
 
-1. `REALTIME` destination production'da aktif değildir ve consumer yoktur.
+1. `REALTIME` destination production'da bilinçli olarak aktif değildir; relay consumer hazır ve pasif hedefte doğrulanmıştır.
 2. API process'inde dedicated PostgreSQL listener ve subscriber registry yoktur.
 3. İç domain event'ini dış SSE allowlist'ine çeviren, owner-scoped current projection reader yoktur.
 4. Mevcut OpenAPI `DashboardPage` tek cursor ile iki collection'ı tarif eder; bu, büyük check/group koleksiyonları için tam snapshot pagination sözleşmesi değildir.
@@ -121,15 +121,15 @@ Yeni `site_monitor_realtime` NOLOGIN rolü yalnız şu dar yetkilere sahip olur:
 
 - realtime dispatch claim/complete/retry/dead-letter SECURITY DEFINER fonksiyonlarını çağırmak;
 - worker schema compatibility/preflight fonksiyonunu çağırmak;
-- sabit `site_monitor_realtime_v1` kanalına `pg_notify` üretmek.
+- completion fonksiyonu üzerinden sabit `site_monitor_realtime_v1` kanalına redacted wake-up üretmek.
 
-Rol domain tablolarına, auth tablolarına veya serbest outbox `UPDATE` yetkisine sahip olmaz. Yerel Compose mevcut bootstrap login üzerinden bu role `SET ROLE` eder; production'da ayrı login/secret gerekir.
+Rol domain tablolarına, auth tablolarına, serbest outbox `SELECT/UPDATE` yetkisine veya keyfi notification payload'ı üretme yüzeyine sahip olmaz. Yerel Compose mevcut bootstrap login üzerinden bu role `SET ROLE` eder; production'da ayrı login/secret gerekir.
 
 API rolü outbox tüketemez. Dedicated listener bağlantısı yalnız `LISTEN site_monitor_realtime_v1` yapar; owner DTO okuması mevcut `site_monitor_api` pool'unda RLS kapsamlı transaction ile yürür.
 
 ### 6.2 Dar DB fonksiyonları
 
-Revision 27 aşağıdaki kavramsal fonksiyonları ekler:
+Revision 27 aşağıdaki dar fonksiyonları ekler:
 
 - `security_api.claim_realtime_dispatch(worker_id, lease_seconds)`:
   - yalnız `destination='REALTIME'`;
@@ -137,12 +137,11 @@ Revision 27 aşağıdaki kavramsal fonksiyonları ekler:
   - `FOR UPDATE SKIP LOCKED` ve deterministik `(available_at,event_id)` sırası;
   - `attempt_count` ve monoton `fencing_token` artırımı;
   - event envelope ile lease bilgisini döndürür.
-- `security_api.complete_realtime_dispatch(event_id, worker_id, fencing_token)`:
+- `security_api.complete_realtime_dispatch(event_id, worker_id, fencing_token, result, result_code, retry_delay_seconds)`:
   - yalnız güncel lease/fence kazanabilir;
-  - `COMPLETED` yazar.
-- `security_api.retry_realtime_dispatch(...)`:
-  - sanitized error code, bounded exponential backoff + jitter;
-  - maksimum denemede görünür `DEAD`.
+  - `COMPLETED`, `RETRY` veya `DEAD` sonucunu tek fencing sınırında uygular;
+  - retry zamanını worker'ın bounded deterministic backoff kararından alır;
+  - yalnız `COMPLETED` sonucunda stored routing metadata'dan sabit, 1 KiB altı wake-up üretir.
 
 Worker `complete` çağrısı ve sabit kanal `pg_notify` işlemini aynı DB transaction'ında yapar. PostgreSQL notification'ı yalnız commit sonrasında teslim ettiği için şu iki durumdan biri oluşur:
 
@@ -399,10 +398,10 @@ Sonuçlar local baseline olarak raporlanır; production SLO veya sonsuz bağlant
 
 ### Dilim 1 — Kalıcılık, worker ve relay çekirdeği
 
-- Revision 27 rol/fonksiyon/preflight;
-- realtime worker config, claim/fencing/retry/dead-letter;
-- safe wake-up mapper ve transactional `pg_notify`;
-- activation kapalıyken unit + gerçek PostgreSQL testleri.
+- [x] Revision 27 rol/fonksiyon/preflight;
+- [x] realtime worker config, claim/fencing/retry/dead-letter;
+- [x] safe wake-up mapper ve transactional `pg_notify`;
+- [x] activation kapalıyken unit + gerçek PostgreSQL testleri ve container readiness smoke'u.
 
 ### Dilim 2 — Private API stream ve projection
 

@@ -523,6 +523,8 @@ apps/
   api/                    # Fastify API ve SSE
   monitor-worker/         # Scheduler ve HTTP kontrolleri
   notification-worker/    # Outbox ve e-posta teslimatı
+  housekeeping-worker/    # Rollup, partition ve retention
+  realtime-worker/        # Durable outbox relay ve redacted wake-up
   target-simulator/       # Başarı, hata, gecikme ve hang senaryoları
 
 services/
@@ -564,6 +566,8 @@ Docker Compose en az şu servisleri sağlar:
 - `api`
 - `monitor-worker`
 - `notification-worker`
+- `housekeeping-worker`
+- `realtime-worker`
 - `postgres`
 - `mailpit`
 - `target-simulator`
@@ -571,7 +575,7 @@ Docker Compose en az şu servisleri sağlar:
 
 Predictor compose profile ile açılıp kapatılabilir. API ve diğer worker'lar predictor için `depends_on` bağımlılığı taşımaz.
 
-Üretimde aynı container imajından birden fazla monitor veya notification worker replica'sı çalıştırılabilir. İlk sürüm Kubernetes gerektirmez; container sözleşmeleri daha sonraki deployment ortamlarına taşınabilir biçimde tutulur.
+Üretimde aynı container imajından birden fazla monitor, notification, housekeeping veya realtime worker replica'sı çalıştırılabilir. İlk sürüm Kubernetes gerektirmez; container sözleşmeleri daha sonraki deployment ortamlarına taşınabilir biçimde tutulur.
 
 Yerel ve üretim veri tabanı profilleri farklıdır. Yerelde tek PostgreSQL container yeterlidir. Üretim profili managed veya primary/standby PostgreSQL, otomatik backup, point-in-time recovery, periyodik restore testi, connection pooling, disk/transaction izlemesi ve tanımlı RPO/RTO içerir. Repository'nin tam HA altyapısını kurması zorunlu değildir; operasyon sözleşmesi ve doğrulama prosedürü belgelenir.
 

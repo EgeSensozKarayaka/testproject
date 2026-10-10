@@ -396,7 +396,7 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 - `docs/REALTIME.md`
 
-**Mimari durumu:** 2026-10-10 19:12 +06:00 tarihinde nihai tasarım hazırlandı; uygulama henüz başlamadı. Public-safe transport portları bu aşamada hazırlanır, gerçek public route/snapshot aktivasyonu Aşama 15'te atomik olarak yapılır.
+**Mimari durumu:** 2026-10-10 19:12 +06:00 tarihinde nihai tasarım hazırlandı; 19:31'de Dilim 1 relay çekirdeği tamamlandı. Public-safe transport portları bu aşamada hazırlanır, gerçek public route/snapshot aktivasyonu Aşama 15'te atomik olarak yapılır.
 
 **Uygulama kapsamı:**
 
@@ -643,4 +643,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 12 kapanış dilimi** tamamlanmıştır. Ayrı ağır kapasite harness'ı 20/200/500 source discovery ve minute→hour throughput'unu; 420.000 hour satırıyla 50,4 milyon raw örneğe eşdeğer 35 günlük dağılımı; indeksli/pruned month sorgusunu ve 3.840 bucket'lık eşzamanlı housekeeper yükünde private API izolasyonunu doğrular. 500-check projection 9,54 saniye, month service sorgusu 25,32 ms ve yüklü API p95 15,20 ms ölçülmüştür.
 
-**Sıradaki çalışma Aşama 13 — Canlı Güncelleme Altyapısı nihai mimarisidir.** Mevcut `REALTIME_CONTRACT.md` gereksinimleri production SSE/LISTEN-NOTIFY sınırı, reconnect/snapshot semantiği, connection limitleri ve polling fallback açısından yeniden incelenecektir.
+**Aşama 13 Dilim 1 — Realtime relay çekirdeği** tamamlanmıştır. Revision 27 dar `site_monitor_realtime` rolünü, REALTIME-only lease/fencing claim ve completion/retry/dead sınırını, transactional redacted PostgreSQL wake-up'ını ve storage preflight'ini ekler. Ayrı realtime worker bounded polling, deterministic retry, readiness ve graceful shutdown ile production-benzeri container'da doğrulandı; `REALTIME` activation bilinçli olarak kapalı kaldı.
+
+**Sıradaki çalışma Aşama 13 Dilim 2 — Private API stream ve projection'dır.** Dedicated API listener, owner-scoped bounded hub/projection, authenticated SSE route, session/backpressure yaşam döngüsü ve iki API replica owner izolasyonu uygulanacaktır.

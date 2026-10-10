@@ -39,8 +39,10 @@ Node.js 24, tasarım tarihinde resmi olarak LTS durumundadır. Python predictor 
 ├─ apps/
 │  ├─ web/                    # React/Vite tarayıcı uygulaması
 │  ├─ api/                    # Fastify API ve SSE entrypoint
-│  ├─ monitor-worker/         # Scheduler, execution ve housekeeping entrypoint
+│  ├─ monitor-worker/         # Scheduler ve probe execution entrypoint
 │  ├─ notification-worker/    # Outbox ve SMTP entrypoint
+│  ├─ housekeeping-worker/    # Rollup, partition ve retention entrypoint
+│  ├─ realtime-worker/        # Outbox relay ve PostgreSQL wake-up entrypoint
 │  └─ target-simulator/       # Test/demo hedef sunucusu
 │
 ├─ packages/
@@ -252,7 +254,7 @@ Günlük geliştirme için varsayılandır:
 
 ```text
 Host:
-  web, api, monitor-worker, notification-worker
+  web, api, monitor-worker, notification-worker, housekeeping-worker, realtime-worker
 
 Docker:
   postgres, mailpit, target-simulator
@@ -299,6 +301,8 @@ Planlanan servisler:
 | `api`                 | `app`                | Hayır         | PostgreSQL ready + migration tamam                     |
 | `monitor-worker`      | `app`                | Hayır         | PostgreSQL ready + migration tamam                     |
 | `notification-worker` | `app`                | Hayır         | PostgreSQL ready; SMTP readiness başlangıcı engellemez |
+| `housekeeping-worker` | `app`                | Hayır         | PostgreSQL ready + migration tamam                     |
+| `realtime-worker`     | `app`                | Hayır         | PostgreSQL ready + migration tamam                     |
 | `web`                 | `app`                | Hayır         | API liveness; hard startup dependency gerekmez         |
 | `predictor`           | `prediction`         | Hayır         | PostgreSQL ready; ana servisler buna bağlı değil       |
 | `migrate`             | One-shot profile/job | Hayır         | PostgreSQL ready                                       |

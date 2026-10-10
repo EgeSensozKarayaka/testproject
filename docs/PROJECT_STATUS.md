@@ -1,11 +1,15 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 19:12 +06:00
+**Son güncelleme:** 2026-10-10 19:35 +06:00
 
-**Genel durum:** Aşama 0–12 tamamlandı; Aşama 13 canlı güncelleme mimarisi hazır, uygulama sırada
+**Genel durum:** Aşama 0–12 ve Aşama 13 Dilim 1 tamamlandı; private SSE Dilim 2 sırada
 
 ## Tamamlanan
 
+- Aşama 13 Dilim 1: Revision 27 ile dar `site_monitor_realtime` rolü, REALTIME-only lease/fencing claim ve completion/retry/dead sınırı, aynı transaction'da 1 KiB altı redacted PostgreSQL wake-up ve schema preflight'i
+- Ayrı `realtime-worker` process/container'ı; bounded poll/batch/retry, deterministic full-jitter, terminal unsupported-event kararı, loop-aware readiness ve bounded graceful shutdown. Production `REALTIME` destination bilinçli olarak pasif bırakıldı
+- Realtime relay gerçek PostgreSQL paketi **4/4** geçti: rollback'te sıfır notification, commit'te exact redacted wake-up, expired lease sonrası stale fence reddi ve retry/dead durumlarında yayın yokluğu. Unit toplamı **227/227**, integration toplamı **91/91** geçti; güncel container readiness `200`
+- Aşama 13 Dilim 1 final `pnpm run ci` kapısı format, 58-operation contract drift, lint, bütün workspace strict typecheck'leri, **32 dosyada 227/227 unit**, **16 dosyada 91/91 gerçek PostgreSQL/socket/process integration** ve bütün production build'leriyle geçti; 500-check monitor regresyonu **59,24 check/s** ölçtü
 - Aşama 13 için ayrı least-privilege realtime relay process'i, transactional outbox completion + PostgreSQL wake-up broadcast'i, API replica listener/owner hub'ı, fetch-stream browser client'ı, snapshot reconciliation, backpressure, session yaşam döngüsü, polling fallback ve public Aşama 15 aktivasyon sınırını kesinleştiren `docs/REALTIME.md`
 - Aşama 12 ağır kapasite kapanışı **4/4** geçti: 20/200/500 source discovery + minute→hour rollup, 420.000 hour satırlık/50,4 milyon raw örnek eşdeğeri 35 günlük month fixture'ı, indeksli partition-pruned plan ve API–housekeeper izolasyonu
 - 500-check rollup projection **9,54 sn / 52,41 check/s**; month service sorgusu **25,32 ms**, `EXPLAIN ANALYZE` **4,568 ms**, output **360 bucket** ve tek `rollups_hour_2026` partition'ı; 3.840 bucket housekeeper yükünde 40/40 API isteği, p95 **15,20 ms**, max **15,59 ms**
@@ -169,7 +173,7 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Aşama 13 realtime worker, private SSE runtime, browser stream client ve `REALTIME` cutover kodu; bu turda yalnız nihai mimari yazıldı
+- Aşama 13 private SSE runtime, browser stream client ve `REALTIME` cutover kodu; relay çekirdeği tamamlandı, hedef henüz pasif
 - Notification recipient/policy yönetim arayüzü (backend ve worker tamam; yönetim frontend'i Aşama 14 kapsamındadır)
 - History grafikleri ve incident journal yönetim arayüzü (private backend API tamam)
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
@@ -194,4 +198,4 @@
 
 ## Sıradaki İş
 
-Aşama 13 Dilim 1 uygulanacaktır: Revision 27, dar realtime worker rol/fonksiyonları, lease/fencing relay runtime'ı ve dispatch completion ile aynı transaction'da redacted PostgreSQL wake-up. Production `REALTIME` activation bu dilimde kapalı kalacaktır.
+Aşama 13 Dilim 2 uygulanacaktır: her API replica'da dedicated PostgreSQL listener, owner-scoped bounded hub/projection, authenticated private SSE route, session/backpressure yaşam döngüsü ve iki-replica owner izolasyonu. Production `REALTIME` activation Dilim 3'e kadar kapalı kalacaktır.

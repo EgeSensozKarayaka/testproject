@@ -1,19 +1,19 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 19:12 +06:00
+**Son güncelleme:** 2026-10-10 19:35 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–12 tamamlandı; Aşama 13 nihai mimarisi hazır, uygulama sırada
+**Mevcut kilometre taşı:** Aşama 0–12 ve Aşama 13 Dilim 1 tamamlandı
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
-## 1. Sıradaki Çalışma — Aşama 13 Dilim 1
+## 1. Sıradaki Çalışma — Aşama 13 Dilim 2
 
 [`REALTIME.md`](./REALTIME.md) nihai mimarisine göre:
 
-- Revision 27'de dar `site_monitor_realtime` rolü ile claim/complete/retry/dead-letter fonksiyonlarını ekle
-- Ayrı realtime worker config/runtime'ını, lease/fencing ve redacted wake-up mapper'ını uygula
-- Dispatch completion ile sabit PostgreSQL `pg_notify` çağrısını aynı transaction'da doğrula
-- Production `REALTIME` activation'ı kapalı tutarak unit ve gerçek PostgreSQL testlerini geçir
+- Her API replica için dedicated `LISTEN site_monitor_realtime_v1` bağlantısını ve reconnect/readiness yaşam döngüsünü uygula
+- Owner bazlı bounded hub, projection reader/mapper, serializer ve slow-consumer backpressure sınırlarını kur
+- Authenticated private SSE route'unu session expiry/revocation ve graceful shutdown davranışıyla aç
+- İki API replica ve owner izolasyonu testlerini geçir; production `REALTIME` activation'ını Dilim 3'e kadar kapalı tut
 
 Aşama 12 kapanış ölçümleri [history kapasite raporunda](./HISTORY_CAPACITY_REPORT.md) saklanır.
 

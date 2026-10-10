@@ -472,3 +472,46 @@ export function loadHousekeepingRuntimeConfig(
     shutdownGraceMs: parsed.HOUSEKEEPING_SHUTDOWN_GRACE_MS,
   };
 }
+
+export interface RealtimeRuntimeConfig {
+  batchSize: number;
+  databasePoolSize: number;
+  leaseSeconds: number;
+  maxDispatchAttempts: number;
+  pollMs: number;
+  retryBaseSeconds: number;
+  retryCapSeconds: number;
+  shutdownGraceMs: number;
+}
+
+export function loadRealtimeRuntimeConfig(
+  environment: NodeJS.ProcessEnv = process.env,
+): RealtimeRuntimeConfig {
+  const parsed = z
+    .object({
+      REALTIME_BATCH_SIZE: z.coerce.number().int().min(1).max(1_000).default(100),
+      REALTIME_DB_POOL_SIZE: z.coerce.number().int().min(2).max(16).default(4),
+      REALTIME_LEASE_SECONDS: z.coerce.number().int().min(5).max(900).default(30),
+      REALTIME_MAX_DISPATCH_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
+      REALTIME_POLL_MS: z.coerce.number().int().min(25).max(60_000).default(100),
+      REALTIME_RETRY_BASE_SECONDS: z.coerce.number().int().min(1).max(3_600).default(2),
+      REALTIME_RETRY_CAP_SECONDS: z.coerce.number().int().min(1).max(3_600).default(60),
+      REALTIME_SHUTDOWN_GRACE_MS: z.coerce.number().int().min(1_000).max(120_000).default(15_000),
+    })
+    .parse(environment);
+
+  if (parsed.REALTIME_RETRY_CAP_SECONDS < parsed.REALTIME_RETRY_BASE_SECONDS) {
+    throw new Error('REALTIME_RETRY_CAP_SECONDS cannot be lower than the retry base');
+  }
+
+  return {
+    batchSize: parsed.REALTIME_BATCH_SIZE,
+    databasePoolSize: parsed.REALTIME_DB_POOL_SIZE,
+    leaseSeconds: parsed.REALTIME_LEASE_SECONDS,
+    maxDispatchAttempts: parsed.REALTIME_MAX_DISPATCH_ATTEMPTS,
+    pollMs: parsed.REALTIME_POLL_MS,
+    retryBaseSeconds: parsed.REALTIME_RETRY_BASE_SECONDS,
+    retryCapSeconds: parsed.REALTIME_RETRY_CAP_SECONDS,
+    shutdownGraceMs: parsed.REALTIME_SHUTDOWN_GRACE_MS,
+  };
+}

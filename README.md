@@ -2,7 +2,7 @@
 
 Çok kullanıcılı ve kullanıcı bazlı sahiplik izolasyonuna sahip site erişilebilirlik izleme ürünü. Repository; React web uygulaması, Node.js API ve worker süreçleri, PostgreSQL, Mailpit, deterministik hedef simülatörü ve ana sistemden bağımsız opsiyonel Python predictor için çalışır bir geliştirme temeli içerir.
 
-Aşama 0–11 ile Aşama 12'nin kalıcılık, housekeeping ve private API dilimleri tamamlanmıştır. Güvenli hesap ve owner-scoped group/check/bakım/bildirim yönetimi, gerçek HTTP kontrol motoru, sağlık/incident reducer'ı ve kalıcı worker runtime'ları uygulanmıştır. Monitor worker probe akışını; notification worker e-posta akışını; housekeeping worker ise source discovery, minute/hour rollup, partition guard ve retention işlerini ayrı process/pool'larda bounded döngülerle yürütür. Day/week/month history ve incident journal private API üzerinden kullanılabilir; grafik arayüzü sonraki aşamadadır.
+Aşama 0–12 ile Aşama 13'ün dayanıklı realtime relay çekirdeği tamamlanmıştır. Güvenli hesap ve owner-scoped group/check/bakım/bildirim yönetimi, gerçek HTTP kontrol motoru, sağlık/incident reducer'ı ve kalıcı worker runtime'ları uygulanmıştır. Monitor worker probe akışını; notification worker e-posta akışını; housekeeping worker source discovery/rollup/retention işlerini; realtime worker ise pasif `REALTIME` hedefi için lease/fencing ve redacted PostgreSQL wake-up sınırını ayrı process/pool'larda yürütür. Day/week/month history ve incident journal private API üzerinden kullanılabilir; private SSE ve grafik arayüzü sonraki dilimlerdedir.
 
 ## Ön koşullar
 
@@ -68,7 +68,7 @@ pnpm db:migrate
 pnpm db:seed
 ```
 
-Ardından web, API ve üç zorunlu worker'ı hot reload ile çalıştırın:
+Ardından web, API ve dört zorunlu worker'ı hot reload ile çalıştırın:
 
 ```sh
 pnpm dev
@@ -176,7 +176,7 @@ Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ile
 
 ## Repository yapısı
 
-- `apps/` — web, API, monitor worker, notification worker, housekeeping worker ve target simulator
+- `apps/` — web, API, monitor worker, notification worker, housekeeping worker, realtime worker ve target simulator
 - `packages/` — auth, domain, contract, config, database, observability ve ortak adapter sınırları
 - `database/` — immutable SQL migration'lar ve development seed'i
 - `services/predictor/` — bağımsız Python ortamı
@@ -186,7 +186,7 @@ Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ile
 
 ## Dürüst durum
 
-Aşama 0–11 ile Aşama 12'nin ilk üç uygulama dilimi tamamlanmıştır. Yirmi altı immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları, group/check/bakım/bildirim/history/incident API'leri, React yapılandırma yönetimi, güvenli HTTP kontrol motoru, deterministik sağlık/incident reducer'ı ve üç production worker runtime'ı uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
+Aşama 0–12 ile Aşama 13 Dilim 1 tamamlanmıştır. Yirmi yedi immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları, group/check/bakım/bildirim/history/incident API'leri, React yapılandırma yönetimi, güvenli HTTP kontrol motoru, deterministik sağlık/incident reducer'ı ve dört production worker runtime'ı uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
 
 Monitor worker owner-fair scheduler, bounded dispatcher, lease recovery ve freshness döngülerini production entrypoint'inde çalıştırır; loop hata durumu readiness'e yansır, graceful shutdown yeni claim'i durdurup aktif işleri bounded sürede drain eder. Compose smoke'unda gerçek 30 saniyelik cadence, `PASS/200`, `UP/FRESH`, restart sonrası run devamlılığı ve duplicate aktif job oluşmaması doğrulanmıştır. 20/200/500 gerçek PostgreSQL runtime profili 500-check burst'ünü son regresyonda 8.57 saniyede, 58.35 check/s uçtan uca throughput ile tamamlamıştır. Gerçek process kill sonrası doğal lease reclaim/stale-result fencing ve iki production worker 200 check'i işlerken ayrı API prosesinin list/readiness yanıtları ayrıca doğrulanmıştır. Bakım kapsamı, notification gate, kalıcı notification consumer/SMTP teslimi ve owner-scoped recipient/default-group policy API'si uygulanmıştır. Housekeeping runtime iki replica ve restart altında exact minute/hour yakınsaması, DEFAULT guard ve retention grace ile doğrulanmıştır. Private history API sabit 288/336/360 bucket, bounded raw tail ve projection-lag `503`; incident journal ise group-at-open filtresi, signed cursor ve observed/unobserved segment ayrımı sağlar. Recipient yönetim UI'ı, history grafikleri, SSE, canlı monitoring dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran güvenli yapılandırma yönetimini sağlar; henüz canlı durum paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
 

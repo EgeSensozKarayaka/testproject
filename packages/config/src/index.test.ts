@@ -6,6 +6,7 @@ import {
   loadHistoryRuntimeConfig,
   loadMonitorRuntimeConfig,
   loadProbeRuntimeConfig,
+  loadRealtimeRuntimeConfig,
   loadResourceRuntimeConfig,
   loadRuntimeConfig,
 } from './index.js';
@@ -110,6 +111,31 @@ describe('housekeeping worker configuration', () => {
     expect(() =>
       loadHousekeepingRuntimeConfig({ HOUSEKEEPING_PARTITION_POLL_MS: '999' }),
     ).toThrow();
+  });
+});
+
+describe('realtime worker configuration', () => {
+  it('uses bounded relay defaults', () => {
+    expect(loadRealtimeRuntimeConfig({})).toEqual({
+      batchSize: 100,
+      databasePoolSize: 4,
+      leaseSeconds: 30,
+      maxDispatchAttempts: 5,
+      pollMs: 100,
+      retryBaseSeconds: 2,
+      retryCapSeconds: 60,
+      shutdownGraceMs: 15_000,
+    });
+  });
+
+  it('rejects an inverted retry range and unbounded batch', () => {
+    expect(() =>
+      loadRealtimeRuntimeConfig({
+        REALTIME_RETRY_BASE_SECONDS: '60',
+        REALTIME_RETRY_CAP_SECONDS: '30',
+      }),
+    ).toThrow('REALTIME_RETRY_CAP_SECONDS cannot be lower');
+    expect(() => loadRealtimeRuntimeConfig({ REALTIME_BATCH_SIZE: '1001' })).toThrow();
   });
 });
 

@@ -30,7 +30,8 @@ export interface DatabasePoolOptions {
     | 'site_monitor_notifier'
     | 'site_monitor_predictor'
     | 'site_monitor_public'
-    | 'site_monitor_housekeeper';
+    | 'site_monitor_housekeeper'
+    | 'site_monitor_realtime';
   maxConnections?: number;
 }
 

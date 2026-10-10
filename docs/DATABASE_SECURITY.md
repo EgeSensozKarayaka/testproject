@@ -33,6 +33,7 @@ Gerçek kullanıcı hesapları PostgreSQL login rolü değildir. Migration aşa�
 | `site_monitor_predictor`    |             Hayır |                    Hayır | Güvenli feature view okuma, analysis job/score yazma                 | Raw URL, PII, current health/incident yazma              |
 | `site_monitor_public`       |             Hayır |                    Hayır | Yalnız digest tabanlı public snapshot fonksiyonu                     | Private tablo SELECT dahil her şey                       |
 | `site_monitor_housekeeper`  |             Hayır |                    Hayır | Partition/retention/rebuild için dar procedure'ler                   | Genel DDL ve auth verisi                                 |
+| `site_monitor_realtime`     |             Hayır |                    Hayır | REALTIME dispatch claim/complete ve redacted wake-up fonksiyonları   | Outbox/table erişimi, keyfi payload, auth/domain verisi  |
 | `site_monitor_backup`       | Deployment'a özel | Gerekirse ayrı kontrollü | Mantıksal backup/restore görevi; normal runtime dışında              | Uygulama trafiği                                         |
 
 Kurallar:

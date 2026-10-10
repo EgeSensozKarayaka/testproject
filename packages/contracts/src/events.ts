@@ -32,6 +32,7 @@ export const domainEventTypeSchema = z.enum([
   'maintenance.cancelled',
   'maintenance.reconciliation_requested',
   'notification.recipient_created',
+  'notification.recipient_reactivated',
   'notification.recipient_verified',
   'notification.recipient_disabled',
   'notification.policy_changed',
