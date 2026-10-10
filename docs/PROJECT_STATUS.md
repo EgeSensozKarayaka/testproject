@@ -1,8 +1,8 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 16:08 +06:00
+**Son güncelleme:** 2026-10-10 16:12 +06:00
 
-**Genel durum:** Aşama 0–9 tamamlandı ve doğrulandı; Aşama 10 revision 15/domain temeli ile CRUD API tamamlandı, çapraz kaynak dilimi sırada
+**Genel durum:** Aşama 0–9 tamamlandı ve doğrulandı; Aşama 10'un revision/domain, CRUD API ve çapraz kaynak dilimleri tamamlandı, kapanış kanıtı sırada
 
 ## Tamamlanan
 
@@ -12,6 +12,10 @@
 - Owner-scoped maintenance create/get/list/patch/cancel API'si; CSRF/origin/session, owner rate limit, yapılandırılabilir aktif+gelecek kotası, güçlü ETag, atomik exact idempotency replay, imzalı ve DB-zamanı snapshot'lı cursor ile soft-cancel/immutable-history kuralları
 - Maintenance HTTP sınırı **6/6**, gerçek PostgreSQL servis paketi **7/7** geçti. Concurrent create tek aggregate/receipt üretti; iki eşzamanlı patch'ten yalnız biri kazandı; cross-owner hedef/kaynak `404`, note audit/outbox'ta redacted, cursor filter-bound ve cancellation idempotent kaldı
 - CRUD dilimi final `pnpm run ci` kapısında format, 57-operation OpenAPI drift, lint, strict workspace typecheck, **24 dosyada 176/176 unit**, tüm gerçek PostgreSQL/socket/process entegrasyonları ve production build'leriyle geçti
+- Check group değişikliğinde maintenance kapsamını check'in commit edilmiş güncel üyeliğinden yeniden hesaplayan ve `check.group_changed` olayını notification/realtime hedeflerine yönlendiren transaction akışı
+- Check/group silmede yalnız henüz bitmemiş hedef bakım pencerelerini ID sırasıyla kilitleyip version'lı `CANCELLED` yapan, bitmiş geçmişi koruyan ve her iptal için redacted `maintenance.cancelled` event/audit kaydı üreten ortak effect helper'ı
+- Çapraz kaynak PostgreSQL paketi **3/3**, check/group/maintenance birleşik regresyon paketi **28/28** geçti. Group move scope değişimi, create-vs-check-delete yarışı, group delete detach/cancel ve test-only notification destination routing doğrulandı; production `NOTIFICATION` aktivasyonu Aşama 11'e bırakıldı
+- Çapraz kaynak dilimi final `pnpm run ci` kapısında format, contract drift, lint, strict typecheck, **176/176 unit**, tüm gerçek PostgreSQL/socket/process entegrasyonları ve production build'leriyle geçti
 - Aşama 10 için check/group scope, `[start,end)`, overlap, mutation, group membership, incident/notification ayrımı ve restart-safe reconciliation kararlarını içeren `docs/MAINTENANCE_WINDOWS.md`
 - Ayrı job tablosu eklemeden `notification.intents.maintenance_until` deadline'ını doğal bakım bitişi, transactional outbox wake-up'larını erken bitiş/kapsam değişikliği için kullanan D-078 kararı
 - İki gerçek production monitor-worker ve ayrı production API prosesinin aynı PostgreSQL üzerinde eşzamanlı çalıştığı 200-check kabul profili; 200 job/attempt/run/accepted result ve 200 hedef isteği tam eşleşirken iki worker da iş aldı
@@ -155,4 +159,4 @@
 
 ## Sıradaki İş
 
-Aşama 10'un üçüncü diliminde check/group delete ile group-change yolları maintenance cancellation/reconciliation event'lerine bağlanacaktır.
+Aşama 10 kapanışında exact zaman sınırları, overlap, restart ve notification-decision fixture'ları birlikte doğrulanacaktır.

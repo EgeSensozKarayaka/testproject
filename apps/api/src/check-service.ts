@@ -17,6 +17,7 @@ import {
 
 import { ApiProblemError } from './problem.js';
 import { createUuidV7 } from './request-id.js';
+import { cancelOpenMaintenanceForTarget } from './maintenance-effects.js';
 
 type ExecutionState = 'ACTIVE' | 'PAUSED';
 type FreshnessState = 'FRESH' | 'STALE';
@@ -1201,6 +1202,13 @@ export class CheckService implements CheckServicePort {
       const current = await this.#lockCheck(client, ownerId, checkId);
       assertVersion(current.resource_version, expectedVersion);
       await this.#lockCurrentState(client, ownerId, checkId);
+      await cancelOpenMaintenanceForTarget(client, {
+        correlationId,
+        ownerId,
+        reason: 'CHECK_DELETED',
+        targetId: checkId,
+        targetType: 'CHECK',
+      });
       await cancelActiveJobs(client, ownerId, checkId, 'CHECK_DELETED');
       await closeIncident(client, {
         checkId,
@@ -1246,6 +1254,7 @@ export class CheckService implements CheckServicePort {
         aggregateType: 'check',
         aggregateVersion: row.resource_version,
         correlationId,
+        destinations: ['NOTIFICATION', 'REALTIME'],
         eventType: 'check.deleted',
         ownerId,
         payload: {
@@ -1558,6 +1567,7 @@ export class CheckService implements CheckServicePort {
     if (kinds.groupChanged) {
       await writeEvent(client, {
         ...base,
+        destinations: ['NOTIFICATION', 'REALTIME'],
         eventType: 'check.group_changed',
         payload: {
           check_id: check.id,

@@ -1,6 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
-import type { Pool, PoolClient } from '@site-monitor/database';
+import type { OutboxDestination, Pool, PoolClient } from '@site-monitor/database';
 import { withUserTransaction, writeActivatedOutboxEvent } from '@site-monitor/database';
 import {
   classifyGroupChanges,
@@ -11,6 +11,7 @@ import {
 } from '@site-monitor/domain';
 
 import { ApiProblemError } from './problem.js';
+import { cancelOpenMaintenanceForTarget } from './maintenance-effects.js';
 
 export interface GroupDto {
   created_at: string;
@@ -148,6 +149,7 @@ async function writeEvent(
     aggregateType: 'check' | 'group';
     aggregateVersion: string;
     correlationId: string;
+    destinations?: OutboxDestination[];
     eventType: string;
     ownerId: string;
     payload: Record<string, unknown>;
@@ -158,7 +160,7 @@ async function writeEvent(
     aggregateType: input.aggregateType,
     aggregateVersion: input.aggregateVersion,
     correlationId: input.correlationId,
-    destinations: ['REALTIME'],
+    destinations: input.destinations ?? ['REALTIME'],
     eventType: input.eventType,
     ownerId: input.ownerId,
     payload: input.payload,
@@ -486,6 +488,13 @@ export class GroupService implements GroupServicePort {
          FOR UPDATE`,
         [ownerId, groupId],
       );
+      await cancelOpenMaintenanceForTarget(client, {
+        correlationId,
+        ownerId,
+        reason: 'GROUP_DELETED',
+        targetId: groupId,
+        targetType: 'GROUP',
+      });
       const detached = await client.query<{ id: string; resource_version: string }>(
         `UPDATE app.checks
          SET group_id = NULL, resource_version = resource_version + 1,
@@ -509,6 +518,7 @@ export class GroupService implements GroupServicePort {
           aggregateType: 'check',
           aggregateVersion: check.resource_version,
           correlationId,
+          destinations: ['NOTIFICATION', 'REALTIME'],
           eventType: 'check.group_changed',
           ownerId,
           payload: {
@@ -524,6 +534,7 @@ export class GroupService implements GroupServicePort {
         aggregateType: 'group',
         aggregateVersion: deleted.rows[0]!.resource_version,
         correlationId,
+        destinations: ['NOTIFICATION', 'REALTIME'],
         eventType: 'group.deleted',
         ownerId,
         payload: {
