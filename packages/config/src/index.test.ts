@@ -74,6 +74,7 @@ describe('resource configuration', () => {
     expect(loadResourceRuntimeConfig({})).toEqual({
       checksPerOwnerLimit: 500,
       groupsPerOwnerLimit: 100,
+      maintenanceWindowsPerOwnerLimit: 500,
     });
   });
 
@@ -82,10 +83,18 @@ describe('resource configuration', () => {
       loadResourceRuntimeConfig({
         CHECKS_PER_OWNER_LIMIT: 'unlimited',
         GROUPS_PER_OWNER_LIMIT: '250',
+        MAINTENANCE_WINDOWS_PER_OWNER_LIMIT: 'unlimited',
       }),
-    ).toEqual({ checksPerOwnerLimit: 0, groupsPerOwnerLimit: 250 });
+    ).toEqual({
+      checksPerOwnerLimit: 0,
+      groupsPerOwnerLimit: 250,
+      maintenanceWindowsPerOwnerLimit: 0,
+    });
     expect(() => loadResourceRuntimeConfig({ GROUPS_PER_OWNER_LIMIT: '0' })).toThrow(
       'GROUPS_PER_OWNER_LIMIT must be a positive integer or unlimited',
+    );
+    expect(() => loadResourceRuntimeConfig({ MAINTENANCE_WINDOWS_PER_OWNER_LIMIT: '0' })).toThrow(
+      'MAINTENANCE_WINDOWS_PER_OWNER_LIMIT must be a positive integer or unlimited',
     );
   });
 });

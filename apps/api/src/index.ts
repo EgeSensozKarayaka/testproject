@@ -11,6 +11,7 @@ import { buildApiApplication } from './app.js';
 import { AuthService } from './auth-service.js';
 import { CheckService } from './check-service.js';
 import { GroupService } from './group-service.js';
+import { MaintenanceService } from './maintenance-service.js';
 
 const config = loadRuntimeConfig({ defaultPort: 13_000, serviceName: 'api' });
 const logger = createLogger({
@@ -41,6 +42,10 @@ const groupService = new GroupService(database, {
   groupLimit: resourceConfig.groupsPerOwnerLimit,
   securityKey: authConfig.rateLimitKey,
 });
+const maintenanceService = new MaintenanceService(database, {
+  maintenanceWindowLimit: resourceConfig.maintenanceWindowsPerOwnerLimit,
+  securityKey: authConfig.rateLimitKey,
+});
 const app = buildApiApplication({
   allowedOrigin: process.env.WEB_ORIGIN ?? 'http://localhost:15173',
   authService,
@@ -48,6 +53,7 @@ const app = buildApiApplication({
   cookieSecure: authConfig.cookieSecure,
   groupService,
   logger,
+  maintenanceService,
   readiness: async () => isDatabaseReady(database),
   serviceName: config.serviceName,
   version: config.version,

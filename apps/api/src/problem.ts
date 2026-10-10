@@ -21,6 +21,7 @@ const PROBLEM_TITLES: Record<ProblemCode, string> = {
   invalid_precondition: 'Invalid precondition',
   invalid_request: 'Invalid request',
   invalid_state_transition: 'Invalid state transition',
+  maintenance_window_immutable: 'Maintenance window is immutable',
   malformed_json: 'Malformed JSON',
   method_not_allowed: 'Method not allowed',
   not_acceptable: 'Not acceptable',

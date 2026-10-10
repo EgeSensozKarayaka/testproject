@@ -1,14 +1,17 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 15:54 +06:00
+**Son güncelleme:** 2026-10-10 16:08 +06:00
 
-**Genel durum:** Aşama 0–9 tamamlandı ve doğrulandı; Aşama 10 revision 15/domain temeli tamamlandı, CRUD API dilimi sırada
+**Genel durum:** Aşama 0–9 tamamlandı ve doğrulandı; Aşama 10 revision 15/domain temeli ile CRUD API tamamlandı, çapraz kaynak dilimi sırada
 
 ## Tamamlanan
 
 - Revision 15 ile maintenance `name → note varchar(1000) NULL` sözleşme düzeltmesi, owner-list indeksi, fiziksel delete/hedef update yasağı ve API/monitor/notifier'ın paylaştığı security-invoker etkin bakım projection fonksiyonu
 - Saf maintenance domain politikası: exact `[start,end)` sınırları, note normalizasyonu, create/edit range doğrulaması, aktif/bitmiş/cancelled mutation kuralları ve direct+current-group overlap union projection'ı
 - Revision 15 için sıfırdan migration, RLS cross-owner gizleme, least-privilege ve projection testi dahil gerçek PostgreSQL paketi **15/15**; ortak projection'ı kullanan check API/monitor observation paketleri **20/20** geçti
+- Owner-scoped maintenance create/get/list/patch/cancel API'si; CSRF/origin/session, owner rate limit, yapılandırılabilir aktif+gelecek kotası, güçlü ETag, atomik exact idempotency replay, imzalı ve DB-zamanı snapshot'lı cursor ile soft-cancel/immutable-history kuralları
+- Maintenance HTTP sınırı **6/6**, gerçek PostgreSQL servis paketi **7/7** geçti. Concurrent create tek aggregate/receipt üretti; iki eşzamanlı patch'ten yalnız biri kazandı; cross-owner hedef/kaynak `404`, note audit/outbox'ta redacted, cursor filter-bound ve cancellation idempotent kaldı
+- CRUD dilimi final `pnpm run ci` kapısında format, 57-operation OpenAPI drift, lint, strict workspace typecheck, **24 dosyada 176/176 unit**, tüm gerçek PostgreSQL/socket/process entegrasyonları ve production build'leriyle geçti
 - Aşama 10 için check/group scope, `[start,end)`, overlap, mutation, group membership, incident/notification ayrımı ve restart-safe reconciliation kararlarını içeren `docs/MAINTENANCE_WINDOWS.md`
 - Ayrı job tablosu eklemeden `notification.intents.maintenance_until` deadline'ını doğal bakım bitişi, transactional outbox wake-up'larını erken bitiş/kapsam değişikliği için kullanan D-078 kararı
 - İki gerçek production monitor-worker ve ayrı production API prosesinin aynı PostgreSQL üzerinde eşzamanlı çalıştığı 200-check kabul profili; 200 job/attempt/run/accepted result ve 200 hedef isteği tam eşleşirken iki worker da iş aldı
@@ -128,7 +131,7 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Maintenance reconciliation ve incident e-posta politikaları
+- Check/group mutation'larından maintenance reconciliation ve incident e-posta politikaları
 - Rollup/retention background işleri, history sorguları ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
 - Predictor analiz algoritması/model lifecycle'ı
@@ -152,4 +155,4 @@
 
 ## Sıradaki İş
 
-Aşama 10 bakım pencereleri için nihai mimari hazırlanacaktır; kullanıcı belgeyi inceledikten sonra migration ve uygulama dilimlerine geçilecektir.
+Aşama 10'un üçüncü diliminde check/group delete ile group-change yolları maintenance cancellation/reconciliation event'lerine bağlanacaktır.

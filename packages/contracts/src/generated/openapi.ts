@@ -2076,6 +2076,10 @@ export interface operations {
         state?: components['schemas']['MaintenanceState'];
         check_id?: components['schemas']['Uuid'];
         group_id?: components['schemas']['Uuid'];
+        /** @description Return windows that start before this exclusive UTC boundary. */
+        starts_before?: components['schemas']['Instant'];
+        /** @description Return windows that end after this exclusive UTC boundary. */
+        ends_after?: components['schemas']['Instant'];
       };
       header?: never;
       path?: never;
@@ -2121,6 +2125,8 @@ export interface operations {
           'application/json': components['schemas']['MaintenanceWindow'];
         };
       };
+      404: components['responses']['NotFoundProblem'];
+      409: components['responses']['ConflictProblem'];
       422: components['responses']['ValidationProblem'];
     };
   };
@@ -2169,6 +2175,8 @@ export interface operations {
         };
         content?: never;
       };
+      404: components['responses']['NotFoundProblem'];
+      409: components['responses']['ConflictProblem'];
       412: components['responses']['PreconditionFailed'];
       428: components['responses']['PreconditionRequired'];
     };
@@ -2201,7 +2209,10 @@ export interface operations {
           'application/json': components['schemas']['MaintenanceWindow'];
         };
       };
+      404: components['responses']['NotFoundProblem'];
+      409: components['responses']['ConflictProblem'];
       412: components['responses']['PreconditionFailed'];
+      422: components['responses']['ValidationProblem'];
       428: components['responses']['PreconditionRequired'];
     };
   };

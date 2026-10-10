@@ -12,6 +12,8 @@ import { registerCheckRoutes } from './check-routes.js';
 import type { CheckServicePort } from './check-service.js';
 import { registerGroupRoutes } from './group-routes.js';
 import type { GroupServicePort } from './group-service.js';
+import { registerMaintenanceRoutes } from './maintenance-routes.js';
+import type { MaintenanceServicePort } from './maintenance-service.js';
 
 export interface ApiApplicationOptions {
   allowedOrigin: string;
@@ -20,6 +22,7 @@ export interface ApiApplicationOptions {
   cookieSecure?: boolean;
   groupService?: GroupServicePort;
   logger: Logger;
+  maintenanceService?: MaintenanceServicePort;
   readiness: () => Promise<boolean>;
   serviceName: string;
   version: string;
@@ -80,6 +83,14 @@ export function buildApiApplication(options: ApiApplicationOptions) {
         authService: options.authService,
         cookieSecure: options.cookieSecure ?? false,
         groupService: options.groupService,
+      });
+    }
+    if (options.maintenanceService) {
+      void app.register(registerMaintenanceRoutes, {
+        allowedOrigin: options.allowedOrigin,
+        authService: options.authService,
+        cookieSecure: options.cookieSecure ?? false,
+        maintenanceService: options.maintenanceService,
       });
     }
   }

@@ -50,6 +50,7 @@ export function loadDatabaseUrl(environment: NodeJS.ProcessEnv = process.env): s
 export interface ResourceRuntimeConfig {
   checksPerOwnerLimit: number;
   groupsPerOwnerLimit: number;
+  maintenanceWindowsPerOwnerLimit: number;
 }
 
 function resourceLimit(value: string | undefined, fallback: number, name: string): number {
@@ -78,6 +79,11 @@ export function loadResourceRuntimeConfig(
       environment.GROUPS_PER_OWNER_LIMIT,
       100,
       'GROUPS_PER_OWNER_LIMIT',
+    ),
+    maintenanceWindowsPerOwnerLimit: resourceLimit(
+      environment.MAINTENANCE_WINDOWS_PER_OWNER_LIMIT,
+      500,
+      'MAINTENANCE_WINDOWS_PER_OWNER_LIMIT',
     ),
   };
 }

@@ -77,10 +77,22 @@ export function normalizeMaintenanceConfiguration(
   input: MaintenanceConfigurationInput,
   evaluatedAt: Date,
 ): MaintenanceConfiguration {
+  const configuration = normalizeMaintenanceConfigurationRange(input);
   const now = copyValidInstant(evaluatedAt, 'evaluated_at');
+  if (configuration.endsAt.getTime() <= now.getTime()) {
+    fail('ends_at', 'not_in_future', 'ends_at must be later than the current database time.');
+  }
+  return configuration;
+}
+
+export function normalizeMaintenanceConfigurationRange(
+  input: MaintenanceConfigurationInput,
+): MaintenanceConfiguration {
   const startsAt = copyValidInstant(input.startsAt, 'starts_at');
   const endsAt = copyValidInstant(input.endsAt, 'ends_at');
-  assertRange(startsAt, endsAt, now);
+  if (endsAt.getTime() <= startsAt.getTime()) {
+    fail('ends_at', 'invalid_range', 'ends_at must be later than starts_at.');
+  }
   return { endsAt, note: normalizeMaintenanceNote(input.note), startsAt };
 }
 

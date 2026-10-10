@@ -1,6 +1,6 @@
 # AI Kullanımı
 
-**Son güncelleme:** 2026-10-10 15:54 +06:00
+**Son güncelleme:** 2026-10-10 16:08 +06:00
 
 ## Araç ve model
 
@@ -36,6 +36,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 18. Aşama 9'un dokuzuncu uygulama diliminde AI production monitor entrypoint'ini gerçek hanging HTTP probe sırasında child process olarak force-kill etti. Lease elle değiştirilmeden doğal doldu, replacement daha yüksek fence ile tamamladı ve eski immutable claim'in gecikmiş FAIL sonucu state/incident'ı değiştirmeden rejected history oldu. Gerçek crash ile zombie delivery'nin farklı failure mode'ları olduğu açıkça belgelendi.
 19. Aşama 9 kapanışında AI iki production monitor-worker ve ayrı production API entrypoint'ini üç child process'te aynı izole PostgreSQL üzerinde çalıştırdı. 200 check'in exact job/attempt/run/hedef-request eşitliği ve iki worker katılımı kanıtlanırken gerçek session'lı API list/readiness latency'si 40 kez ölçüldü; process/pool izolasyonu ile replica başına hostname limitinin birleşik etkisi dürüstçe raporlandı.
 20. Aşama 10'un ilk uygulama diliminde AI OpenAPI `note` ile eski DB `name` uyumsuzluğunu forward-only revision 15 ile giderdi; fiziksel maintenance delete ve hedef update yetkilerini kapattı. API, monitor ve ileride notifier'ın aynı half-open check+current-group kuralını kullanması için security-invoker DB projection'ı oluşturuldu; exact sınırlar ve overlap saf domain testleriyle, RLS/grant/fonksiyon davranışı gerçek PostgreSQL ile doğrulandı.
+21. Aşama 10'un ikinci uygulama diliminde AI owner-scoped maintenance CRUD service/routes katmanını, zaman filtreli OpenAPI'yi ve yapılandırılabilir kotayı uyguladı. İncelemede zamanla türetilen state için güncel kaynağı idempotency replay'inde yeniden okumanın genel exact replay sözleşmesini bozacağı görüldü; ilk body/ETag receipt'ten aynen döndürüldü ve güncel temsil `GET` sınırında bırakıldı. Kilit bekleyebilen mutation'larda yaşam döngüsü kararı transaction başlangıcı yerine kilit alındıktan sonraki DB saatiyle yapıldı. Concurrent create/patch, owner izolasyonu, cursor ve redaction gerçek PostgreSQL ile doğrulandı.
 
 ## Güvenlik ve gizlilik
 

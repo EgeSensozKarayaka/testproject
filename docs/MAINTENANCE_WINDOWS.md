@@ -1,6 +1,6 @@
 # Bakım Pencereleri Mimarisi
 
-**Durum:** Onaylandı; revision 15/domain temeli uygulandı, API dilimi sırada
+**Durum:** Onaylandı; revision 15/domain temeli ve owner-scoped CRUD API uygulandı, çapraz kaynak dilimi sırada
 **Tarih:** 2026-10-10 15:46 +06:00  
 **Bağımlılıklar:** Aşama 6 check/group yönetimi, Aşama 8 health/incident modeli, Aşama 9 kalıcı worker ve outbox altyapısı  
 **Sonraki aşama sınırı:** E-posta alıcıları, policy çözümleme ve SMTP delivery state machine'i Aşama 11'e aittir.
@@ -193,6 +193,8 @@ Response hedefi `target_type/target_id` olarak normalize eder ve şu alanları t
 
 Mutation'lar mevcut CSRF/origin/session, owner rate-limit, RFC 9457 problem ve atomic idempotency altyapısını kullanır. Cross-owner erişim `404` ile gizlenir.
 
+Create idempotency replay'i genel API sözleşmesine uygun olarak ilk `201` body/ETag temsilini aynen döndürür. Türetilmiş `state` veya resource version aradan geçen zamanda değişmişse güncel temsil normal `GET` ile okunur. Liste cursor'ı ise ilk sayfanın imzalı `evaluated_at` değerini taşıdığı için bütün sayfalarda aynı yaşam döngüsü snapshot'ını korur.
+
 ## 10. Event, Audit ve Veri Gizliliği
 
 Domain event'leri:
@@ -265,3 +267,5 @@ Hızlı fakat geri alınabilir ilerleme için Aşama 10 dört küçük dilimde u
 4. **Kapanış kanıtı:** zaman sınırları, overlap, restart ve notification-decision fixture'ları; tam CI ve belge güncellemesi.
 
 Her dilim ayrı anlamlı commit olur. Aşama 10 tamamlanmadan `NOTIFICATION` destination aktive edilmez; bu aktivasyon ve gerçek delivery Aşama 11'de yapılır.
+
+**2026-10-10 uygulama durumu:** 1 ve 2 tamamlandı. CRUD API; zaman filtreli OpenAPI, yapılandırılabilir owner kotası, atomik create receipt'i, güçlü ETag/If-Match, soft cancel, redacted audit/outbox ve DB-zamanlı türetilmiş state ile production API'ye bağlandı. Owner izolasyonu, eşzamanlı create/patch, exact replay/conflict, filter-bound cursor ve immutable history gerçek PostgreSQL üzerinde doğrulandı. Sıradaki dilim 3'tür.

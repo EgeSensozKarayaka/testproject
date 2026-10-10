@@ -709,6 +709,16 @@ paths:
           name: group_id
           schema:
             $ref: '#/components/schemas/Uuid'
+        - in: query
+          name: starts_before
+          description: Return windows that start before this exclusive UTC boundary.
+          schema:
+            $ref: '#/components/schemas/Instant'
+        - in: query
+          name: ends_after
+          description: Return windows that end after this exclusive UTC boundary.
+          schema:
+            $ref: '#/components/schemas/Instant'
       responses:
         '200':
           description: Maintenance window page
@@ -740,6 +750,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MaintenanceWindow'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
         '422':
           $ref: '#/components/responses/ValidationProblem'
   /api/v1/maintenance-windows/{window_id}:
@@ -786,6 +800,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MaintenanceWindow'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
+        '422':
+          $ref: '#/components/responses/ValidationProblem'
         '412':
           $ref: '#/components/responses/PreconditionFailed'
         '428':
@@ -799,6 +819,10 @@ paths:
       responses:
         '204':
           description: Maintenance window cancelled
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
         '412':
           $ref: '#/components/responses/PreconditionFailed'
         '428':

@@ -1,8 +1,8 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 15:54 +06:00
+**Son güncelleme:** 2026-10-10 16:08 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–9 tamamlandı; Aşama 10 revision 15/domain temeli tamamlandı
+**Mevcut kilometre taşı:** Aşama 0–9 tamamlandı; Aşama 10 revision 15/domain temeli ve CRUD API tamamlandı
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
@@ -10,7 +10,6 @@ Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan 
 
 Onaylanmış `docs/MAINTENANCE_WINDOWS.md` tasarımını şu sırayla uygula:
 
-- Owner-scoped CRUD API, OpenAPI filtre/hata sözleşmesi, ETag/idempotency/cursor
 - Check/group delete ve grup değişikliğinde maintenance reconciliation event'leri
 - Overlap, restart ve notification-decision PostgreSQL kabul senaryoları
 - Tam CI, durum ve teslim belgelerinin Aşama 10 kapanışıyla güncellenmesi

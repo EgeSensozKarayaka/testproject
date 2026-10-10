@@ -15,6 +15,7 @@ export const problemCodeSchema = z.enum([
   'method_not_allowed',
   'not_acceptable',
   'invalid_state_transition',
+  'maintenance_window_immutable',
   'idempotency_key_reused',
   'idempotency_in_progress',
   'resource_conflict',

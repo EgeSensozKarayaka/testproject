@@ -76,7 +76,7 @@ pnpm dev
 
 `.env.example` gerekirse `.env` olarak kopyalanabilir. `.env` Git tarafından dışlanır ve örnek dosyada gerçek secret bulunmaz.
 
-Canlı kaynak kotası ürünün sabit 50 kontrol varsayımı değildir. `CHECKS_PER_OWNER_LIMIT` ve `GROUPS_PER_OWNER_LIMIT` pozitif deployment değerleridir; bilinçli limitsiz yerel kurulum için yalnız `unlimited` literal'i kabul edilir.
+Canlı kaynak kotası ürünün sabit 50 kontrol varsayımı değildir. `CHECKS_PER_OWNER_LIMIT`, `GROUPS_PER_OWNER_LIMIT` ve `MAINTENANCE_WINDOWS_PER_OWNER_LIMIT` pozitif deployment değerleridir; bilinçli limitsiz yerel kurulum için yalnız `unlimited` literal'i kabul edilir.
 
 Probe egress portları, total deadline alt sınırları ve body/header/redirect limitleri `.env.example` içindeki `PROBE_*` değişkenleriyle yönetilir. Local hedef simülatörüne erişim yalnız exact-origin allowlist ile açılır; production ortamı bu geliştirme istisnası tanımlıysa fail-fast kapanır.
 
