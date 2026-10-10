@@ -2,6 +2,7 @@ export type EntityId = string;
 
 export * from './checks.js';
 export * from './groups.js';
+export * from './monitoring-state.js';
 
 export interface Clock {
   now(): Date;

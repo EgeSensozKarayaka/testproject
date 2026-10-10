@@ -179,6 +179,99 @@ databaseSuite('group service PostgreSQL boundary', () => {
     ).rejects.toMatchObject({ code: 'invalid_cursor', status: 400 });
   });
 
+  it('derives group status from the live freshness deadline before reconciliation', async () => {
+    const target = await service.create(
+      ownerB,
+      { name: 'Freshness projection' },
+      'owner-b-freshness-group-001',
+      '00000000-0000-7000-8000-000000000019',
+    );
+    const checkId = randomUUID();
+    await schemaPool.query(
+      `INSERT INTO app.checks
+         (id, owner_id, group_id, name, url, interval_seconds, timeout_ms,
+          expected_status_code, next_run_at)
+       VALUES ($1, $2, $3, 'Projected check', 'https://projection.example.test/',
+               30, 5000, 200, statement_timestamp())`,
+      [checkId, ownerB, target.group.id],
+    );
+    await schemaPool.query(
+      `INSERT INTO monitoring.check_current_states
+         (owner_id, check_id, health_state, freshness_state, fresh_until)
+       VALUES ($1, $2, 'UP', 'FRESH', statement_timestamp() - interval '1 second')`,
+      [ownerB, checkId],
+    );
+
+    const stalePage = await service.list(ownerB, { limit: 10 });
+    expect(stalePage.data.find((item) => item.group.id === target.group.id)?.status).toEqual({
+      down: 0,
+      health_state: 'UNKNOWN',
+      paused: 0,
+      suspect: 0,
+      unknown: 1,
+      up: 0,
+    });
+
+    await schemaPool.query(
+      `UPDATE monitoring.check_current_states
+       SET fresh_until = statement_timestamp() + interval '30 seconds'
+       WHERE owner_id = $1 AND check_id = $2`,
+      [ownerB, checkId],
+    );
+    const freshPage = await service.list(ownerB, { limit: 10 });
+    expect(freshPage.data.find((item) => item.group.id === target.group.id)?.status).toEqual({
+      down: 0,
+      health_state: 'UP',
+      paused: 0,
+      suspect: 0,
+      unknown: 0,
+      up: 1,
+    });
+  });
+
+  it('keeps the set-based group aggregate bounded for 20, 200 and 500 checks', async () => {
+    const fixtures: Array<{ count: number; groupId: string }> = [];
+    for (const count of [20, 200, 500]) {
+      const created = await service.create(
+        ownerA,
+        { name: `Capacity ${count}` },
+        `owner-a-group-capacity-${count}`,
+        `00000000-0000-7000-8000-${String(count).padStart(12, '0')}`,
+      );
+      fixtures.push({ count, groupId: created.group.id });
+      await schemaPool.query(
+        `WITH inserted AS (
+           INSERT INTO app.checks
+             (id, owner_id, group_id, name, url, interval_seconds, timeout_ms,
+              expected_status_code, next_run_at)
+           SELECT gen_random_uuid(), $1::uuid, $2::uuid,
+                  format('Capacity check %s/%s', $3::int, item),
+                  format('https://capacity-%s-%s.example.test/', $3::int, item),
+                  30, 5000, 200, statement_timestamp()
+           FROM generate_series(1, $3::int) AS item
+           RETURNING owner_id, id
+         )
+         INSERT INTO monitoring.check_current_states
+           (owner_id, check_id, health_state, freshness_state, fresh_until)
+         SELECT owner_id, id, 'UP', 'FRESH', statement_timestamp() + interval '1 hour'
+         FROM inserted`,
+        [ownerA, created.group.id, count],
+      );
+    }
+
+    const startedAt = performance.now();
+    const page = await service.list(ownerA, { limit: 10 });
+    const elapsedMs = performance.now() - startedAt;
+    for (const fixture of fixtures) {
+      expect(page.data.find((item) => item.group.id === fixture.groupId)?.status).toMatchObject({
+        health_state: 'UP',
+        unknown: 0,
+        up: fixture.count,
+      });
+    }
+    expect(elapsedMs).toBeLessThan(5_000);
+  });
+
   it('soft-deletes a group and atomically detaches its live checks', async () => {
     const target = await service.create(
       ownerA,

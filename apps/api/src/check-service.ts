@@ -768,18 +768,30 @@ export class CheckService implements CheckServicePort {
                 c.expected_status_code, c.expected_body_substring, c.execution_state,
                 c.resource_version::text, c.probe_generation::text,
                 c.schedule_generation::text, c.created_at, c.updated_at,
-                s.freshness_state,
                 CASE WHEN c.execution_state = 'PAUSED' OR s.freshness_state = 'STALE'
+                           OR s.fresh_until IS NULL
+                           OR s.fresh_until <= statement_timestamp()
+                     THEN 'STALE' ELSE 'FRESH' END AS freshness_state,
+                CASE WHEN c.execution_state = 'PAUSED' OR s.freshness_state = 'STALE'
+                           OR s.fresh_until IS NULL
+                           OR s.fresh_until <= statement_timestamp()
                      THEN 'UNKNOWN' ELSE s.health_state END AS health_state,
                 s.last_response_time_ms, s.last_accepted_run_finished_at,
                 s.state_version::text, maintenance.ends_at AS maintenance_until,
                 i.id AS incident_id, i.started_at AS incident_started_at,
                 i.confirmed_at AS incident_confirmed_at,
-                i.observation_mode AS incident_observation_mode,
+                CASE WHEN i.id IS NULL THEN NULL
+                     WHEN i.observation_mode = 'OBSERVED'
+                       AND (s.fresh_until IS NULL OR s.fresh_until <= statement_timestamp())
+                     THEN 'UNOBSERVED'
+                     ELSE i.observation_mode END AS incident_observation_mode,
                 CASE WHEN i.id IS NULL THEN NULL ELSE
                   (i.observed_duration_ms + CASE
                     WHEN i.observation_mode = 'OBSERVED' AND seg.started_at IS NOT NULL
-                    THEN floor(extract(epoch FROM (statement_timestamp() - seg.started_at)) * 1000)::bigint
+                    THEN floor(extract(epoch FROM
+                      ((CASE WHEN s.fresh_until IS NULL THEN seg.started_at
+                             ELSE LEAST(statement_timestamp(), s.fresh_until) END) - seg.started_at)
+                    ) * 1000)::bigint
                     ELSE 0 END)::text END AS incident_observed_duration_ms
          FROM app.checks c
          JOIN monitoring.check_current_states s
@@ -801,8 +813,14 @@ export class CheckService implements CheckServicePort {
            AND ($5::text IS NULL OR c.execution_state = $5)
            AND ($6::text IS NULL OR
                 CASE WHEN c.execution_state = 'PAUSED' OR s.freshness_state = 'STALE'
+                           OR s.fresh_until IS NULL
+                           OR s.fresh_until <= statement_timestamp()
                      THEN 'UNKNOWN' ELSE s.health_state END = $6)
-           AND ($7::text IS NULL OR s.freshness_state = $7)
+           AND ($7::text IS NULL OR
+                CASE WHEN c.execution_state = 'PAUSED' OR s.freshness_state = 'STALE'
+                           OR s.fresh_until IS NULL
+                           OR s.fresh_until <= statement_timestamp()
+                     THEN 'STALE' ELSE 'FRESH' END = $7)
          ORDER BY c.created_at DESC, c.id DESC
          LIMIT $8`,
         [

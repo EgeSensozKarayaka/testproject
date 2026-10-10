@@ -352,13 +352,18 @@ export class GroupService implements GroupServicePort {
         `SELECT g.id, g.name, g.description, g.resource_version::text,
                 g.created_at, g.updated_at,
                 count(*) FILTER (WHERE c.execution_state = 'ACTIVE' AND
-                  s.freshness_state = 'FRESH' AND s.health_state = 'UP')::int AS up,
+                  s.freshness_state = 'FRESH' AND s.fresh_until > statement_timestamp()
+                  AND s.health_state = 'UP')::int AS up,
                 count(*) FILTER (WHERE c.execution_state = 'ACTIVE' AND
-                  s.freshness_state = 'FRESH' AND s.health_state = 'SUSPECT')::int AS suspect,
+                  s.freshness_state = 'FRESH' AND s.fresh_until > statement_timestamp()
+                  AND s.health_state = 'SUSPECT')::int AS suspect,
                 count(*) FILTER (WHERE c.execution_state = 'ACTIVE' AND
-                  s.freshness_state = 'FRESH' AND s.health_state = 'DOWN')::int AS down,
+                  s.freshness_state = 'FRESH' AND s.fresh_until > statement_timestamp()
+                  AND s.health_state = 'DOWN')::int AS down,
                 count(*) FILTER (WHERE c.execution_state = 'ACTIVE' AND
-                  (s.freshness_state IS DISTINCT FROM 'FRESH' OR s.health_state = 'UNKNOWN'))::int AS unknown,
+                  (s.freshness_state IS DISTINCT FROM 'FRESH'
+                   OR s.fresh_until IS NULL OR s.fresh_until <= statement_timestamp()
+                   OR s.health_state = 'UNKNOWN'))::int AS unknown,
                 count(*) FILTER (WHERE c.execution_state = 'PAUSED')::int AS paused
          FROM app.check_groups g
          LEFT JOIN app.checks c ON c.owner_id = g.owner_id AND c.group_id = g.id
