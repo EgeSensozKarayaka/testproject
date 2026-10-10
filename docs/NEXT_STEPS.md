@@ -1,13 +1,14 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 11:53 +06:00  
+**Son güncelleme:** 2026-10-10 12:33 +06:00
+
 **Mevcut kilometre taşı:** Aşama 0–8 tamamlandı ve yerelde doğrulandı
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
 ## 1. Sıradaki Çalışma — Aşama 9
 
-Önce `docs/SCHEDULER_AND_WORKERS.md` nihai mimarisi hazırlanıp incelenecek, ardından küçük uygulama dilimlerine geçilecektir:
+[`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) nihai mimarisi hazırlanmıştır. Kullanıcı incelemesi sonrasında küçük uygulama dilimlerine geçilecektir:
 
 1. PostgreSQL tabanlı due-job claim, lease, heartbeat, fencing ve retry protokolü
 2. Aynı check'in kendisiyle paralel çalışmasını engelleyen tek-aktif-job invariant'ı

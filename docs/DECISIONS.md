@@ -610,3 +610,63 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Pool error event'ini yutmak; sabit bir sleep eklemek; forced drop'u koruyup `57P01` kodunu görmezden gelmek; test veritabanlarını silmeden bırakmak.
 - **Gerekçe:** Bağlantı kapanış yarışını kaynağında kaldırmak, sabit zaman varsayımından kaçınmak ve gerçek izin/bağlantı hatalarının test işini başarısız etmeye devam etmesini sağlamak.
 - **Sonuçlar:** Temizlik en fazla beş saniye bekleyebilir ve yalnız kapanmakta olan session görünürlüğü için retry yapar. Unit regresyonları SQL'in `FORCE` içermediğini, `55006` retry'ını ve unrelated error fail-fast davranışını sabitler.
+
+## D-067 — Worker ve API check-first canonical kilit sırası kullanır
+
+- **Tarih:** 2026-10-10 12:33 +06:00
+- **Durum:** Accepted — Aşama 9 uygulama tasarımı
+- **Bağlam:** API check komutları check satırını kilitledikten sonra aktif job'ları değiştiriyor. Önceki worker taslağındaki job→check sırası aynı kaynaklarda ters yönlü bekleme ve deadlock üretebilirdi.
+- **Karar:** Bütün check-scope işlemler `check → job → attempt → current state → incident → segment → interval` sırasını kullanır. Dispatcher candidate'ı kilitsiz/bounded okur; claim transaction'ında check'i `FOR UPDATE SKIP LOCKED`, ardından job'ı kilitler. Pending job'ı kilitleyip check beklemek yasaktır.
+- **Alternatifler:** API komutlarını job-first yapmak; deadlock'u yalnız SQLSTATE retry ile saklamak; scheduler ve API'yi tek process'e bağlamak.
+- **Gerekçe:** Mevcut aggregate-root komut sırasını korumak, yatay worker/API replica'larında deadlock riskini yapısal olarak kaldırmak ve external I/O olmadan kısa transaction'lar sağlamak.
+- **Sonuçlar:** Aşama 8 ve veritabanı operasyon belgelerindeki eski sıra güncellendi. Heartbeat yalnız kendi job satırını conditional update ettiği için check lock'u almaz.
+
+## D-068 — Running job terminal cancellation yerine acknowledgement kullanır
+
+- **Tarih:** 2026-10-10 12:33 +06:00
+- **Durum:** Accepted — Aşama 9 uygulama tasarımı
+- **Bağlam:** LEASED/RUNNING job'ı API transaction'ında doğrudan `CANCELLED` yapmak partial unique invariant'ı hemen serbest bırakır; eski HTTP isteği henüz abort olmadan yeni job başlayabilir.
+- **Karar:** PENDING job doğrudan iptal edilebilir. LEASED/RUNNING job için allowlist cancellation request yazılır ve aktif state korunur. Worker heartbeat request'i görüp probe'u abort eder; acknowledgement transaction'ı attempt/job'ı terminal yapar. Worker kaybında aynı işi lease recovery tamamlar.
+- **Alternatifler:** Yalnız fencing'e güvenmek; iptal sonrası sabit sleep; terminal job yanında açık attempt taramak; check başına process mutex'i.
+- **Gerekçe:** Normal pause/config/delete yarışında fiziksel overlap'i engellemek, durable crash recovery sağlamak ve process-local koordinasyona bağımlı kalmamak.
+- **Sonuçlar:** Revision 14 cancellation kolonları/constraint'leri gerektirir. Lease partition sonrası zombie request teorik olarak kısa süre çakışabilir; yalnız current fence sonucu state'e kabul edilir ve external exactly-once iddiası yapılmaz.
+
+## D-069 — Owner-fair DB sırası, bounded process-local concurrency ile birleşir
+
+- **Tarih:** 2026-10-10 12:33 +06:00
+- **Durum:** Accepted — Aşama 9 uygulama tasarımı
+- **Bağlam:** Tek global FIFO büyük bir owner'ın kuyruğuyla küçük owner'ları aç bırakabilir. Uzun probe boyunca PostgreSQL connection/advisory lock tutmak ise pool kapasitesini network concurrency'ye bağlar.
+- **Karar:** Due ve pending candidate'lar owner içi rank ile round-robin benzeri sırada değerlendirilir. Worker yalnız boş global+owner+hostname process-local slotu varken claim eder; probe sırasında DB connection tutmaz. Reference başlangıcı process başına global 64, owner 32 ve hostname 4'tür.
+- **Alternatifler:** Global FIFO; owner başına ayrı queue; Redis semaphore; probe süresince session advisory lock; ilk sürümde cluster-wide concurrency lease tablosu.
+- **Gerekçe:** PostgreSQL'i tek kalıcı koordinasyon kaynağı tutarken 20/200/500 profillerinde açlığı ve kaynak taşmasını bounded biçimde önlemek.
+- **Sonuçlar:** Owner fairness DB seviyesinde replica'lar arasında korunur; hard owner/host cap replica sayısıyla çarpılır. Ölçüm kesin cluster-wide limit gerektirirse expiring shared slot tablosu ayrı ADR/migration olur.
+
+## D-070 — Coalesced manual intent request-time modunu saklar
+
+- **Tarih:** 2026-10-10 12:33 +06:00
+- **Durum:** Accepted — Aşama 9 uygulama tasarımı
+- **Bağlam:** `manual_requested_at` tek bekleyen niyeti kanıtlıyor fakat ACTIVE/PAUSED durumundan türetilen `STATEFUL/DIAGNOSTIC` mode'u saklamıyor. Check durumu job materialize edilmeden değişirse API receipt ile gerçek job anlamı ayrışabilir.
+- **Karar:** İlk pending niyet `manual_requested_at + manual_requested_mode` çiftiyle kalıcıdır. Sonraki talepler buna coalesce olur; mode değiştirilmez. Job güncel config/generation snapshot'ıyla fakat stored mode ile üretilir. ACTIVE→PAUSED henüz materialize edilmemiş STATEFUL intent'i temizler.
+- **Alternatifler:** Mode'u materialization anında yeniden hesaplamak; receipt mode alanını kaldırmak; her manual talep için ayrı job sırası tutmak.
+- **Gerekçe:** Receipt'in dürüstlüğünü, tek-pending-intent invariant'ını ve diagnostic/stateful ayrımını birlikte korumak.
+- **Sonuçlar:** Revision 14 nullable pair constraint'i ve API coalescing düzeltmesi gerekir. Config değişimi intent'i kaybetmeden son snapshot'la çalıştırabilir; delete intent'i temizler.
+
+## D-071 — Attempt sonucu partition-key pointer'ıyla idempotent bulunur
+
+- **Tarih:** 2026-10-10 12:33 +06:00
+- **Durum:** Accepted — Aşama 9 uygulama tasarımı
+- **Bağlam:** `check_runs` aylık partition'lıdır ve primary key partition key olan `finished_at` değerini içerir. Attempt üzerindeki yalnız `result_recorded_at` marker'ı duplicate persistence'ı engeller, fakat mevcut run'ı sadece `attempt_id` ile aramak partition sayısı büyüdükçe bounded değildir.
+- **Karar:** Attempt satırı `result_run_finished_at + result_run_id` nullable çiftini taşır; result marker ve pointer birlikte null veya birlikte doludur. Run insert ve pointer update aynı transaction'dadır. Duplicate replay tam `(owner_id,check_id,finished_at,id)` anahtarıyla partition-pruned lookup yapar. PostgreSQL üzerinde doğrulanmış deferred composite FK lineage'ı korur.
+- **Alternatifler:** Her run partition'ında yalnız `attempt_id` indeksi; duplicate replay'de run'ı okumadan başarı dönmek; partition dışı ayrı attempt→run mapping tablosu; global unpartitioned run tablosu.
+- **Gerekçe:** Aylık history büyürken idempotent sonucu kesin ve hızlı bulmak, ikinci event/effect üretmemek ve mevcut partition stratejisini bozmamak.
+- **Sonuçlar:** Revision 14 iki pointer kolonu, all-or-none constraint ve FK gerektirir. Stale attempt sonucu kaydedilirse pointer yazılır fakat önceden terminal `LEASE_LOST/CANCELLED` nedeni değiştirilmez.
+
+## D-072 — Outbox yalnız aktive edilmiş destination için dispatch üretir
+
+- **Tarih:** 2026-10-10 12:33 +06:00
+- **Durum:** Accepted — Aşama 9 uygulama tasarımı
+- **Bağlam:** Aşama 9 yüksek hacimde run/incident fact'i üretecek; notification, realtime ve prediction consumer'ları ise sonraki aşamalarda yazılacak. Henüz var olmayan consumer için PENDING dispatch biriktirmek sınırsız backlog oluşturabilir ve consumer ilk açıldığında eski e-postaları yanlışlıkla gönderebilir.
+- **Karar:** Destination aktivasyonu ve cutover kalıcı `infra.destination_activations` kaydıdır. Producer katalog routing kümesini yalnız aktif destination'larla kesiştirir; boşsa gereksiz outbox satırı yazmaz. Aktivasyon sonrasında consumer outage'ı dispatch üretimini durdurmaz. İlk kurulumda notification açık incident reconciliation, realtime source-of-truth snapshot ve predictor run-history backfill kullanır; tarihsel dispatch'i körlemesine replay etmez.
+- **Alternatifler:** Consumer olmasa da sonsuza kadar PENDING dispatch; process environment flag'i; consumer açılışında bütün eski satırları tüketmek; outbox'ı monitoring history olarak kullanmak.
+- **Gerekçe:** Monitoring transaction'ını bağımsız tutmak, kayıp ile henüz devrede olmayan capability'yi ayırmak ve 20/200/500 check ölçeğinde dispatch tablosunun kontrolsüz büyümesini engellemek.
+- **Sonuçlar:** Revision 14 küçük activation tablosu ve ortak routing helper'ı gerektirir. Sonraki consumer aşamalarında aktivasyon/reconciliation sırası ayrıca test edilir; source-of-truth yine run/current/incident tablolarıdır.

@@ -69,9 +69,9 @@ Scheduler kısa bir transaction'da due check'leri bounded batch ile `FOR UPDATE 
 4. Kaçırılmış aralıklar için backfill job oluşturmaz; sıradaki gelecekteki cadence slot'una sıçrar.
 5. Transaction'ı kapatır; HTTP çağrısı hiçbir DB transaction/kilidi açıkken yapılmaz.
 
-Owner adaleti tek global FIFO'ya bırakılmaz. Batch seçimi owner başına sınırlı aday veya round-robin ordering uygular; tek büyük owner küçük owner'ları sonsuza dek bekletemez. Bu algoritma Aşama 7 scheduler uygulamasında load test ile kesinleştirilir, fakat gerekli indeks yukarıdaki due scan indeksidir.
+Owner adaleti tek global FIFO'ya bırakılmaz. Batch seçimi owner başına sınırlı aday veya round-robin ordering uygular; tek büyük owner küçük owner'ları sonsuza dek bekletemez. Bu algoritma Aşama 9 scheduler uygulamasında load test ile kesinleştirilir, fakat gerekli indeks yukarıdaki due scan indeksidir.
 
-Worker job claim'de job satırını kilitler, check üzerindeki `next_fencing_token` değerini atomik artırıp önceki değeri attempt'a verir, lease ve attempt'ı aynı transaction'da yazar. Ağ çağrısı transaction dışında yapılır. Sonuç kabulü yeniden kısa transaction açar ve job/attempt/check/current-state satırlarını belirli sırayla kilitler.
+Worker bounded candidate'ları önce kilitsiz okur. Claim transaction'ı API komutlarıyla aynı canonical sırada önce check satırını `FOR UPDATE SKIP LOCKED`, ardından job satırını kilitler; check üzerindeki `next_fencing_token` değerini atomik artırıp önceki değeri attempt'a verir, lease ve attempt'ı aynı transaction'da yazar. Pending job'ı önce kilitleyip check beklemek yasaktır. Ağ çağrısı transaction dışında yapılır. Sonuç kabulü yeniden kısa transaction açar ve check/job/attempt/current-state satırlarını aynı sırayla kilitler. Ayrıntılar [`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) içindedir.
 
 ### 2.3 Kilit sırası
 

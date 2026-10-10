@@ -418,7 +418,7 @@ Maintenance özeti health'ten ayrı kalır. Aşama 10'dan önce GroupStatus DTO'
 
 ## 13. Event Fact'leri
 
-Motor durable outbox'a doğrudan yazmaz; minimal, redacted fact listesi döndürür. Aşama 9 adapter'ı ID/version'ları bağlayıp aynı transaction'da envelope ve dispatch kayıtlarını yazar.
+Motor durable outbox'a doğrudan yazmaz; minimal, redacted fact listesi döndürür. Aşama 9 adapter'ı ID/version'ları bağlar ve yalnız kalıcı olarak aktive edilmiş destination'lar için aynı transaction'da envelope/dispatch kayıtlarını yazar.
 
 | Fact                             | Ne zaman                                              |
 | -------------------------------- | ----------------------------------------------------- |
@@ -439,18 +439,18 @@ Payload URL, query, IP, expected body, response body veya raw network error taş
 
 Aşama 9 observation transaction'ı bu sırayı izler:
 
-1. Job ve attempt satırını kilitle; duplicate/result eligibility kontrol et.
-2. Check satırını kilitle.
+1. Check satırını kilitle.
+2. Job ve attempt satırını kilitle; duplicate/result eligibility kontrol et.
 3. Current-state satırını kilitle.
 4. Açık incident ve segmenti varsa kilitle.
 5. Açık health interval'i kilitle.
 6. Kilitli snapshot ve candidate result ile saf transition planını hesapla.
 7. Immutable run satırını acceptance kararıyla insert et.
 8. Current state, interval, incident ve segment effect'lerini uygula.
-9. Event/outbox dispatch'lerini yaz.
+9. Activation-aware event/outbox dispatch'lerini yaz.
 10. Attempt/job terminal durumunu yaz ve commit et.
 
-Canonical global sıra `check -> current state -> incident -> segment -> interval`dır. Birden fazla check işlenecekse UUID artan sıradır. Domain transaction içinde HTTP, SMTP, SSE veya predictor çağrısı yoktur.
+Canonical global sıra `check -> job -> attempt -> current state -> incident -> segment -> interval`dır. API check komutları da check→job kullandığı için worker ters sırada kilit alamaz. Birden fazla check işlenecekse UUID artan sıradır. Domain transaction içinde HTTP, SMTP, SSE veya predictor çağrısı yoktur. Ayrıntılı claim/cancellation protokolü [`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) içinde kesinleştirilmiştir.
 
 Failure halinde transaction'ın hiçbiri görünür olmaz. External e-posta veya realtime teslimatı outbox sonrasıdır.
 
@@ -465,7 +465,7 @@ Aşama 9 entegrasyonundan önce aşağıdakiler migration/test review'undan geç
 - incident/current-state/interval snapshot'larında cross-owner FK ve RLS davranışı;
 - default partition'a düşmeden ilgili ay partition'larının varlığı;
 - zero-length interval üretmeyen rotation helper'ı;
-- outbox event ve dispatch'in state transaction'ıyla atomikliği.
+- aktive destination için outbox event/dispatch'in state transaction'ıyla atomikliği ve inactive destination'da backlog oluşmaması.
 
 Uygulanmış migration dosyaları değiştirilmez; ihtiyaç çıkarsa revision 14+ forward-only migration yazılır.
 
@@ -530,7 +530,7 @@ Aşama 9 bağlanmadan önce saf plan test edilir; bağlandığında gerçek Post
 - iki concurrent result'tan yalnız biri accepted;
 - stale attempt/run history'de kalır fakat state'i değiştirmez;
 - incident/segment partial unique invariant'ları;
-- run + state + interval + incident + outbox atomik commit/rollback;
+- run + state + interval + incident + aktive outbox routing atomik commit/rollback;
 - RLS owner izolasyonu;
 - freshness deadline ve reconciler idempotency;
 - 20/200/500 group aggregate plan/latency profili

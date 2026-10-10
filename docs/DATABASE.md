@@ -42,6 +42,8 @@ Veritabanı tasarımı aşağıdaki özellikleri birlikte sağlar:
 
 PostgreSQL; kullanıcı, yapılandırma, queue, current state, incident, bildirim ve geçmiş için tek kalıcı kaynak gerçektir. Redis, message broker veya ayrı bir time-series veritabanı v1 için zorunlu değildir. PostgreSQL outbox ve kalıcı job tabloları süreçler arası koordinasyonu sağlar.
 
+Outbox destination'ları migration-owned activation/cutover kaydıyla devreye alınır. Katalogda adı bulunması tek başına dispatch üretmez; aktivasyon sonrasında consumer geçici olarak kapalı olsa bile kalıcı dispatch ve retry devam eder.
+
 ### 3.2 SQL-first şema, Kysely ile tipli erişim
 
 PostgreSQL'e özgü RLS, partition, partial index, constraint ve rol tanımlarının görünür kalması için migration'lar sürümlü düz SQL olacaktır. Uygulama sorguları `pg` transaction altyapısı üzerinde Kysely ile tipli yazılacaktır. Migration yaşam döngüsü ORM model senkronizasyonuna bırakılmayacaktır.

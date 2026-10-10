@@ -60,7 +60,9 @@ PENDING ──claim──> LEASED ──start──> RUNNING ──result persis
    │                 │                  │
    │                 ├─lease expiry─────┤──> PENDING (retryable)
    │                 │                  │
-   ├─invalidate──────┴──────────────────┴──> CANCELLED
+   ├─invalidate──────┘                  ├─cancel request──> RUNNING + cancel_requested
+   │        │                           │                         │
+   │        └───────────────────────────┴─────────ack/recovery──> CANCELLED
    │
    └─retry budget exhausted / permanent internal error──> DEAD
 ```
@@ -68,13 +70,15 @@ PENDING ──claim──> LEASED ──start──> RUNNING ──result persis
 | State | İzin verilen işlemler | Notlar |
 | --- | --- | --- |
 | PENDING | Claim, cancel | Claim atomik lease ve fencing token üretir. |
-| LEASED | Start, heartbeat, release, expire, cancel | HTTP isteği başlamadan önceki kısa evre. |
-| RUNNING | Heartbeat, persist result, lose lease, cancel request | Lease kaybında worker abort sinyali alır. |
+| LEASED | Start, heartbeat, release, expire, cancellation request | HTTP isteği başlamadan önceki kısa evre. Cancellation acknowledgement'a kadar aktif kalır. |
+| RUNNING | Heartbeat, persist result, lose lease, cancellation request | Lease kaybında veya cancellation request'te worker abort sinyali alır; acknowledgement'a kadar partial unique invariant korunur. |
 | COMPLETED | Yok | Hedef PASS veya FAIL olabilir; ikisi de job'ın başarılı yürütülmesidir. |
 | CANCELLED | Yok | Pause/delete/config invalidation nedeniyle yürütülmeyecek iş. |
 | DEAD | Operatör/reconciliation incelemesi | Internal hatalar retry bütçesini tüketmiştir; hedef failure gözlemi üretilmez. |
 
 Lease expiry sonrası job yeniden PENDING olabilir. Yeni claim daha yüksek fencing token üretir. Eski attempt'in sonucu CheckRun olarak tanısal biçimde saklanabilse bile observation acceptance'tan geçemez.
+
+PENDING iş invalidation sırasında doğrudan CANCELLED olabilir. LEASED/RUNNING iş doğrudan terminal yapılmaz; `cancellation_requested` işaretlenir ve worker acknowledgement veya lease recovery gerçekleşmeden aynı check için yeni iş başlatılmaz.
 
 ## 5. Observation Acceptance Kararı
 

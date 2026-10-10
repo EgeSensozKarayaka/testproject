@@ -1,7 +1,8 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 11:53 +06:00
-**Genel durum:** Aşama 0–8 tamamlandı ve doğrulandı; sıradaki çalışma Aşama 9 kalıcı scheduler/monitor worker mimarisidir
+**Son güncelleme:** 2026-10-10 12:33 +06:00
+
+**Genel durum:** Aşama 0–8 tamamlandı ve doğrulandı; Aşama 9 kalıcı scheduler/monitor worker mimarisi uygulama öncesi incelemeye hazırdır
 
 ## Tamamlanan
 
@@ -42,6 +43,7 @@
 - Aşama 8 domain paketi **16/16** odaklı testte geçti; buna 250 observation'lık sabit-seed sequence, duplicate/diagnostic/stale fencing reddi, provisional UP/DOWN/UNKNOWN çözümleme, incident suspend/resume/recovery ve deadline duration cap dahildir.
 - Check/group PostgreSQL sınırı **17/17** geçti. Reconciler gecikmesinde list/filter sonucu STALE/UNKNOWN, incident görünümü UNOBSERVED ve duration deadline'da capped; group aggregate 20/200/500 canlı check fixture'ıyla doğrulandı. Kapasite testinin fixture + sorgu süresi yerel warm koşuda **359 ms** idi.
 - Final `pnpm run ci`; format, 57-operation contract drift, lint, strict typecheck, **18 dosyada 147/147 unit**, gerçek PostgreSQL ile **4 dosyada 34/34 integration** ve bütün production build'leriyle geçti.
+- PostgreSQL cleanup yarış düzeltmesi sonrasında unit paket **149/149**, integration paket **34/34** geçti. GitHub Actions [`38030487100`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38030487100) Node, PostgreSQL, Python, dependency audit ve full-stack smoke işlerinin beşinde başarılı oldu.
 - Aşama 7 odaklı unit paketi **6 dosyada 52/52**, gerçek socket HTTP/redirect/gzip/oversize/TLS/timeout ve 50 eşzamanlı probe entegrasyonu **4/4** geçti.
 - Final yerel `pnpm run ci`; format, generated-contract drift, lint, strict typecheck, **17 dosyada 131/131 unit test**, integration kapıları ve bütün production build'leriyle geçti.
 - Gerçek PostgreSQL admin URL'siyle birleşik integration paketi **4 dosyada 32/32** geçti; buna Aşama 7'nin gerçek socket entegrasyonları da dahildir.
@@ -94,4 +96,4 @@
 
 ## Sıradaki İş
 
-Aşama 9 için kalıcı scheduler/monitor worker mimarisini kesinleştirmek; job claim/lease/fencing, fairness ve concurrency sınırlarını, aynı check'in kendisiyle çakışmamasını, observation planlarının atomik PostgreSQL uygulamasını, freshness reconciler'ı ve outbox sınırını birlikte tasarlamak.
+[`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) incelemesi sonrasında Aşama 9'u küçük dilimlerle uygulamak: typed config/cadence, revision 14, check-first claim/lease/fencing, bounded dispatcher, cancellation acknowledgement, atomik observation adapter, freshness reconciler ve 20/200/500 dayanıklılık kanıtları.

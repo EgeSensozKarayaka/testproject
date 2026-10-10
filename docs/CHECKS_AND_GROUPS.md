@@ -277,7 +277,7 @@ Transaction check'i kilitler ve güncel configuration snapshot üretir:
 
 Check için aktif job yoksa doğrudan `monitoring.check_jobs` içinde `PENDING + MANUAL` kalıcı job oluşturulur ve disposition `ENQUEUED` olur. Job snapshot URL, timeout, expected değerler ve üç version/generation değerini içerir; 16 KiB sınırını geçemez.
 
-Aktif `PENDING/LEASED/RUNNING` job varsa yeni job yaratılmaz. `manual_requested_at` null ise request anına set edilir, doluysa değiştirilmez; disposition `COALESCED` olur. Job tamamlayan scheduler/worker transaction'ı bu tek niyeti tüketerek en fazla bir yeni manual job üretir. Partial unique index son yarış bariyeridir.
+Aktif `PENDING/LEASED/RUNNING` job varsa yeni job yaratılmaz. `manual_requested_at` null ise request anına set edilir, doluysa değiştirilmez; disposition `COALESCED` olur. Aşama 9 forward migration'ı ilk bekleyen niyetin request-time `STATEFUL/DIAGNOSTIC` kararını `manual_requested_mode` ile birlikte saklar. Job tamamlayan scheduler/worker transaction'ı bu tek niyeti tüketerek güncel config snapshot'ıyla en fazla bir yeni manual job üretir. Partial unique index son yarış bariyeridir.
 
 Manuel request:
 
@@ -376,6 +376,8 @@ Audit kayıtları:
 Audit bir tam configuration backup'ı değildir ve otomatik rollback sunmaz. Configuration version kimin/ne zaman/hangi alan sınıfını değiştirdiğini kanıtlar; hassas eski URL/substring'i kalıcı kopyalamaz. Immutable job/run snapshot'ları yalnız gerçekten çalıştırılan probe lineage'ı içindir ve private retention politikasına tabidir.
 
 Outbox dispatch başarısızlığı domain commit'ini geri almaz; dispatch kaydı aynı transaction'da kalıcıdır ve worker retry eder. Event insertion'ın kendisi başarısızsa domain mutation da rollback olur.
+
+Aşama 9 ile API ve worker ortak activation-aware outbox writer kullanır. Katalogda tanımlı fakat consumer'ı henüz devreye alınmamış destination için event/dispatch üretilmez; destination kalıcı olarak aktive edildikten sonraki geçici consumer arızasında ise dispatch aynı transaction'da kalır ve retry edilir. Böylece bu atomiklik kuralı korunurken uygulanmamış consumer için sınırsız backlog oluşmaz.
 
 ## 18. Hata sözleşmesi
 

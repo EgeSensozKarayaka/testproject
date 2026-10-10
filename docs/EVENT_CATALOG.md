@@ -163,6 +163,8 @@ Scheduler'ın source of truth'u `monitoring.check_jobs`, history/rollup'ın sour
 
 Destination fiziksel topic adı değildir; `infra.outbox_dispatches.destination` değeridir. Aynı canonical event gereken dört destination'dan birden fazlasına ayrı dispatch satırıyla fan-out edilebilir. Consumer'ın ihtiyacı olmayan event'i tüm payload ile yayınlayan global bus kurulmaz. Yeni durable tüketici sınıfı gerekirse eski migration/check constraint değiştirilmez; review edilmiş forward-only migration gerekir.
 
+Destination'ın katalogda tanımlı olması consumer'ın deployment'ta hazır olduğu anlamına gelmez. Producer yalnız migration-owned `infra.destination_activations` kaydı bulunan destination için event/dispatch üretir. Aktivasyon öncesinde source-of-truth tablolardan snapshot/reconciliation/backfill hazırlanır; aktivasyon sonrasında consumer'ın geçici arızası dispatch üretimini durdurmaz. Böylece henüz yazılmamış consumer için sınırsız backlog ve ilk açılışta eski notification replay'i oluşmaz. Ayrıntılı cutover kuralı [`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) içindedir.
+
 ## 10. Şema Evrimi
 
 1. Yeni opsiyonel payload alanı v1'de eklenebilir; consumer bilinmeyen alanı yok sayar.
