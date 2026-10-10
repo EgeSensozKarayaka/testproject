@@ -1,19 +1,18 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 14:17 +06:00
+**Son güncelleme:** 2026-10-10 14:30 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–8 tamamlandı; Aşama 9 atomik observation persistence dilimi doğrulandı
+**Mevcut kilometre taşı:** Aşama 0–8 tamamlandı; Aşama 9 freshness reconciliation dilimi doğrulandı
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
 ## 1. Sıradaki Çalışma — Aşama 9
 
-[`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) mimarisinin revision 14, typed config, durable cancellation/manual intent, result pointer, activation-aware outbox, owner-fair materialization/claim, global-owner-host bounded probe dispatcher, cancellation acknowledgement, infrastructure retry/DEAD, expired-lease recovery ve atomik observation persistence dilimleri tamamlandı. Sıradaki küçük uygulama dilimleri:
+[`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) mimarisinin revision 14, typed config, durable cancellation/manual intent, result pointer, activation-aware outbox, owner-fair materialization/claim, global-owner-host bounded probe dispatcher, cancellation acknowledgement, infrastructure retry/DEAD, expired-lease recovery, atomik observation persistence ve deadline freshness reconciliation dilimleri tamamlandı. Sıradaki küçük uygulama dilimleri:
 
-1. Deadline tabanlı freshness reconciler ve restart/catch-up davranışı
-2. Scheduler, dispatcher, recovery ve freshness döngülerinin güvenli runtime koordinasyonu; bütün zorunlu yollar hazır olmadan production aktivasyonu yapılmaması
-3. Graceful shutdown ve loop-lag/readiness gözlemlenebilirliği
-4. Concurrent worker, stale lease, duplicate result, rollback ve 20/200/500 kapasite kanıtları
+1. Scheduler, dispatcher, recovery ve freshness döngülerinin güvenli runtime koordinasyonu
+2. Graceful shutdown ve loop-lag/readiness gözlemlenebilirliği
+3. Concurrent worker, stale lease, duplicate result, rollback ve 20/200/500 kapasite kanıtları
 
 ## 2. Aşama 9 Sonrasında
 

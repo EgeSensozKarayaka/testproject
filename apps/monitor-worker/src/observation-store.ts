@@ -3,9 +3,11 @@ import type { Pool, PoolClient } from '@site-monitor/database';
 import { writeActivatedOutboxEvent } from '@site-monitor/database';
 import {
   decideObservationAcceptance,
+  planFreshnessReconciliation,
   planObservationTransition,
   type AcceptedObservationTransition,
   type CurrentHealthSnapshot,
+  type FreshnessReconciliation,
   type IncidentEffect,
   type MonitoringEventFact,
   type ObservationRejectionReason,
@@ -109,6 +111,21 @@ interface AllocationsRow {
   run_id: string;
   segment_id: string;
 }
+
+interface MonitoringTransitionPlan {
+  current: CurrentHealthSnapshot;
+  incidentEffects: IncidentEffect[];
+  intervalEffects: AcceptedObservationTransition['intervalEffects'];
+}
+
+export interface FreshnessCandidate {
+  checkId: string;
+  freshUntil: string;
+  ownerId: string;
+}
+
+export type FreshnessReconciliationResult =
+  { lagMs: number; outcome: 'RECONCILED'; stateVersion: string } | { outcome: 'SKIPPED' | 'STALE' };
 
 export interface ObservationPersistenceResult {
   accepted: boolean;
@@ -273,6 +290,147 @@ export class PostgresObservationStore implements JobExecutionSink {
 
   async recordResult(job: ClaimedJob, result: ProbeResult): Promise<void> {
     await this.persistResult(job, result);
+  }
+
+  async listFreshnessCandidates(limit: number): Promise<FreshnessCandidate[]> {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 2_000) {
+      throw new TypeError('Freshness candidate limit must be an integer from 1 through 2000.');
+    }
+    const result = await this.pool.query<{
+      check_id: string;
+      fresh_until: Date | string;
+      owner_id: string;
+    }>(
+      `WITH ranked AS (
+         SELECT state.owner_id, state.check_id, state.fresh_until,
+                row_number() OVER (
+                  PARTITION BY state.owner_id
+                  ORDER BY state.fresh_until, state.check_id
+                ) AS owner_rank
+         FROM monitoring.check_current_states AS state
+         JOIN app.checks AS check_row
+           ON check_row.owner_id = state.owner_id AND check_row.id = state.check_id
+         WHERE check_row.lifecycle_state = 'LIVE'
+           AND check_row.execution_state = 'ACTIVE'
+           AND state.freshness_state = 'FRESH'
+           AND state.fresh_until <= statement_timestamp()
+           AND state.stale_reconciled_at IS NULL
+       )
+       SELECT owner_id::text, check_id::text, fresh_until
+       FROM ranked
+       ORDER BY owner_rank, fresh_until, owner_id, check_id
+       LIMIT $1`,
+      [limit],
+    );
+    return result.rows.map((row) => ({
+      checkId: row.check_id,
+      freshUntil: instant(row.fresh_until),
+      ownerId: row.owner_id,
+    }));
+  }
+
+  async reconcileFreshness(
+    candidate: Pick<FreshnessCandidate, 'checkId' | 'ownerId'>,
+  ): Promise<FreshnessReconciliationResult> {
+    return inTransaction(this.pool, async (client) => {
+      const checkResult = await client.query<{
+        execution_state: 'ACTIVE' | 'PAUSED';
+        lifecycle_state: 'DELETED' | 'LIVE';
+      }>(
+        `SELECT lifecycle_state, execution_state
+         FROM app.checks
+         WHERE owner_id = $1 AND id = $2
+         FOR UPDATE SKIP LOCKED`,
+        [candidate.ownerId, candidate.checkId],
+      );
+      const check = checkResult.rows[0];
+      if (!check) return { outcome: 'SKIPPED' };
+      if (check.lifecycle_state !== 'LIVE' || check.execution_state !== 'ACTIVE') {
+        return { outcome: 'STALE' };
+      }
+
+      const currentResult = await client.query<CurrentStateRow>(
+        `SELECT candidate_run_finished_at, candidate_run_id, candidate_started_at,
+                consecutive_failure_count, fresh_until, freshness_state, health_state,
+                last_accepted_fencing_token::text, last_accepted_run_finished_at,
+                last_accepted_run_id, last_failure_at, last_failure_category,
+                last_response_time_ms, last_status_code, last_success_at,
+                open_incident_id, stale_reconciled_at, state_version::text
+         FROM monitoring.check_current_states
+         WHERE owner_id = $1 AND check_id = $2
+         FOR UPDATE`,
+        [candidate.ownerId, candidate.checkId],
+      );
+      const currentRow = currentResult.rows[0];
+      if (!currentRow) throw new Error('Freshness candidate current state is missing.');
+      const current = currentSnapshot(currentRow);
+      if (
+        current.freshnessState !== 'FRESH' ||
+        current.freshUntilMs === null ||
+        current.staleReconciledAtMs !== null
+      ) {
+        return { outcome: 'STALE' };
+      }
+
+      const incidentResult = await client.query<OpenIncidentRow>(
+        `SELECT confirmed_at, id::text, last_failure_category, observation_mode,
+                observed_duration_ms::text, resource_version::text, started_at
+         FROM monitoring.incidents
+         WHERE owner_id = $1 AND check_id = $2 AND status = 'OPEN'
+         FOR UPDATE`,
+        [candidate.ownerId, candidate.checkId],
+      );
+      const incidentRow = incidentResult.rows[0];
+      const segmentResult = incidentRow
+        ? await client.query<OpenSegmentRow>(
+            `SELECT id::text, incident_id::text, start_run_finished_at,
+                    start_run_id::text, started_at
+             FROM monitoring.incident_segments
+             WHERE owner_id = $1 AND check_id = $2 AND incident_id = $3
+               AND ended_at IS NULL
+             FOR UPDATE`,
+            [candidate.ownerId, candidate.checkId, incidentRow.id],
+          )
+        : null;
+      const intervalResult = await client.query<OpenIntervalRow>(
+        `SELECT classification, id::text, probe_generation::text, source_kind,
+                source_run_finished_at, source_run_id::text, started_at
+         FROM monitoring.open_health_intervals
+         WHERE owner_id = $1 AND check_id = $2
+         FOR UPDATE`,
+        [candidate.ownerId, candidate.checkId],
+      );
+      const intervalRow = intervalResult.rows[0];
+      if (!intervalRow) throw new Error('Freshness candidate has no open health interval.');
+
+      const allocationResult = await client.query<{
+        as_of: Date | string;
+        interval_id: string;
+      }>(
+        `SELECT date_trunc('milliseconds', clock_timestamp()) AS as_of,
+                uuidv7()::text AS interval_id`,
+      );
+      const allocation = allocationResult.rows[0];
+      if (!allocation) throw new Error('Could not allocate freshness transition identity.');
+      const asOfMs = milliseconds(allocation.as_of);
+      const transition = planFreshnessReconciliation({
+        asOfMs,
+        current,
+        incident: incidentSnapshot(incidentRow),
+        nextIntervalId: allocation.interval_id,
+        openInterval: intervalSnapshot(intervalRow),
+        openSegment: segmentSnapshot(segmentResult?.rows[0]),
+      });
+      if (transition === null) return { outcome: 'STALE' };
+
+      await this.#applyMonitoringTransition(client, candidate, current, transition);
+      await this.#writeFreshnessEvents(client, candidate, current, transition);
+      return {
+        lagMs: Math.max(0, asOfMs - current.freshUntilMs),
+        outcome: 'RECONCILED',
+        stateVersion: transition.current.stateVersion.toString(),
+      };
+    });
   }
 
   async persistResult(
@@ -499,7 +657,10 @@ export class PostgresObservationStore implements JobExecutionSink {
 
       await this.#insertRun(client, claimed, persistedJob, result, allocations, transition);
       if (isAcceptedTransition(transition)) {
-        await this.#applyAcceptedTransition(client, claimed, current, transition, result);
+        if (transition.current.lastResponseTimeMs !== result.timings.totalMs) {
+          throw new Error('Reducer response time differs from the probe result.');
+        }
+        await this.#applyMonitoringTransition(client, claimed, current, transition);
       }
       await this.#writeEvents(client, claimed, check, current, transition, result);
 
@@ -647,12 +808,11 @@ export class PostgresObservationStore implements JobExecutionSink {
     }
   }
 
-  async #applyAcceptedTransition(
+  async #applyMonitoringTransition(
     client: PoolClient,
-    claimed: ClaimedJob,
+    claimed: Pick<ClaimedJob, 'checkId' | 'ownerId'>,
     previousCurrent: CurrentHealthSnapshot,
-    transition: AcceptedObservationTransition,
-    result: ProbeResult,
+    transition: MonitoringTransitionPlan,
   ): Promise<void> {
     let openInterval = await this.#loadOpenInterval(client, claimed);
     for (const effect of transition.intervalEffects) {
@@ -760,12 +920,12 @@ export class PostgresObservationStore implements JobExecutionSink {
       ],
     );
     exactlyOne(state.rowCount, 'Current state changed while applying transition.');
-    if (next.lastResponseTimeMs !== result.timings.totalMs) {
-      throw new Error('Reducer response time differs from the probe result.');
-    }
   }
 
-  async #loadOpenInterval(client: PoolClient, claimed: ClaimedJob): Promise<OpenIntervalRow> {
+  async #loadOpenInterval(
+    client: PoolClient,
+    claimed: Pick<ClaimedJob, 'checkId' | 'ownerId'>,
+  ): Promise<OpenIntervalRow> {
     const result = await client.query<OpenIntervalRow>(
       `SELECT classification, id::text, probe_generation::text, source_kind,
               source_run_finished_at, source_run_id::text, started_at
@@ -780,9 +940,9 @@ export class PostgresObservationStore implements JobExecutionSink {
 
   async #applyIncidentEffect(
     client: PoolClient,
-    claimed: ClaimedJob,
+    claimed: Pick<ClaimedJob, 'checkId' | 'ownerId'>,
     effect: IncidentEffect,
-    transition: AcceptedObservationTransition,
+    transition: MonitoringTransitionPlan,
   ): Promise<void> {
     switch (effect.kind) {
       case 'OPEN_INCIDENT': {
@@ -963,6 +1123,62 @@ export class PostgresObservationStore implements JobExecutionSink {
         exactlyOne(incident.rowCount, 'Incident recovery did not match its version.');
         return;
       }
+    }
+  }
+
+  async #writeFreshnessEvents(
+    client: PoolClient,
+    candidate: Pick<FreshnessCandidate, 'checkId' | 'ownerId'>,
+    previousCurrent: CurrentHealthSnapshot,
+    transition: FreshnessReconciliation,
+  ): Promise<void> {
+    for (const fact of transition.eventFacts) {
+      if (fact.kind === 'FRESHNESS_CHANGED') {
+        await writeActivatedOutboxEvent(client, {
+          aggregateId: candidate.checkId,
+          aggregateType: 'check_state',
+          aggregateVersion: transition.current.stateVersion,
+          correlationId: candidate.checkId,
+          destinations: ['REALTIME'],
+          eventType: 'check.freshness_changed',
+          ownerId: candidate.ownerId,
+          payload: {
+            changed_at: transitionTime(fact.transitionedAtMs),
+            check_id: candidate.checkId,
+            freshness: fact.to,
+            previous_freshness: previousCurrent.freshnessState,
+            reason_code: 'DEADLINE',
+            state_version: transition.current.stateVersion.toString(),
+          },
+        });
+        continue;
+      }
+      if (fact.kind === 'INCIDENT_SUSPENDED') {
+        const effect = transition.incidentEffects.find(
+          (item): item is Extract<IncidentEffect, { kind: 'SUSPEND_INCIDENT' }> =>
+            item.kind === 'SUSPEND_INCIDENT' && item.incident.id === fact.incidentId,
+        );
+        if (!effect) throw new Error('Freshness suspension event has no matching effect.');
+        await writeActivatedOutboxEvent(client, {
+          aggregateId: fact.incidentId,
+          aggregateType: 'incident',
+          aggregateVersion: effect.incident.resourceVersion,
+          correlationId: candidate.checkId,
+          destinations: ['REALTIME'],
+          eventType: 'incident.observation_suspended',
+          ownerId: candidate.ownerId,
+          payload: {
+            check_id: candidate.checkId,
+            incident_id: fact.incidentId,
+            reason_code: 'STALE',
+            resource_version: effect.incident.resourceVersion.toString(),
+            segment_id: effect.segmentId,
+            suspended_at: transitionTime(fact.transitionedAtMs),
+          },
+        });
+        continue;
+      }
+      throw new Error(`Freshness reconciliation produced unsupported fact ${fact.kind}.`);
     }
   }
 

@@ -41,7 +41,7 @@ Bu aşama probe çalıştırmaz, job claim etmez, SQL transaction'ı açmaz, e-p
 - Job/attempt claim, lease, heartbeat ve retry
 - Gerçek `check_runs` insert'i ve attempt idempotency guard'ı — uygulandı
 - Satır kilitleri, SQL effect uygulama ve transaction commit'i — uygulandı
-- Freshness reconciliation işlerinin kalıcı planlanması/claim edilmesi
+- Freshness reconciliation işlerinin bounded, owner-fair seçimi ve kalıcı uygulanması — uygulandı
 - Motoru gerçek probe sonuç akışına bağlama — persistence sink uygulandı; production loop aktivasyonu açık
 - Worker concurrency, fairness, overlap engeli ve restart recovery
 

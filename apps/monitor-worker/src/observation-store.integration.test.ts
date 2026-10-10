@@ -115,7 +115,12 @@ databaseSuite('monitor PostgreSQL observation store', () => {
     }
   }, 30_000);
 
-  async function insertCheck(input: { id: string; paused?: boolean }): Promise<void> {
+  async function insertCheck(input: {
+    id: string;
+    ownerId?: string;
+    paused?: boolean;
+  }): Promise<void> {
+    const checkOwnerId = input.ownerId ?? ownerId;
     await schemaPool.query(
       `INSERT INTO app.checks
          (id, owner_id, name, url, interval_seconds, timeout_ms,
@@ -127,7 +132,7 @@ databaseSuite('monitor PostgreSQL observation store', () => {
                     ELSE NULL END)`,
       [
         input.id,
-        ownerId,
+        checkOwnerId,
         `https://${input.id.slice(-4)}.example.test/status?secret=never-emit`,
         input.paused ? 'PAUSED' : 'ACTIVE',
       ],
@@ -135,7 +140,7 @@ databaseSuite('monitor PostgreSQL observation store', () => {
     await schemaPool.query(
       `INSERT INTO monitoring.check_current_states (owner_id, check_id)
        VALUES ($1, $2)`,
-      [ownerId, input.id],
+      [checkOwnerId, input.id],
     );
     await schemaPool.query(
       `INSERT INTO monitoring.open_health_intervals
@@ -143,7 +148,7 @@ databaseSuite('monitor PostgreSQL observation store', () => {
           probe_generation, source_kind)
        VALUES ($1, $2, 'UNKNOWN', statement_timestamp() - interval '1 second',
                1, 'STARTUP')`,
-      [ownerId, input.id],
+      [checkOwnerId, input.id],
     );
   }
 
@@ -194,6 +199,30 @@ databaseSuite('monitor PostgreSQL observation store', () => {
       queue,
       store: new PostgresObservationStore(monitorPool, workerId, 5_000, queue),
     };
+  }
+
+  async function expireFreshness(checkId: string): Promise<Date> {
+    const interval = await schemaPool.query(
+      `UPDATE monitoring.open_health_intervals AS open_interval
+       SET started_at = state.last_accepted_run_finished_at - interval '1 second'
+       FROM monitoring.check_current_states AS state
+       WHERE open_interval.owner_id = state.owner_id
+         AND open_interval.check_id = state.check_id
+         AND state.owner_id = $1 AND state.check_id = $2
+         AND state.last_accepted_run_finished_at IS NOT NULL`,
+      [ownerId, checkId],
+    );
+    expect(interval.rowCount).toBe(1);
+    const state = await schemaPool.query<{ fresh_until: Date }>(
+      `UPDATE monitoring.check_current_states
+       SET fresh_until = last_accepted_run_finished_at
+       WHERE owner_id = $1 AND check_id = $2
+         AND last_accepted_run_finished_at IS NOT NULL
+       RETURNING fresh_until`,
+      [ownerId, checkId],
+    );
+    expect(state.rowCount).toBe(1);
+    return state.rows[0]!.fresh_until;
   }
 
   it('persists one concurrent result and materializes pending manual intent atomically', async () => {
@@ -454,5 +483,212 @@ databaseSuite('monitor PostgreSQL observation store', () => {
       invalid_job_state: 'RUNNING',
       invalid_runs: '0',
     });
+  });
+
+  it('reconciles one overdue state once across concurrent replicas', async () => {
+    const checkId = '00000000-0000-4000-8000-000000010006';
+    const jobId = '00000000-0000-7000-8000-000000010006';
+    await insertCheck({ id: checkId });
+    await insertJob({ checkId, id: jobId });
+    const firstRuntime = runtime('monitor-worker:freshness-first');
+    const claim = await claimStarted(firstRuntime.queue, checkId, jobId);
+    await firstRuntime.store.persistResult(claim, passingResult);
+    const deadline = await expireFreshness(checkId);
+
+    const candidates = await firstRuntime.store.listFreshnessCandidates(10);
+    expect(candidates).toContainEqual({
+      checkId,
+      freshUntil: deadline.toISOString(),
+      ownerId,
+    });
+    const secondRuntime = runtime('monitor-worker:freshness-second');
+    const outcomes = await Promise.all([
+      firstRuntime.store.reconcileFreshness({ checkId, ownerId }),
+      secondRuntime.store.reconcileFreshness({ checkId, ownerId }),
+    ]);
+    expect(outcomes.filter((result) => result.outcome === 'RECONCILED')).toHaveLength(1);
+    await expect(firstRuntime.store.reconcileFreshness({ checkId, ownerId })).resolves.toEqual({
+      outcome: 'STALE',
+    });
+
+    const persisted = await schemaPool.query<{
+      deadline_events: string;
+      freshness_state: string;
+      health_state: string;
+      history_intervals: string;
+      source_kind: string;
+      stale_reconciled_at: Date;
+      state_version: string;
+    }>(
+      `SELECT state.freshness_state, state.health_state,
+              state.stale_reconciled_at, state.state_version::text,
+              open_interval.source_kind,
+              (SELECT count(*)::text FROM monitoring.health_intervals history
+               WHERE history.owner_id = state.owner_id
+                 AND history.check_id = state.check_id) AS history_intervals,
+              (SELECT count(*)::text FROM infra.outbox_events event
+               WHERE event.event_type = 'check.freshness_changed'
+                 AND event.aggregate_id = state.check_id
+                 AND event.payload->>'reason_code' = 'DEADLINE') AS deadline_events
+       FROM monitoring.check_current_states AS state
+       JOIN monitoring.open_health_intervals AS open_interval
+         ON open_interval.owner_id = state.owner_id
+        AND open_interval.check_id = state.check_id
+       WHERE state.owner_id = $1 AND state.check_id = $2`,
+      [ownerId, checkId],
+    );
+    expect(persisted.rows[0]).toEqual({
+      deadline_events: '1',
+      freshness_state: 'STALE',
+      health_state: 'UP',
+      history_intervals: '2',
+      source_kind: 'FRESHNESS',
+      stale_reconciled_at: deadline,
+      state_version: '3',
+    });
+  });
+
+  it('suspends an observed incident at the exact freshness deadline', async () => {
+    const checkId = '00000000-0000-4000-8000-000000010007';
+    await insertCheck({ id: checkId });
+    const { queue, store } = runtime('monitor-worker:freshness-incident');
+    for (const suffix of ['1', '2']) {
+      const jobId = `00000000-0000-7000-8000-00000001007${suffix}`;
+      await insertJob({ checkId, id: jobId });
+      const claim = await claimStarted(queue, checkId, jobId);
+      await store.persistResult(claim, failingResult);
+    }
+    const deadline = await expireFreshness(checkId);
+
+    await expect(store.reconcileFreshness({ checkId, ownerId })).resolves.toMatchObject({
+      outcome: 'RECONCILED',
+      stateVersion: '4',
+    });
+    const persisted = await schemaPool.query<{
+      close_reason: string;
+      ended_at: Date;
+      freshness_state: string;
+      health_state: string;
+      incident_events: string;
+      observation_mode: string;
+      observed_duration_ms: string;
+      runs: string;
+    }>(
+      `SELECT state.freshness_state, state.health_state,
+              incident.observation_mode, incident.observed_duration_ms::text,
+              segment.ended_at, segment.close_reason,
+              (SELECT count(*)::text FROM monitoring.check_runs run
+               WHERE run.owner_id = state.owner_id AND run.check_id = state.check_id) AS runs,
+              (SELECT count(*)::text FROM infra.outbox_events event
+               WHERE event.event_type = 'incident.observation_suspended'
+                 AND event.aggregate_id = incident.id) AS incident_events
+       FROM monitoring.check_current_states AS state
+       JOIN monitoring.incidents AS incident
+         ON incident.owner_id = state.owner_id AND incident.id = state.open_incident_id
+       JOIN monitoring.incident_segments AS segment
+         ON segment.owner_id = incident.owner_id AND segment.incident_id = incident.id
+       WHERE state.owner_id = $1 AND state.check_id = $2`,
+      [ownerId, checkId],
+    );
+    expect(persisted.rows[0]).toMatchObject({
+      close_reason: 'STALE',
+      ended_at: deadline,
+      freshness_state: 'STALE',
+      health_state: 'DOWN',
+      incident_events: '1',
+      observation_mode: 'UNOBSERVED',
+      runs: '2',
+    });
+    expect(Number(persisted.rows[0]!.observed_duration_ms)).toBeGreaterThan(0);
+  });
+
+  it('converges when a new observation races freshness reconciliation', async () => {
+    const checkId = '00000000-0000-4000-8000-000000010008';
+    const firstJobId = '00000000-0000-7000-8000-000000010081';
+    const secondJobId = '00000000-0000-7000-8000-000000010082';
+    await insertCheck({ id: checkId });
+    await insertJob({ checkId, id: firstJobId });
+    const { queue, store } = runtime('monitor-worker:freshness-race');
+    const firstClaim = await claimStarted(queue, checkId, firstJobId);
+    await store.persistResult(firstClaim, passingResult);
+    await expireFreshness(checkId);
+    await insertJob({ checkId, id: secondJobId });
+    const secondClaim = await claimStarted(queue, checkId, secondJobId);
+
+    const [, observation] = await Promise.all([
+      store.reconcileFreshness({ checkId, ownerId }),
+      store.persistResult(secondClaim, passingResult),
+    ]);
+    expect(observation).toMatchObject({ accepted: true, jobOutcome: 'COMPLETED' });
+
+    const persisted = await schemaPool.query<{
+      deadline_events: string;
+      freshness_state: string;
+      health_state: string;
+      runs: string;
+      source_kind: string;
+      stale_reconciled_at: Date | null;
+      state_version: string;
+    }>(
+      `SELECT state.freshness_state, state.health_state,
+              state.stale_reconciled_at, state.state_version::text,
+              open_interval.source_kind,
+              (SELECT count(*)::text FROM monitoring.check_runs run
+               WHERE run.owner_id = state.owner_id AND run.check_id = state.check_id) AS runs,
+              (SELECT count(*)::text FROM infra.outbox_events event
+               WHERE event.event_type = 'check.freshness_changed'
+                 AND event.aggregate_id = state.check_id
+                 AND event.payload->>'reason_code' = 'DEADLINE') AS deadline_events
+       FROM monitoring.check_current_states AS state
+       JOIN monitoring.open_health_intervals AS open_interval
+         ON open_interval.owner_id = state.owner_id
+        AND open_interval.check_id = state.check_id
+       WHERE state.owner_id = $1 AND state.check_id = $2`,
+      [ownerId, checkId],
+    );
+    expect(persisted.rows[0]).toEqual({
+      deadline_events: '1',
+      freshness_state: 'FRESH',
+      health_state: 'UP',
+      runs: '2',
+      source_kind: 'RUN',
+      stale_reconciled_at: null,
+      state_version: '4',
+    });
+  });
+
+  it('selects overdue candidates fairly across owners before applying the batch limit', async () => {
+    const secondOwnerId = '00000000-0000-4000-8000-000000000202';
+    await schemaPool.query(
+      `INSERT INTO auth.users
+         (id, email_normalized, email_display, display_name, status, email_verified_at)
+       VALUES ($1, 'freshness-owner@example.test', 'freshness-owner@example.test',
+               'Freshness Owner', 'ACTIVE', statement_timestamp())
+       ON CONFLICT (id) DO NOTHING`,
+      [secondOwnerId],
+    );
+    const checks = [
+      { id: '00000000-0000-4000-8000-000000010091', ownerId },
+      { id: '00000000-0000-4000-8000-000000010092', ownerId },
+      { id: '00000000-0000-4000-8000-000000010093', ownerId: secondOwnerId },
+    ];
+    for (const check of checks) {
+      await insertCheck(check);
+      await schemaPool.query(
+        `UPDATE monitoring.check_current_states
+         SET freshness_state = 'FRESH',
+             fresh_until = statement_timestamp() - interval '1 second',
+             stale_reconciled_at = NULL
+         WHERE owner_id = $1 AND check_id = $2`,
+        [check.ownerId, check.id],
+      );
+    }
+
+    const { store } = runtime('monitor-worker:freshness-fairness');
+    const candidates = await store.listFreshnessCandidates(2);
+    expect(candidates).toHaveLength(2);
+    expect(new Set(candidates.map((candidate) => candidate.ownerId))).toEqual(
+      new Set([ownerId, secondOwnerId]),
+    );
   });
 });

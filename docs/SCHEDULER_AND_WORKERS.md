@@ -2,7 +2,7 @@
 
 **Aşama:** 9 — Kalıcı Scheduler ve Monitor Worker
 
-**Durum:** Uygulama devam ediyor — temel şema, materialization/lease, bounded dispatcher, fault/recovery ve atomik observation persistence dilimleri doğrulandı; production loop henüz aktif değil
+**Durum:** Uygulama devam ediyor — temel şema, materialization/lease, bounded dispatcher, fault/recovery, atomik observation persistence ve freshness reconciliation dilimleri doğrulandı; production loop henüz aktif değil
 
 **Tarih:** 2026-10-10 12:33 +06:00
 
@@ -784,7 +784,7 @@ Retry attempt ve backoff loglanır fakat SQL metni/parametreleri veya hassas sna
 10. 20/200/500 kapasite, process-kill/restart ve API-isolation kanıtları
 11. Compose smoke, tam CI, karar/geliştirme/proje durumu güncellemeleri
 
-İlk yedi dilim uygulanmış ve doğrulanmıştır. Her dilim küçük ve anlamlı commit olur. Migration revision uygulandıktan sonra değiştirilmez; bulunan sorun yeni forward migration ile düzeltilir.
+İlk sekiz dilim uygulanmış ve doğrulanmıştır. Her dilim küçük ve anlamlı commit olur. Migration revision uygulandıktan sonra değiştirilmez; bulunan sorun yeni forward migration ile düzeltilir.
 
 ## 26. Tamamlanma kapısı
 
