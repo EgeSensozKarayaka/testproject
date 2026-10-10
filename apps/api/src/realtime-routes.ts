@@ -80,10 +80,13 @@ export function registerRealtimeRoutes(app: FastifyInstance, options: RealtimeRo
       });
       reply.hijack();
       raw.writeHead(200, {
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Allow-Origin': options.allowedOrigin,
         'Cache-Control': 'no-store, no-transform',
         Connection: 'keep-alive',
         'Content-Type': 'text/event-stream; charset=utf-8',
         Pragma: 'no-cache',
+        Vary: 'Origin',
         'X-Accel-Buffering': 'no',
         'X-Request-Id': request.id,
       });

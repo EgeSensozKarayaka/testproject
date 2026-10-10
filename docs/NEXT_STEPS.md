@@ -1,21 +1,22 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 19:50 +06:00
+**Son güncelleme:** 2026-10-10 20:22 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–12 ve Aşama 13 Dilim 1–2 tamamlandı
+**Mevcut kilometre taşı:** Aşama 0–13 tamamlandı
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
-## 1. Sıradaki Çalışma — Aşama 13 Dilim 3
+## 1. Sıradaki Çalışma — Aşama 14 Authenticated Frontend Mimarisi
 
-[`REALTIME.md`](./REALTIME.md) nihai mimarisine göre:
+Önce [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) kapsamıyla uyumlu nihai frontend mimarisi ve durum matrisi hazırlanacaktır:
 
-- Browser `fetch` stream parser'ını, stale detection/reconnect backoff'unu ve polling fallback'i uygula
-- Stream-before-snapshot koordinasyonunu mevcut authenticated query cache/invalidation akışına bağla
-- İki browser, slow consumer, reconnect ve worker outage kabul/kapsam testlerini tamamla
-- Capacity/proxy kanıtlarından sonra `REALTIME` destination'ını güvenli cutover ile aktive et
+- Güncel durum/freshness/bakım dashboard'u ve responsive bilgi hiyerarşisi
+- History response-time grafikleri, availability ve incident günlüğü
+- Maintenance window ile notification recipient/policy yönetimi
+- Loading, empty, stale, partial-error ve erişilebilirlik matrisi
+- Mevcut snapshot/realtime katmanının query sınırları ve iki-client Playwright kabul planı
 
-Aşama 12 kapanış ölçümleri [history kapasite raporunda](./HISTORY_CAPACITY_REPORT.md) saklanır.
+Aşama 13 kapanış ölçümleri [realtime kapasite raporunda](./REALTIME_CAPACITY_REPORT.md), Aşama 12 ölçümleri [history kapasite raporunda](./HISTORY_CAPACITY_REPORT.md) saklanır.
 
 ## 2. Aşama 10 Kapanış Kanıtları
 

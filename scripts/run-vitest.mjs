@@ -50,6 +50,15 @@ if (mode === 'integration') {
     '--no-file-parallelism',
     'capacity/history-capacity.integration.test.ts',
   ];
+} else if (mode === 'realtime-capacity') {
+  process.env.REALTIME_CAPACITY = '1';
+  vitestArgs = [
+    'exec',
+    'vitest',
+    'run',
+    '--no-file-parallelism',
+    'capacity/realtime-capacity.integration.test.ts',
+  ];
 } else {
   vitestArgs = [
     'exec',

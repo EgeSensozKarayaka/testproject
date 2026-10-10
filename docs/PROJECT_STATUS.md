@@ -1,17 +1,22 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 19:50 +06:00
+**Son güncelleme:** 2026-10-10 20:22 +06:00
 
-**Genel durum:** Aşama 0–12 ve Aşama 13 Dilim 1–2 tamamlandı; browser client/cutover Dilim 3 sırada
+**Genel durum:** Aşama 0–13 tamamlandı; sıradaki çalışma Aşama 14 authenticated frontend mimarisi
 
 ## Tamamlanan
 
+- Aşama 13 Dilim 3: bağımlılıksız credentialed fetch-stream parser, UTF-8/chunk/CRLF güvenliği, heartbeat tabanlı 45 saniye stale abort, bounded full-jitter reconnect, 401/403 terminal auth kaybı, `Retry-After`, stream-before-snapshot buffering, 60 saniye reconciliation ve üç kararsız çevrim sonrası polling fallback
+- React yapılandırma ekranında canlı bağlantı/polling durumu sağlık state'inden ayrı gösterilir; iki bağımsız browser session'ında ikinci istemcinin check mutation'ı ilk ekrana reload olmadan yansıdı. İlk kabul koşusunda bulunan raw SSE CORS başlık eksikliği exact-origin/credentials/Vary response ve regresyon testiyle kapatıldı; Playwright **4/4** geçti
+- Forward-only Revision 28 `REALTIME` destination'ını migration-owned biçimde aktive eder. Yerel migration head 28 ve ikinci koşu idempotenttir; migrate/API/realtime-worker/web production-benzeri imajları healthy, listener connected ve relay dispatch tüketir
+- Realtime kapasite profili iki replica üzerinde 20/200/500 exact broadcast'i, profil başına 20 eşzamanlı owner-scoped REST okumasını ve 500 burst'ünde slow-client izolasyonunu geçti. 500 profili **513,77 ms**, **1.946,38 event/sn**, REST p95 **34,87 ms** ölçtü; sınırlar `docs/REALTIME_CAPACITY_REPORT.md` içindedir
+- Aşama 13 kapanış kalite kapısı format, 58-operation contract drift, lint, bütün strict typecheck'ler, **36 dosyada 247/247 unit**, **17 dosyada 92/92 gerçek PostgreSQL/socket/process integration**, bütün production build'leri ve full-stack Playwright **4/4** ile geçti
 - Aşama 13 Dilim 2: her API replica'da request pool'undan ayrı PostgreSQL listener, grace-aware readiness/reconnect, owner/session/IP/global admission limitli local hub, bounded/coalescing slow-consumer kuyruğu ve owner-RLS private projection katmanı
 - `GET /api/v1/events` authenticated SSE sınırı; exact origin, `Accept`/session/rate/capacity kontrolü, no-cache/no-buffering header'ları, ilk `stream.ready`, 15 saniye heartbeat, periyodik session doğrulama, logout'ta anlık local stream kapatma ve bounded graceful shutdown
 - İki API listener'ı aynı PostgreSQL notification'ını kendi owner client'ına yayınlarken diğer owner'a sıfır frame verdi; cross-owner projection RLS ile sonuç üretmedi ve zorla kesilen listener `SUBSCRIBER_RESTARTED` sonrası yeniden bağlanıp yayın almaya devam etti. Slow consumer overflow'u yalnız ilgili bağlantıyı kapattı
 - Aşama 13 Dilim 2 final `pnpm run ci` kapısı format, 58-operation contract drift, lint, bütün strict typecheck'ler, **35 dosyada 239/239 unit**, **17 dosyada 92/92 gerçek PostgreSQL/socket/process integration** ve bütün production build'leriyle geçti. Full-stack Playwright **4/4** geçti; güncel API image'ında listener bağlandı, readiness `200` oldu ve production `REALTIME` activation satır sayısı bilinçli olarak `0` kaldı
 - Aşama 13 Dilim 1: Revision 27 ile dar `site_monitor_realtime` rolü, REALTIME-only lease/fencing claim ve completion/retry/dead sınırı, aynı transaction'da 1 KiB altı redacted PostgreSQL wake-up ve schema preflight'i
-- Ayrı `realtime-worker` process/container'ı; bounded poll/batch/retry, deterministic full-jitter, terminal unsupported-event kararı, loop-aware readiness ve bounded graceful shutdown. Production `REALTIME` destination bilinçli olarak pasif bırakıldı
+- Ayrı `realtime-worker` process/container'ı; bounded poll/batch/retry, deterministic full-jitter, terminal unsupported-event kararı, loop-aware readiness ve bounded graceful shutdown. Dilim 1'de pasif doğrulanan `REALTIME` destination Dilim 3 Revision 28 ile aktive edildi
 - Realtime relay gerçek PostgreSQL paketi **4/4** geçti: rollback'te sıfır notification, commit'te exact redacted wake-up, expired lease sonrası stale fence reddi ve retry/dead durumlarında yayın yokluğu. Unit toplamı **227/227**, integration toplamı **91/91** geçti; güncel container readiness `200`
 - Aşama 13 Dilim 1 final `pnpm run ci` kapısı format, 58-operation contract drift, lint, bütün workspace strict typecheck'leri, **32 dosyada 227/227 unit**, **16 dosyada 91/91 gerçek PostgreSQL/socket/process integration** ve bütün production build'leriyle geçti; 500-check monitor regresyonu **59,24 check/s** ölçtü
 - Aşama 13 için ayrı least-privilege realtime relay process'i, transactional outbox completion + PostgreSQL wake-up broadcast'i, API replica listener/owner hub'ı, fetch-stream browser client'ı, snapshot reconciliation, backpressure, session yaşam döngüsü, polling fallback ve public Aşama 15 aktivasyon sınırını kesinleştiren `docs/REALTIME.md`
@@ -177,10 +182,9 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Aşama 13 browser stream client, snapshot/polling koordinasyonu ve `REALTIME` cutover kodu; relay ve private API stream tamamlandı, hedef henüz pasif
 - Notification recipient/policy yönetim arayüzü (backend ve worker tamam; yönetim frontend'i Aşama 14 kapsamındadır)
 - History grafikleri ve incident journal yönetim arayüzü (private backend API tamam)
-- SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
+- Nihai durum/freshness/bakım monitoring dashboard'u ve public durum sayfası; authenticated SSE altyapısı tamamdır
 - Predictor analiz algoritması/model lifecycle'ı
 - MFA/passkey, OAuth/OIDC, organizasyon/üyelik/rol modeli ve kullanıcıya açık session/device yönetimi
 - Production deployment, servis başına ayrı login secret'ları, managed backup/PITR ve production restore drill'i
@@ -202,4 +206,4 @@
 
 ## Sıradaki İş
 
-Aşama 13 Dilim 3 uygulanacaktır: fetch-stream browser client, stale/reconnect ve polling fallback, stream-before-snapshot query koordinasyonu, iki-browser/slow-client kabulü, capacity/proxy kanıtları ve güvenli `REALTIME` cutover'ı. Public production stream Aşama 15'e bağlı kalacaktır.
+Aşama 14 authenticated frontend nihai mimarisi hazırlanacaktır: güncel durum/freshness/bakım dashboard'u, history grafikleri, incident günlüğü, maintenance ve notification yönetimi, responsive/erişilebilir durum matrisi ve iki-client kabul planı. Public production stream Aşama 15'e bağlı kalacaktır.

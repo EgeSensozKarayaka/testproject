@@ -76,7 +76,7 @@ Mevcut repository şu temeli sağlar:
 
 Kalan uygulama boşlukları:
 
-1. `REALTIME` destination production'da bilinçli olarak aktif değildir; relay consumer hazır ve pasif hedefte doğrulanmıştır.
+1. `REALTIME` destination Revision 28 ile, relay/API/browser kabulü tamamlandıktan sonra aktive edilmiştir.
 2. Fetch-stream browser parser'ı, 45 saniye stale detection, snapshot coordination ve polling fallback henüz uygulanmamıştır.
 3. Mevcut OpenAPI `DashboardPage` tek cursor ile iki collection'ı tarif eder; browser yakınsaması bu nedenle görünür ekranın bounded snapshot setini kullanacaktır.
 4. Production capacity/proxy kabulü ve iki gerçek browser yakınsaması Dilim 3 kapsamındadır.
@@ -411,11 +411,12 @@ Sonuçlar local baseline olarak raporlanır; production SLO veya sonsuz bağlant
 
 ### Dilim 3 — Browser client, cutover ve kapanış
 
-- fetch-stream parser, stale detection, backoff, snapshot coordinator ve polling fallback;
-- mevcut authenticated UI query invalidation bağlantısı;
-- `REALTIME` activation cutover;
-- iki browser/reconnect/replica/slow-client acceptance;
-- capacity report, Compose/proxy config ve tam CI.
+- [x] fetch-stream parser, stale detection, backoff, snapshot coordinator ve polling fallback;
+- [x] mevcut authenticated UI query invalidation bağlantısı;
+- [x] Revision 28 ile `REALTIME` activation cutover;
+- [x] iki browser/reconnect/replica/slow-client acceptance;
+- [x] capacity report ve Compose/proxy config;
+- [ ] tam CI ve production image/E2E kapanış kapısı.
 
 Public production adapter Aşama 15'in ilk diliminde shared Aşama 13 transport'una bağlanır.
 
@@ -445,7 +446,7 @@ Public production adapter Aşama 15'in ilk diliminde shared Aşama 13 transport'
 
 Aşama 13 ancak aşağıdakilerin tamamı sağlandığında uygulama olarak tamamlanmış sayılır:
 
-- Revision 27 ve realtime worker clean database ile kurulabilir ve idempotent migration kapısından geçer;
+- Revision 27–28, realtime worker ve cutover clean database ile kurulabilir ve idempotent migration kapısından geçer;
 - private SSE, iki browser ve iki API replica ile otomatik güncellemeyi kanıtlar;
 - owner izolasyonu, race-free snapshot, listener/worker restart ve slow-consumer senaryoları geçer;
 - polling fallback canlı kanal kaybını check DOWN state'iyle karıştırmaz;

@@ -396,7 +396,7 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 - `docs/REALTIME.md`
 
-**Mimari durumu:** 2026-10-10 19:12 +06:00 tarihinde nihai tasarım hazırlandı; 19:31'de Dilim 1 relay çekirdeği, 19:50'de Dilim 2 private API stream/projection tamamlandı. Gerçek public route/snapshot aktivasyonu Aşama 15'te atomik olarak yapılır.
+**Mimari durumu:** 2026-10-10 19:12 +06:00 tarihinde nihai tasarım hazırlandı; 19:31'de Dilim 1 relay çekirdeği, 19:50'de Dilim 2 private API stream/projection, 20:22'de Dilim 3 browser client/cutover/kapanış tamamlandı. Gerçek public route/snapshot aktivasyonu Aşama 15'te atomik olarak yapılır.
 
 **Uygulama kapsamı:**
 
@@ -647,4 +647,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 13 Dilim 2 — Private API stream ve projection** tamamlanmıştır. Dedicated API listener, owner-scoped bounded hub/projection, authenticated SSE route, session/backpressure yaşam döngüsü, cross-owner RLS ve iki API replica reconnect/broadcast davranışı uygulanıp doğrulandı. `REALTIME` activation kapalı kaldı.
 
-**Sıradaki çalışma Aşama 13 Dilim 3 — Browser client, cutover ve kapanıştır.** Fetch-stream parser, stale/reconnect/polling fallback, snapshot koordinasyonu, iki browser kabulü, capacity/proxy kanıtları ve güvenli `REALTIME` activation uygulanacaktır.
+**Aşama 13 Dilim 3 — Browser client, cutover ve kapanış** tamamlanmıştır. Credentialed fetch-stream parser, 45 saniye stale algısı, full-jitter reconnect, stream-before-snapshot koordinasyonu, 60 saniye reconciliation ve üç kararsız çevrim sonrası polling fallback uygulanmıştır. Revision 28 `REALTIME` hedefini aktive eder; iki tarayıcı reload olmadan yakınsamış, 20/200/500 iki-replica kapasite profili ve slow-client izolasyonu geçmiştir.
+
+**Sıradaki çalışma Aşama 14 — Authenticated Frontend nihai mimarisidir.** Mevcut canlı güncellenen yapılandırma ekranı; durum dashboard'u, freshness/bakım görünümü, history grafikleri, incident günlüğü ve notification/maintenance yönetimiyle tamamlanacaktır.

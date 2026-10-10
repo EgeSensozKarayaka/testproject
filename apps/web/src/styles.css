@@ -227,6 +227,38 @@ dd {
 .workspace-subtitle {
   margin: 0;
 }
+.header-controls {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.realtime-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #334b66;
+  border-radius: 999px;
+  color: #b8c7da;
+  background: rgb(15 31 50 / 85%);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.realtime-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #fbbf24;
+}
+.realtime-live .realtime-dot {
+  background: #2dd4bf;
+  box-shadow: 0 0 0 0.2rem rgb(45 212 191 / 14%);
+}
+.realtime-polling .realtime-dot,
+.realtime-reconnecting .realtime-dot {
+  background: #fb923c;
+}
 .header-action {
   flex: 0 0 auto;
   margin-top: 0.35rem;
@@ -478,6 +510,10 @@ dd {
   }
   .header-action {
     margin: 0;
+  }
+  .header-controls {
+    width: 100%;
+    align-items: flex-start;
   }
   .heading-actions {
     width: 100%;

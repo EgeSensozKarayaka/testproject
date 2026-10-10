@@ -2,6 +2,10 @@ import type { components } from '@site-monitor/contracts/openapi';
 
 const apiBaseUrl = import.meta.env.VITE_PUBLIC_API_BASE_URL ?? 'http://localhost:13000';
 
+export function apiUrl(path: string): string {
+  return `${apiBaseUrl}${path}`;
+}
+
 type Schemas = components['schemas'];
 
 export type SessionView = Schemas['SessionView'];
@@ -49,7 +53,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
   if (init.body !== undefined && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(apiUrl(path), {
     ...init,
     credentials: 'include',
     headers,

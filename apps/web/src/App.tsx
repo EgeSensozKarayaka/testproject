@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useState } from 'react';
 
 import { apiRequest, type SessionView } from './api-client.js';
 import { MonitoringDashboard } from './monitoring-ui.js';
@@ -236,6 +236,7 @@ export function App() {
   const [session, setSession] = useState<SessionView | null>(null);
   const path = window.location.pathname;
   const [checking, setChecking] = useState(path === '/');
+  const sessionExpired = useCallback(() => setSession(null), []);
 
   useEffect(() => {
     if (path !== '/') return;
@@ -261,7 +262,11 @@ export function App() {
       {path === '/reset-password' && <TokenAction kind="reset" />}
       {path === '/' && checking && <p role="status">Oturum kontrol ediliyor…</p>}
       {path === '/' && !checking && session && (
-        <MonitoringDashboard onLogout={() => void logout()} session={session} />
+        <MonitoringDashboard
+          onLogout={() => void logout()}
+          onSessionExpired={sessionExpired}
+          session={session}
+        />
       )}
       {path === '/' && !checking && !session && <AuthCard onLogin={setSession} />}
     </main>

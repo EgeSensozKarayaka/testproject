@@ -53,11 +53,6 @@ databaseSuite('maintenance service PostgreSQL boundary', () => {
     });
     await runMigrations(schemaPool, { appBuild: 'maintenance-service-integration-test' });
     await schemaPool.query(
-      `INSERT INTO infra.destination_activations
-         (destination, activated_at, activated_by_revision)
-       VALUES ('REALTIME', statement_timestamp(), 14)`,
-    );
-    await schemaPool.query(
       `INSERT INTO auth.users
          (id, email_normalized, email_display, display_name, status, email_verified_at)
        VALUES

@@ -245,9 +245,10 @@ test('registers, verifies through Mailpit, logs in, and logs out', async ({ page
   await secondPage.getByLabel('Parola').fill(password);
   await secondPage.getByRole('button', { name: 'Giriş yap' }).click();
   await expect(secondPage.getByRole('heading', { name: 'Hoş geldiniz, E2E User' })).toBeVisible();
-
-  await checkCard.getByRole('button', { name: 'Düzenle' }).click();
-  await page.getByLabel('Kontrol adı').fill('Stale first-tab edit');
+  await Promise.all([
+    expect(page.getByLabel('Canlı veri durumu')).toContainText('Canlı güncellemeler etkin'),
+    expect(secondPage.getByLabel('Canlı veri durumu')).toContainText('Canlı güncellemeler etkin'),
+  ]);
 
   const secondCheckCard = secondPage.locator('.check-card').filter({ hasText: 'E2E Homepage' });
   await secondCheckCard.getByRole('button', { name: 'Düzenle' }).click();
@@ -255,10 +256,10 @@ test('registers, verifies through Mailpit, logs in, and logs out', async ({ page
   await secondPage.getByRole('button', { name: 'Kontrolü güncelle' }).click();
   await expect(secondPage.getByRole('heading', { name: 'Updated in second tab' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Kontrolü güncelle' }).click();
-  await expect(page.getByRole('alert')).toContainText('başka bir oturumda değiştirildi');
   checkCard = page.locator('.check-card').filter({ hasText: 'Updated in second tab' });
-  await expect(checkCard.getByRole('heading', { name: 'Updated in second tab' })).toBeVisible();
+  await expect(checkCard.getByRole('heading', { name: 'Updated in second tab' })).toBeVisible({
+    timeout: 10_000,
+  });
   await secondContext.close();
 
   await checkCard.getByRole('button', { name: 'Sil' }).click();

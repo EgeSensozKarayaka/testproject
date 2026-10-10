@@ -215,6 +215,15 @@ databaseSuite('PostgreSQL persistence architecture', () => {
   });
 
   it('routes outbox facts only to migration-activated destinations', async () => {
+    const activations = await pool.query<{ activated_by_revision: string; destination: string }>(
+      `SELECT destination, activated_by_revision::text
+       FROM infra.destination_activations
+       ORDER BY destination`,
+    );
+    expect(activations.rows).toEqual([
+      { activated_by_revision: '19', destination: 'NOTIFICATION' },
+      { activated_by_revision: '28', destination: 'REALTIME' },
+    ]);
     const inactive = await withRole(pool, 'site_monitor_api', ownerA, async (client) =>
       writeActivatedOutboxEvent(client, {
         aggregateId: checkA,
@@ -229,11 +238,6 @@ databaseSuite('PostgreSQL persistence architecture', () => {
     );
     expect(inactive).toEqual({ destinations: [], eventId: null });
 
-    await pool.query(
-      `INSERT INTO infra.destination_activations
-         (destination, activated_at, activated_by_revision)
-       VALUES ('REALTIME', statement_timestamp(), 14)`,
-    );
     const active = await withRoleCommit(
       pool,
       'site_monitor_api',

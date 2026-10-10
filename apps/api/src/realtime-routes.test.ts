@@ -108,6 +108,9 @@ describe('private realtime route', () => {
       signal: controller.signal,
     });
     expect(response.status).toBe(200);
+    expect(response.headers.get('access-control-allow-origin')).toBe('http://localhost:5173');
+    expect(response.headers.get('access-control-allow-credentials')).toBe('true');
+    expect(response.headers.get('vary')).toContain('Origin');
     expect(response.headers.get('content-type')).toContain('text/event-stream');
     expect(response.headers.get('cache-control')).toBe('no-store, no-transform');
     expect(response.headers.get('x-accel-buffering')).toBe('no');

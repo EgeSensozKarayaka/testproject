@@ -11,6 +11,7 @@ import {
   type SessionView,
   monitoringApi,
 } from './api-client.js';
+import { PrivateRealtimeSync, type RealtimeConnectionState } from './realtime-client.js';
 
 function formText(form: FormData, name: string): string {
   const value = form.get(name);
@@ -193,9 +194,11 @@ function StatusBadge({ state }: { state: string }) {
 
 export function MonitoringDashboard({
   onLogout,
+  onSessionExpired,
   session,
 }: {
   onLogout: () => void;
+  onSessionExpired?: () => void;
   session: SessionView;
 }) {
   const [groups, setGroups] = useState<GroupListItem[]>([]);
@@ -211,8 +214,9 @@ export function MonitoringDashboard({
   const [editingGroup, setEditingGroup] = useState<string | null>(null);
   const [editingCheck, setEditingCheck] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [realtimeState, setRealtimeState] = useState<RealtimeConnectionState>('connecting');
 
-  const reload = useCallback(async (showLoading = true) => {
+  const reload = useCallback(async (showLoading = true, propagateError = false) => {
     if (showLoading) setLoading(true);
     try {
       const [groupPage, checkPage] = await Promise.all([
@@ -226,6 +230,7 @@ export function MonitoringDashboard({
       setError('');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Kaynaklar yüklenemedi.');
+      if (propagateError) throw cause;
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -240,6 +245,16 @@ export function MonitoringDashboard({
       active = false;
     };
   }, [reload]);
+
+  useEffect(() => {
+    const realtime = new PrivateRealtimeSync({
+      onAuthLost: () => onSessionExpired?.(),
+      onState: setRealtimeState,
+      reconcile: () => reload(false, true),
+    });
+    realtime.start();
+    return () => realtime.stop();
+  }, [onSessionExpired, reload]);
 
   async function perform(
     key: string,
@@ -310,9 +325,21 @@ export function MonitoringDashboard({
           <h1>Hoş geldiniz, {session.user.display_name}</h1>
           <p className="workspace-subtitle">{session.user.email}</p>
         </div>
-        <button className="secondary header-action" onClick={onLogout} type="button">
-          Çıkış yap
-        </button>
+        <div className="header-controls">
+          <span
+            aria-label="Canlı veri durumu"
+            className={`realtime-state realtime-${realtimeState}`}
+          >
+            <span aria-hidden="true" className="realtime-dot" />
+            {realtimeState === 'live' && 'Canlı güncellemeler etkin'}
+            {realtimeState === 'connecting' && 'Canlı bağlantı kuruluyor'}
+            {realtimeState === 'reconnecting' && 'Canlı bağlantı yeniden kuruluyor'}
+            {realtimeState === 'polling' && 'Periyodik yenileme etkin'}
+          </span>
+          <button className="secondary header-action" onClick={onLogout} type="button">
+            Çıkış yap
+          </button>
+        </div>
       </header>
 
       {error && (

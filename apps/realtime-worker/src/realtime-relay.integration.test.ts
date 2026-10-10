@@ -112,13 +112,13 @@ databaseSuite('realtime relay database boundary', () => {
     }
   });
 
-  it('keeps REALTIME inactive and exposes only the narrow worker boundary', async () => {
+  it('activates REALTIME only through migration and exposes the narrow worker boundary', async () => {
     const activation = await databasePool.query<{ active: boolean }>(
       `SELECT EXISTS (
          SELECT 1 FROM infra.destination_activations WHERE destination = 'REALTIME'
        ) AS active`,
     );
-    expect(activation.rows[0]?.active).toBe(false);
+    expect(activation.rows[0]?.active).toBe(true);
 
     const identity = await realtimePool.query<{ current_user: string }>('SELECT current_user');
     expect(identity.rows[0]?.current_user).toBe('site_monitor_realtime');
