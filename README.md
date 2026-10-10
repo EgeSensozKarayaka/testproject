@@ -2,7 +2,7 @@
 
 Çok kullanıcılı ve kullanıcı bazlı sahiplik izolasyonuna sahip site erişilebilirlik izleme ürünü. Repository; React web uygulaması, Node.js API ve worker süreçleri, PostgreSQL, Mailpit, deterministik hedef simülatörü ve ana sistemden bağımsız opsiyonel Python predictor için çalışır bir geliştirme temeli içerir.
 
-Aşama 8 sonuna kadar güvenli hesap ve owner-scoped group/check yönetimi, scheduler'dan bağımsız gerçek HTTP kontrol motoru, deterministik hedef simülatörü ve saf sağlık/incident reducer'ı uygulanmıştır. Aşama 9 scheduler mimarisi uygulama öncesi incelemeye hazırdır; job claim, sonuç kalıcılığı ve canlı durum akışları henüz runtime'a bağlanmamıştır.
+Aşama 8 sonuna kadar güvenli hesap ve owner-scoped group/check yönetimi, scheduler'dan bağımsız gerçek HTTP kontrol motoru, deterministik hedef simülatörü ve saf sağlık/incident reducer'ı uygulanmıştır. Aşama 9 uygulaması başlamıştır: revision 14 scheduler şema temeli, durable cancellation/manual intent, partition-aware result pointer, activation-aware outbox ve typed worker kapasite ayarları hazırdır. Job claim, sonuç kalıcılığı ve canlı durum akışları henüz runtime'a bağlanmamıştır.
 
 ## Ön koşullar
 
@@ -178,7 +178,7 @@ Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ile
 
 ## Dürüst durum
 
-Aşama 0–8 tamamlanmıştır. On üç immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları, group/check API'si, React yapılandırma yönetimi, güvenli HTTP kontrol motoru ve deterministik sağlık/incident reducer'ı uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
+Aşama 0–8 tamamlanmıştır; Aşama 9 uygulaması devam etmektedir. On dört immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları, group/check API'si, React yapılandırma yönetimi, güvenli HTTP kontrol motoru ve deterministik sağlık/incident reducer'ı uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
 
 Monitor worker kontrol motorunu güvenli runtime bağımlılıklarıyla oluşturur ve sağlık/incident karar motoru saf domain katmanında hazırdır; fakat scheduler/job claim, sonuç kalıcılığı transaction'ı, bakım reconciliation, incident bildirimleri, history sorguları, SSE, canlı monitoring dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran güvenli yapılandırma yönetimini sağlar; henüz canlı durum paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
 

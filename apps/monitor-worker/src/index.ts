@@ -1,4 +1,9 @@
-import { loadDatabaseUrl, loadProbeRuntimeConfig, loadRuntimeConfig } from '@site-monitor/config';
+import {
+  loadDatabaseUrl,
+  loadMonitorRuntimeConfig,
+  loadProbeRuntimeConfig,
+  loadRuntimeConfig,
+} from '@site-monitor/config';
 import type { ServiceHealth } from '@site-monitor/contracts';
 import { createDatabasePool, isDatabaseReady } from '@site-monitor/database';
 import { createLogger } from '@site-monitor/observability';
@@ -12,12 +17,13 @@ const logger = createLogger({
   service: config.serviceName,
   version: config.version,
 });
+const monitorConfig = loadMonitorRuntimeConfig();
 const runtime = {
   database: createDatabasePool({
     applicationName: config.serviceName,
     connectionString: loadDatabaseUrl(),
     databaseRole: 'site_monitor_monitor',
-    maxConnections: 2,
+    maxConnections: monitorConfig.databasePoolSize,
   }),
   probeEngine: createMonitorProbeEngine(loadProbeRuntimeConfig()),
 };

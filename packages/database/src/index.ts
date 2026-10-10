@@ -13,6 +13,12 @@ export {
 export { TARGET_SCHEMA_REVISION } from './migrations.js';
 export type { Pool, PoolClient } from 'pg';
 export { resetDatabase, runSeeds } from './operations.js';
+export {
+  type ActivatedOutboxEventInput,
+  type ActivatedOutboxEventResult,
+  type OutboxDestination,
+  writeActivatedOutboxEvent,
+} from './outbox.js';
 export type * from './schema.js';
 
 export interface DatabasePoolOptions {

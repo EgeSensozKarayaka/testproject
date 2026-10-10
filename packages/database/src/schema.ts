@@ -121,6 +121,7 @@ export interface CheckTable extends CreatedUpdatedRow, OwnedRow {
   interval_seconds: number;
   lifecycle_state: 'DELETED' | 'LIVE';
   manual_requested_at: Timestamp | null;
+  manual_requested_mode: 'DIAGNOSTIC' | 'STATEFUL' | null;
   name: string;
   next_fencing_token: GeneratedBigInt;
   next_run_at: Timestamp | null;
@@ -147,6 +148,8 @@ export interface CheckJobTable extends CreatedUpdatedRow, OwnedRow {
   attempt_count: number;
   available_at: GeneratedTimestamp;
   check_id: string;
+  cancellation_reason: 'CHECK_DELETED' | 'CHECK_PAUSED' | 'CONFIGURATION_CHANGED' | null;
+  cancellation_requested_at: Timestamp | null;
   completed_at: Timestamp | null;
   config_snapshot: JsonObject;
   fencing_token: BigIntValue | null;
@@ -177,6 +180,8 @@ export interface CheckJobAttemptTable extends OwnedRow {
   last_heartbeat_at: Timestamp | null;
   lease_acquired_at: Timestamp;
   result_recorded_at: Timestamp | null;
+  result_run_finished_at: Timestamp | null;
+  result_run_id: string | null;
   started_at: Timestamp;
   terminal_reason: 'CANCELLED' | 'INTERNAL_ERROR' | 'LEASE_LOST' | 'RESULT_RECORDED' | null;
   worker_id: string;
@@ -345,6 +350,12 @@ export interface OutboxDispatchTable {
   lease_owner: string | null;
   state: 'COMPLETED' | 'DEAD' | 'PENDING' | 'PROCESSING' | 'RETRY_WAIT';
   updated_at: GeneratedTimestamp;
+}
+
+export interface DestinationActivationTable {
+  activated_at: Timestamp;
+  activated_by_revision: BigIntValue;
+  destination: 'AUDIT' | 'NOTIFICATION' | 'PREDICTION' | 'REALTIME';
 }
 
 export interface ApiIdempotencyRecordTable {
@@ -539,6 +550,7 @@ export interface DatabaseSchema {
   'infra.outbox_dispatches': OutboxDispatchTable;
   'infra.outbox_events': OutboxEventTable;
   'infra.api_idempotency_records': ApiIdempotencyRecordTable;
+  'infra.destination_activations': DestinationActivationTable;
   'monitoring.check_current_states': CheckCurrentStateTable;
   'monitoring.check_job_attempts': CheckJobAttemptTable;
   'monitoring.check_jobs': CheckJobTable;

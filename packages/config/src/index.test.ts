@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   loadDatabaseUrl,
+  loadMonitorRuntimeConfig,
   loadProbeRuntimeConfig,
   loadResourceRuntimeConfig,
   loadRuntimeConfig,
@@ -22,6 +23,48 @@ describe('configuration', () => {
     expect(() => loadDatabaseUrl({ DATABASE_URL: 'https://example.com' })).toThrow(
       'DATABASE_URL must use the postgres or postgresql scheme',
     );
+  });
+});
+
+describe('monitor worker configuration', () => {
+  it('uses bounded defaults that are independent from the check count', () => {
+    expect(loadMonitorRuntimeConfig({})).toEqual({
+      candidateBatchSize: 128,
+      databasePoolSize: 8,
+      dispatchPollMs: 100,
+      freshnessPollMs: 250,
+      globalConcurrency: 64,
+      heartbeatMs: 5_000,
+      leaseGraceMs: 15_000,
+      perHostConcurrency: 4,
+      perOwnerConcurrency: 32,
+      recoveryPollMs: 1_000,
+      scheduleBatchSize: 64,
+      schedulerPollMs: 250,
+      shutdownGraceMs: 30_000,
+    });
+  });
+
+  it('rejects inconsistent concurrency and lease timing', () => {
+    expect(() =>
+      loadMonitorRuntimeConfig({
+        MONITOR_GLOBAL_CONCURRENCY: '8',
+        MONITOR_PER_OWNER_CONCURRENCY: '9',
+      }),
+    ).toThrow('MONITOR_PER_OWNER_CONCURRENCY cannot exceed');
+    expect(() =>
+      loadMonitorRuntimeConfig({
+        MONITOR_HEARTBEAT_MS: '5001',
+        MONITOR_LEASE_GRACE_MS: '15000',
+      }),
+    ).toThrow('MONITOR_HEARTBEAT_MS must be at most one third');
+    expect(() =>
+      loadMonitorRuntimeConfig({
+        MONITOR_CANDIDATE_BATCH_SIZE: '8',
+        MONITOR_GLOBAL_CONCURRENCY: '16',
+        MONITOR_PER_OWNER_CONCURRENCY: '8',
+      }),
+    ).toThrow('MONITOR_CANDIDATE_BATCH_SIZE cannot be lower than concurrency');
   });
 });
 

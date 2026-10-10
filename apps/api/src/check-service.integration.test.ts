@@ -45,6 +45,11 @@ databaseSuite('check service PostgreSQL boundary', () => {
     });
     await runMigrations(schemaPool, { appBuild: 'check-service-integration-test' });
     await schemaPool.query(
+      `INSERT INTO infra.destination_activations
+         (destination, activated_at, activated_by_revision)
+       VALUES ('REALTIME', statement_timestamp(), 14)`,
+    );
+    await schemaPool.query(
       `INSERT INTO auth.users
          (id, email_normalized, email_display, display_name, status, email_verified_at)
        VALUES
@@ -254,10 +259,12 @@ databaseSuite('check service PostgreSQL boundary', () => {
     const state = await schemaPool.query<{
       active_jobs: string;
       manual_pending: boolean;
+      manual_requested_mode: string | null;
       resource_version: string;
     }>(
       `SELECT c.resource_version::text,
               c.manual_requested_at IS NOT NULL AS manual_pending,
+              c.manual_requested_mode,
               count(j.id) FILTER (WHERE j.state IN ('PENDING', 'LEASED', 'RUNNING'))::text AS active_jobs
        FROM app.checks c
        LEFT JOIN monitoring.check_jobs j ON j.owner_id = c.owner_id AND j.check_id = c.id
@@ -268,6 +275,7 @@ databaseSuite('check service PostgreSQL boundary', () => {
     expect(state.rows[0]).toEqual({
       active_jobs: '1',
       manual_pending: true,
+      manual_requested_mode: 'STATEFUL',
       resource_version: '1',
     });
   });
@@ -344,6 +352,72 @@ databaseSuite('check service PostgreSQL boundary', () => {
     });
   });
 
+  it('keeps a leased job active until cancellation acknowledgement', async () => {
+    const created = await service.create(
+      ownerA,
+      createInput('Cancellation Site'),
+      'cancellation-site-create-001',
+      '00000000-0000-7000-8000-000000000051',
+    );
+    const enqueued = await service.requestManualRun(
+      ownerA,
+      created.check.id,
+      '1',
+      'cancellation-site-run-001',
+      '00000000-0000-7000-8000-000000000052',
+    );
+    const attemptId = randomUUID();
+    await schemaPool.query(
+      `UPDATE monitoring.check_jobs
+       SET state = 'LEASED', attempt_count = 1, lease_owner = 'integration-worker',
+           lease_expires_at = statement_timestamp() + interval '30 seconds',
+           heartbeat_at = statement_timestamp(), fencing_token = 1,
+           updated_at = statement_timestamp()
+       WHERE id = $1`,
+      [enqueued.request_id],
+    );
+    await schemaPool.query(
+      `INSERT INTO monitoring.check_job_attempts
+         (id, owner_id, check_id, job_id, attempt_number, worker_id, fencing_token,
+          lease_acquired_at, started_at, last_heartbeat_at)
+       VALUES ($1, $2, $3, $4, 1, 'integration-worker', 1,
+               statement_timestamp(), statement_timestamp(), statement_timestamp())`,
+      [attemptId, ownerA, created.check.id, enqueued.request_id],
+    );
+    const coalesced = await service.requestManualRun(
+      ownerA,
+      created.check.id,
+      '1',
+      'cancellation-site-run-002',
+      '00000000-0000-7000-8000-000000000053',
+    );
+    expect(coalesced).toMatchObject({ disposition: 'COALESCED', mode: 'STATEFUL' });
+
+    await service.pause(ownerA, created.check.id, '1', '00000000-0000-7000-8000-000000000054');
+    const persisted = await schemaPool.query<{
+      cancellation_reason: string | null;
+      cancellation_requested: boolean;
+      manual_requested_at: Date | null;
+      manual_requested_mode: string | null;
+      state: string;
+    }>(
+      `SELECT j.state, j.cancellation_reason,
+              j.cancellation_requested_at IS NOT NULL AS cancellation_requested,
+              c.manual_requested_at, c.manual_requested_mode
+       FROM monitoring.check_jobs j
+       JOIN app.checks c ON c.owner_id = j.owner_id AND c.id = j.check_id
+       WHERE j.id = $1`,
+      [enqueued.request_id],
+    );
+    expect(persisted.rows[0]).toEqual({
+      cancellation_reason: 'CHECK_PAUSED',
+      cancellation_requested: true,
+      manual_requested_at: null,
+      manual_requested_mode: null,
+      state: 'LEASED',
+    });
+  });
+
   it('suspends an observed incident on pause and closes it on delete', async () => {
     const created = await service.create(
       ownerB,
@@ -368,12 +442,11 @@ databaseSuite('check service PostgreSQL boundary', () => {
     await schemaPool.query(
       `INSERT INTO monitoring.check_job_attempts
          (id, owner_id, check_id, job_id, attempt_number, worker_id, fencing_token,
-          lease_acquired_at, started_at, ended_at, terminal_reason, result_recorded_at)
+          lease_acquired_at, started_at, ended_at, terminal_reason)
        VALUES ($1, $2, $3, $4, 1, 'integration-worker', 1,
                statement_timestamp() - interval '10 seconds',
                statement_timestamp() - interval '9 seconds',
-               statement_timestamp() - interval '5 seconds', 'RESULT_RECORDED',
-               statement_timestamp() - interval '5 seconds')`,
+               statement_timestamp() - interval '5 seconds', 'RESULT_RECORDED')`,
       [attemptId, ownerB, created.check.id, jobId],
     );
     const run = await schemaPool.query<{ finished_at: string }>(
@@ -389,6 +462,12 @@ databaseSuite('check service PostgreSQL boundary', () => {
                'FAIL', 'HTTP_STATUS', true)
        RETURNING finished_at::text AS finished_at`,
       [runId, ownerB, created.check.id, jobId, attemptId],
+    );
+    await schemaPool.query(
+      `UPDATE monitoring.check_job_attempts
+       SET result_recorded_at = $5, result_run_finished_at = $5, result_run_id = $4
+       WHERE owner_id = $1 AND check_id = $2 AND job_id = $3 AND id = $6`,
+      [ownerB, created.check.id, jobId, runId, run.rows[0]!.finished_at, attemptId],
     );
     await schemaPool.query(
       `INSERT INTO monitoring.incidents

@@ -1,6 +1,6 @@
 # AI Kullanımı
 
-**Son güncelleme:** 2026-10-10 12:33 +06:00
+**Son güncelleme:** 2026-10-10 13:03 +06:00
 
 ## Araç ve model
 
@@ -25,6 +25,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 7. Group route testleri OpenAPI-to-Fastify parametrik yol uyumsuzluğunu ortaya çıkardı; AI önerisi generator seviyesinde düzeltilip contract drift ve gerçek UUID route testleriyle doğrulandı.
 8. Aşama 8'de onaylanan sağlık/incident mimarisi saf TypeScript reducer'a dönüştürüldü. AI; acceptance precedence, iki-failure threshold, provisional interval çözümleme, incident gap süreleri ve read-time freshness için sequence/regresyon testleri üretti; sonuçlar strict typecheck ve gerçek PostgreSQL ile doğrulandı.
 9. Aşama 9 scheduler/worker mimarisi hazırlanırken AI mevcut migration, API komutları, probe motoru ve sağlık reducer'ı arasındaki kilit/cancellation sınırlarını birlikte inceledi. Bu inceleme sonucunda check-first kanonik kilit sırası, çalışan iş için durable cancellation acknowledgement ve coalesced manuel isteğin modunu koruyan kalıcı intent tasarımı seçildi; kodlama kullanıcı onayından sonraki tura bırakıldı.
+10. Aşama 9'un ilk uygulama diliminde AI revision 14, typed worker config ve ortak activation-aware outbox writer'ı hazırladı. Gerçek PostgreSQL testi helper'ın `INSERT ... RETURNING` nedeniyle API rolünden gereksiz `SELECT` istediğini gösterince rolü genişletmek yerine helper yalnız mevcut dar `INSERT` yetkisiyle çalışacak şekilde düzeltildi.
 
 ## Güvenlik ve gizlilik
 

@@ -6,7 +6,12 @@ import path from 'node:path';
 import { Pool, type PoolClient, type QueryResultRow } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createDatabasePool, createQueryDatabase, isDatabaseReady } from './index.js';
+import {
+  createDatabasePool,
+  createQueryDatabase,
+  isDatabaseReady,
+  writeActivatedOutboxEvent,
+} from './index.js';
 import { getSchemaState, runMigrations, TARGET_SCHEMA_REVISION } from './migrations.js';
 import { resetDatabase, runSeeds } from './operations.js';
 import { dropTestDatabase } from './testing.js';
@@ -54,11 +59,15 @@ async function withRoleCommit<T extends QueryResultRow>(
   pool: Pool,
   role: 'site_monitor_api' | 'site_monitor_notifier',
   query: (client: PoolClient) => Promise<T>,
+  ownerId: string | null = null,
 ): Promise<T> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     await client.query(`SET LOCAL ROLE ${role}`);
+    if (ownerId) {
+      await client.query(`SELECT set_config('app.current_user_id', $1, true)`, [ownerId]);
+    }
     const result = await query(client);
     await client.query('COMMIT');
     return result;
@@ -98,7 +107,7 @@ databaseSuite('PostgreSQL persistence architecture', () => {
   it('migrates from zero, records checksums, and is idempotent', async () => {
     const first = await runMigrations(pool, { appBuild: 'integration-test' });
     expect(first.currentRevision).toBe(TARGET_SCHEMA_REVISION);
-    expect(first.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+    expect(first.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
 
     const second = await runMigrations(pool, { appBuild: 'integration-test' });
     expect(second).toEqual({ applied: [], currentRevision: TARGET_SCHEMA_REVISION });
@@ -200,6 +209,55 @@ databaseSuite('PostgreSQL persistence architecture', () => {
     } finally {
       client.release();
     }
+  });
+
+  it('routes outbox facts only to migration-activated destinations', async () => {
+    const inactive = await withRole(pool, 'site_monitor_api', ownerA, async (client) =>
+      writeActivatedOutboxEvent(client, {
+        aggregateId: checkA,
+        aggregateType: 'check',
+        aggregateVersion: 1,
+        correlationId: '00000000-0000-7000-8000-000000000901',
+        destinations: ['PREDICTION'],
+        eventType: 'check.run_recorded',
+        ownerId: ownerA,
+        payload: { check_id: checkA },
+      }),
+    );
+    expect(inactive).toEqual({ destinations: [], eventId: null });
+
+    await pool.query(
+      `INSERT INTO infra.destination_activations
+         (destination, activated_at, activated_by_revision)
+       VALUES ('REALTIME', statement_timestamp(), 14)`,
+    );
+    const active = await withRoleCommit(
+      pool,
+      'site_monitor_api',
+      (client) =>
+        writeActivatedOutboxEvent(client, {
+          aggregateId: checkA,
+          aggregateType: 'check',
+          aggregateVersion: 1,
+          correlationId: '00000000-0000-7000-8000-000000000902',
+          destinations: ['PREDICTION', 'REALTIME', 'REALTIME'],
+          eventType: 'check.health_changed',
+          ownerId: ownerA,
+          payload: { check_id: checkA },
+        }),
+      ownerA,
+    );
+    expect(active.eventId).not.toBeNull();
+    expect(active.destinations).toEqual(['REALTIME']);
+    const persisted = await pool.query<{ destinations: string; events: string }>(
+      `SELECT
+         (SELECT count(*)::text FROM infra.outbox_events WHERE correlation_id = $1) AS events,
+         (SELECT count(*)::text FROM infra.outbox_dispatches d
+            JOIN infra.outbox_events e ON e.id = d.event_id
+            WHERE e.correlation_id = $1) AS destinations`,
+      ['00000000-0000-7000-8000-000000000902'],
+    );
+    expect(persisted.rows[0]).toEqual({ destinations: '1', events: '1' });
   });
 
   it('applies the check/group foundation constraints and narrow API write boundary', async () => {
@@ -615,7 +673,7 @@ databaseSuite('PostgreSQL persistence architecture', () => {
       NODE_ENV: 'test',
     });
     expect(result.currentRevision).toBe(TARGET_SCHEMA_REVISION);
-    expect(result.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]);
+    expect(result.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
     expect((await pool.query('SELECT id FROM auth.users')).rowCount).toBe(0);
   });
 });

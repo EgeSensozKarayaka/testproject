@@ -1,7 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 import type { Pool, PoolClient } from '@site-monitor/database';
-import { withUserTransaction } from '@site-monitor/database';
+import { withUserTransaction, writeActivatedOutboxEvent } from '@site-monitor/database';
 import {
   classifyGroupChanges,
   DomainValidationError,
@@ -11,7 +11,6 @@ import {
 } from '@site-monitor/domain';
 
 import { ApiProblemError } from './problem.js';
-import { createUuidV7 } from './request-id.js';
 
 export interface GroupDto {
   created_at: string;
@@ -154,28 +153,16 @@ async function writeEvent(
     payload: Record<string, unknown>;
   },
 ): Promise<void> {
-  const eventId = createUuidV7();
-  await client.query(
-    `INSERT INTO infra.outbox_events
-       (id, owner_id, event_type, schema_version, aggregate_type, aggregate_id,
-        aggregate_version, correlation_id, occurred_at, payload)
-     VALUES ($1, $2, $3, 1, $4, $5, $6, $7, statement_timestamp(), $8::jsonb)`,
-    [
-      eventId,
-      input.ownerId,
-      input.eventType,
-      input.aggregateType,
-      input.aggregateId,
-      input.aggregateVersion,
-      input.correlationId,
-      JSON.stringify(input.payload),
-    ],
-  );
-  await client.query(
-    `INSERT INTO infra.outbox_dispatches (event_id, destination)
-     VALUES ($1, 'REALTIME')`,
-    [eventId],
-  );
+  await writeActivatedOutboxEvent(client, {
+    aggregateId: input.aggregateId,
+    aggregateType: input.aggregateType,
+    aggregateVersion: input.aggregateVersion,
+    correlationId: input.correlationId,
+    destinations: ['REALTIME'],
+    eventType: input.eventType,
+    ownerId: input.ownerId,
+    payload: input.payload,
+  });
 }
 
 async function writeAudit(

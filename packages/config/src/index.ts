@@ -253,3 +253,70 @@ export function loadProbeRuntimeConfig(
     userAgent: parsed.PROBE_USER_AGENT,
   };
 }
+
+export interface MonitorRuntimeConfig {
+  candidateBatchSize: number;
+  databasePoolSize: number;
+  dispatchPollMs: number;
+  freshnessPollMs: number;
+  globalConcurrency: number;
+  heartbeatMs: number;
+  leaseGraceMs: number;
+  perHostConcurrency: number;
+  perOwnerConcurrency: number;
+  recoveryPollMs: number;
+  scheduleBatchSize: number;
+  schedulerPollMs: number;
+  shutdownGraceMs: number;
+}
+
+export function loadMonitorRuntimeConfig(
+  environment: NodeJS.ProcessEnv = process.env,
+): MonitorRuntimeConfig {
+  const parsed = z
+    .object({
+      MONITOR_CANDIDATE_BATCH_SIZE: z.coerce.number().int().min(1).max(2_000).default(128),
+      MONITOR_DB_POOL_SIZE: z.coerce.number().int().min(2).max(64).default(8),
+      MONITOR_DISPATCH_POLL_MS: z.coerce.number().int().min(25).max(60_000).default(100),
+      MONITOR_FRESHNESS_POLL_MS: z.coerce.number().int().min(25).max(60_000).default(250),
+      MONITOR_GLOBAL_CONCURRENCY: z.coerce.number().int().min(1).max(1_000).default(64),
+      MONITOR_HEARTBEAT_MS: z.coerce.number().int().min(100).max(60_000).default(5_000),
+      MONITOR_LEASE_GRACE_MS: z.coerce.number().int().min(1_000).max(300_000).default(15_000),
+      MONITOR_PER_HOST_CONCURRENCY: z.coerce.number().int().min(1).max(1_000).default(4),
+      MONITOR_PER_OWNER_CONCURRENCY: z.coerce.number().int().min(1).max(1_000).default(32),
+      MONITOR_RECOVERY_POLL_MS: z.coerce.number().int().min(100).max(60_000).default(1_000),
+      MONITOR_SCHEDULE_BATCH_SIZE: z.coerce.number().int().min(1).max(2_000).default(64),
+      MONITOR_SCHEDULER_POLL_MS: z.coerce.number().int().min(25).max(60_000).default(250),
+      MONITOR_SHUTDOWN_GRACE_MS: z.coerce.number().int().min(1_000).max(600_000).default(30_000),
+    })
+    .parse(environment);
+
+  if (parsed.MONITOR_PER_OWNER_CONCURRENCY > parsed.MONITOR_GLOBAL_CONCURRENCY) {
+    throw new Error('MONITOR_PER_OWNER_CONCURRENCY cannot exceed MONITOR_GLOBAL_CONCURRENCY');
+  }
+  if (parsed.MONITOR_PER_HOST_CONCURRENCY > parsed.MONITOR_GLOBAL_CONCURRENCY) {
+    throw new Error('MONITOR_PER_HOST_CONCURRENCY cannot exceed MONITOR_GLOBAL_CONCURRENCY');
+  }
+  if (parsed.MONITOR_HEARTBEAT_MS * 3 > parsed.MONITOR_LEASE_GRACE_MS) {
+    throw new Error('MONITOR_HEARTBEAT_MS must be at most one third of MONITOR_LEASE_GRACE_MS');
+  }
+  if (parsed.MONITOR_CANDIDATE_BATCH_SIZE < parsed.MONITOR_GLOBAL_CONCURRENCY) {
+    throw new Error('MONITOR_CANDIDATE_BATCH_SIZE cannot be lower than concurrency');
+  }
+
+  return {
+    candidateBatchSize: parsed.MONITOR_CANDIDATE_BATCH_SIZE,
+    databasePoolSize: parsed.MONITOR_DB_POOL_SIZE,
+    dispatchPollMs: parsed.MONITOR_DISPATCH_POLL_MS,
+    freshnessPollMs: parsed.MONITOR_FRESHNESS_POLL_MS,
+    globalConcurrency: parsed.MONITOR_GLOBAL_CONCURRENCY,
+    heartbeatMs: parsed.MONITOR_HEARTBEAT_MS,
+    leaseGraceMs: parsed.MONITOR_LEASE_GRACE_MS,
+    perHostConcurrency: parsed.MONITOR_PER_HOST_CONCURRENCY,
+    perOwnerConcurrency: parsed.MONITOR_PER_OWNER_CONCURRENCY,
+    recoveryPollMs: parsed.MONITOR_RECOVERY_POLL_MS,
+    scheduleBatchSize: parsed.MONITOR_SCHEDULE_BATCH_SIZE,
+    schedulerPollMs: parsed.MONITOR_SCHEDULER_POLL_MS,
+    shutdownGraceMs: parsed.MONITOR_SHUTDOWN_GRACE_MS,
+  };
+}

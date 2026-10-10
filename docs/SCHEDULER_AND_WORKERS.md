@@ -2,7 +2,7 @@
 
 **Aşama:** 9 — Kalıcı Scheduler ve Monitor Worker
 
-**Durum:** Uygulama öncesi nihai tasarım
+**Durum:** Uygulama devam ediyor — temel şema/config/outbox dilimi doğrulandı
 
 **Tarih:** 2026-10-10 12:33 +06:00
 
@@ -593,7 +593,7 @@ Shutdown cancellation target run veya incident üretmez. Tekrarlı deployment bi
 
 ## 19. Şema ve migration planı
 
-Uygulanmış revision 1–13 değiştirilmez. Revision 14 review'unda asgari olarak:
+Uygulanmış revision 1–13 değiştirilmedi. Revision 14 aşağıdaki temeli forward-only olarak uyguladı:
 
 1. `app.checks.manual_requested_mode` nullable enum ve `(at,mode)` pair constraint'i
 2. `monitoring.check_jobs.cancellation_requested_at`

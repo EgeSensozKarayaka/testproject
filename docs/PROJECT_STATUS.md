@@ -1,18 +1,22 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 12:33 +06:00
+**Son güncelleme:** 2026-10-10 13:10 +06:00
 
-**Genel durum:** Aşama 0–8 tamamlandı ve doğrulandı; Aşama 9 kalıcı scheduler/monitor worker mimarisi uygulama öncesi incelemeye hazırdır
+**Genel durum:** Aşama 0–8 tamamlandı ve doğrulandı; Aşama 9 temel şema/config/outbox dilimi tamamlandı, scheduler runtime uygulaması devam ediyor
 
 ## Tamamlanan
 
+- Revision 14 scheduler temeli: request-time manual mode, durable cancellation request, eksiksiz job runtime-state constraint'i, partition-key result pointer'ı, rejection allowlist'i ve migration-owned destination activation/cutover kaydı
+- API pause/config/delete komutlarında PENDING job için terminal cancel, LEASED/RUNNING job için acknowledgement bekleyen cancellation request; pause sırasında bekleyen STATEFUL manual intent temizliği
+- API ve worker için ortak activation-aware outbox writer; inactive consumer için event/dispatch üretmeme, aktive destination sonrası durable dispatch davranışı ve gereksiz geniş `SELECT` yetkisi vermeyen least-privilege SQL sınırı
+- Monitor worker için global/owner/hostname concurrency, batch, poll, heartbeat, lease, shutdown ve DB pool değerlerini ilişki doğrulamasıyla yükleyen typed runtime config
 - Aşama 8 saf state reducer'ı; immutable snapshot/invariant doğrulaması, canonical observation acceptance precedence, sabit iki-failure threshold, provisional timeline çözümleme, incident segment/duration effect'leri, deadline reconciliation ve bounded event fact'leri
 - Check ve group API sorgularında reconciler'dan bağımsız `fresh_until` read-time override'ı; effective UNKNOWN/UNOBSERVED görünümü, incident duration cap'i ve aynı semantiği kullanan set-based group aggregate
 - Scheduler/DB'den bağımsız güvenli HTTP probe motoru; versioned snapshot doğrulama, frozen DNS candidate pinning, public IPv4/IPv6 policy, redirect, total deadline/cancellation, bounded streaming/decompression ve typed hata taksonomisi
 - DNS çağrısı yapmayan kısa ömürlü direct TCP/TLS connector; hostname/SNI sertifika doğrulaması, proxy bypass'ı, operator port allowlist'i ve production'da reddedilen exact-origin local simulator istisnası
 - Başarı/body/status, streaming, gecikme/hang, büyük/sıkıştırılmış body, redirect/loop, flaky ve erken bağlantı kapanması fixture'larıyla genişletilmiş hedef simülatörü
 - Aşama 0 gereksinim/kabul kriterleri, Aşama 1 domain/durum makineleri, Aşama 2 monorepo/runtime/CI temeli, Aşama 3 kalıcılık ve Aşama 4 API/event/hata sözleşmeleri
-- PostgreSQL 18.6 üzerinde on üç checksum'lı, immutable ve forward-only migration; schema-aware readiness, ayrı migration container'ı ve idempotent development seed'i
+- PostgreSQL 18.6 üzerinde on dört checksum'lı, immutable ve forward-only migration; schema-aware readiness, ayrı migration container'ı ve idempotent development seed'i
 - Private tablolar için composite sahiplik kısıtları, `FORCE RLS`, transaction-local owner context'i ve dar service rolleri
 - Canonical OpenAPI 3.1'den deterministik TypeScript tipleri ile Fastify runtime şemaları; merkezi RFC 9457 problem yanıtı ve UUIDv7 request korelasyonu
 - 15–128 code-point parola politikası, zxcvbn güç kontrolü, bounded async Argon2id hash/verify ve parametre yükseltme yolu
@@ -40,6 +44,9 @@
 
 ## Doğrulama Kanıtları
 
+- Aşama 9 temel diliminde strict workspace typecheck geçti; unit paket **19 dosyada 151/151**, sıfırdan revision 1–14 migration ve gerçek PostgreSQL API/RLS/outbox sınırı **4 dosyada 36/36** geçti.
+- Aşama 9 final `pnpm run ci` kapısı format, 57-operation contract drift, lint, strict typecheck, **151/151 unit**, **36/36 integration** ve bütün production build'leriyle geçti. Güncel migration/API/monitor-worker imajları üretildi; migration revision 14'ü doğruladı, API ile monitor worker healthy oldu ve iki readiness endpoint'i de `200` döndürdü.
+- İlk activation-aware outbox entegrasyonu `INSERT ... RETURNING` nedeniyle API rolünden gereksiz `SELECT` istedi ve testte `42501` ile reddedildi. Yetki genişletilmeden SQL akışı düzeltildi; aynı paket sonraki koşuda tamamen geçti.
 - Aşama 8 domain paketi **16/16** odaklı testte geçti; buna 250 observation'lık sabit-seed sequence, duplicate/diagnostic/stale fencing reddi, provisional UP/DOWN/UNKNOWN çözümleme, incident suspend/resume/recovery ve deadline duration cap dahildir.
 - Check/group PostgreSQL sınırı **17/17** geçti. Reconciler gecikmesinde list/filter sonucu STALE/UNKNOWN, incident görünümü UNOBSERVED ve duration deadline'da capped; group aggregate 20/200/500 canlı check fixture'ıyla doğrulandı. Kapasite testinin fixture + sorgu süresi yerel warm koşuda **359 ms** idi.
 - Final `pnpm run ci`; format, 57-operation contract drift, lint, strict typecheck, **18 dosyada 147/147 unit**, gerçek PostgreSQL ile **4 dosyada 34/34 integration** ve bütün production build'leriyle geçti.
@@ -72,7 +79,7 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Scheduler/job claim, check overlap engeli, global concurrency/fairness ve probe sonucu kalıcılığı
+- Scheduler/job claim, heartbeat/recovery, check overlap engeli, çalışan dispatcher ve probe sonucu kalıcılığı
 - Saf health/incident planlarının PostgreSQL observation transaction'ına bağlanması, maintenance reconciliation ve incident e-posta politikaları
 - Rollup/retention background işleri, history sorguları ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
@@ -96,4 +103,4 @@
 
 ## Sıradaki İş
 
-[`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) incelemesi sonrasında Aşama 9'u küçük dilimlerle uygulamak: typed config/cadence, revision 14, check-first claim/lease/fencing, bounded dispatcher, cancellation acknowledgement, atomik observation adapter, freshness reconciler ve 20/200/500 dayanıklılık kanıtları.
+Aşama 9'un sıradaki dilimi: saf cadence/backoff/fairness yardımcıları, check-first due/manual materialization ve claim/lease/heartbeat/fencing adapter'ı. Ardından bounded dispatcher, cancellation acknowledgement, atomik observation adapter, freshness reconciler ve 20/200/500 dayanıklılık kanıtları gelecek.

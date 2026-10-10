@@ -1,7 +1,11 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 import type { Pool, PoolClient } from '@site-monitor/database';
-import { withUserTransaction } from '@site-monitor/database';
+import {
+  type OutboxDestination,
+  withUserTransaction,
+  writeActivatedOutboxEvent,
+} from '@site-monitor/database';
 import {
   classifyCheckChanges,
   DomainValidationError,
@@ -159,6 +163,11 @@ interface CheckRow {
   timeout_ms: number;
   updated_at: Date | string;
   url: string;
+}
+
+interface LockedCheckRow extends CheckRow {
+  manual_requested_at: Date | string | null;
+  manual_requested_mode: ManualMode | null;
 }
 
 interface CheckListRow extends CheckRow {
@@ -320,35 +329,22 @@ async function writeEvent(
     aggregateType: string;
     aggregateVersion: string;
     correlationId: string;
-    destinations?: Array<'NOTIFICATION' | 'REALTIME'>;
+    destinations?: OutboxDestination[];
     eventType: string;
     ownerId: string;
     payload: Record<string, unknown>;
   },
 ): Promise<void> {
-  const eventId = createUuidV7();
-  await client.query(
-    `INSERT INTO infra.outbox_events
-       (id, owner_id, event_type, schema_version, aggregate_type, aggregate_id,
-        aggregate_version, correlation_id, occurred_at, payload)
-     VALUES ($1, $2, $3, 1, $4, $5, $6, $7, statement_timestamp(), $8::jsonb)`,
-    [
-      eventId,
-      input.ownerId,
-      input.eventType,
-      input.aggregateType,
-      input.aggregateId,
-      input.aggregateVersion,
-      input.correlationId,
-      JSON.stringify(input.payload),
-    ],
-  );
-  for (const destination of input.destinations ?? ['REALTIME']) {
-    await client.query(
-      `INSERT INTO infra.outbox_dispatches (event_id, destination) VALUES ($1, $2)`,
-      [eventId, destination],
-    );
-  }
+  await writeActivatedOutboxEvent(client, {
+    aggregateId: input.aggregateId,
+    aggregateType: input.aggregateType,
+    aggregateVersion: input.aggregateVersion,
+    correlationId: input.correlationId,
+    destinations: input.destinations ?? ['REALTIME'],
+    eventType: input.eventType,
+    ownerId: input.ownerId,
+    payload: input.payload,
+  });
 }
 
 async function writeAudit(
@@ -396,14 +392,22 @@ async function cancelActiveJobs(
   client: PoolClient,
   ownerId: string,
   checkId: string,
-  reason: string,
+  reason: 'CHECK_DELETED' | 'CHECK_PAUSED' | 'CONFIGURATION_CHANGED',
 ): Promise<void> {
   await client.query(
     `UPDATE monitoring.check_jobs
      SET state = 'CANCELLED', completed_at = statement_timestamp(),
          terminal_reason = $3, updated_at = statement_timestamp()
      WHERE owner_id = $1 AND check_id = $2
-       AND state IN ('PENDING', 'LEASED', 'RUNNING')`,
+       AND state = 'PENDING'`,
+    [ownerId, checkId, reason],
+  );
+  await client.query(
+    `UPDATE monitoring.check_jobs
+     SET cancellation_requested_at = statement_timestamp(),
+         cancellation_reason = $3, updated_at = statement_timestamp()
+     WHERE owner_id = $1 AND check_id = $2
+       AND state IN ('LEASED', 'RUNNING')`,
     [ownerId, checkId, reason],
   );
 }
@@ -1063,6 +1067,12 @@ export class CheckService implements CheckServicePort {
         `UPDATE app.checks
          SET execution_state = 'PAUSED', resource_version = resource_version + 1,
              schedule_generation = schedule_generation + 1, next_run_at = NULL,
+             manual_requested_at = CASE
+               WHEN manual_requested_mode = 'STATEFUL' THEN NULL
+               ELSE manual_requested_at END,
+             manual_requested_mode = CASE
+               WHEN manual_requested_mode = 'STATEFUL' THEN NULL
+               ELSE manual_requested_mode END,
              updated_at = statement_timestamp()
          WHERE owner_id = $1 AND id = $2 AND lifecycle_state = 'LIVE'
          RETURNING id, group_id, name, url, interval_seconds, timeout_ms,
@@ -1210,7 +1220,8 @@ export class CheckService implements CheckServicePort {
       }>(
         `UPDATE app.checks
          SET lifecycle_state = 'DELETED', deleted_at = statement_timestamp(),
-             execution_state = 'PAUSED', next_run_at = NULL, manual_requested_at = NULL,
+             execution_state = 'PAUSED', next_run_at = NULL,
+             manual_requested_at = NULL, manual_requested_mode = NULL,
              resource_version = resource_version + 1,
              schedule_generation = schedule_generation + 1,
              updated_at = statement_timestamp()
@@ -1309,19 +1320,18 @@ export class CheckService implements CheckServicePort {
       );
       const mode: ManualMode = current.execution_state === 'ACTIVE' ? 'STATEFUL' : 'DIAGNOSTIC';
       const requestId = createUuidV7();
-      const requested = await client.query<{ requested_at: Date | string }>(
-        `SELECT statement_timestamp() AS requested_at`,
-      );
-      const requestedAt = instant(requested.rows[0]!.requested_at);
       const disposition = active.rows[0] ? 'COALESCED' : 'ENQUEUED';
+      let receiptMode = mode;
+      let requestedAt: string;
       if (disposition === 'ENQUEUED') {
-        await client.query(
+        const inserted = await client.query<{ requested_at: Date | string }>(
           `INSERT INTO monitoring.check_jobs
              (id, owner_id, check_id, trigger_kind, manual_mode, scheduled_for,
               available_at, priority, state, config_snapshot, resource_version,
               probe_generation, schedule_generation)
            VALUES ($1, $2, $3, 'MANUAL', $4, statement_timestamp(),
-                   statement_timestamp(), 100, 'PENDING', $5::jsonb, $6, $7, $8)`,
+                   statement_timestamp(), 100, 'PENDING', $5::jsonb, $6, $7, $8)
+           RETURNING scheduled_for AS requested_at`,
           [
             requestId,
             ownerId,
@@ -1340,19 +1350,29 @@ export class CheckService implements CheckServicePort {
             current.schedule_generation,
           ],
         );
+        requestedAt = instant(inserted.rows[0]!.requested_at);
       } else {
-        await client.query(
+        const pending = await client.query<{
+          manual_requested_at: Date | string;
+          manual_requested_mode: ManualMode;
+        }>(
           `UPDATE app.checks
            SET manual_requested_at = COALESCE(manual_requested_at, statement_timestamp()),
+               manual_requested_mode = CASE
+                 WHEN manual_requested_at IS NULL THEN $3
+                 ELSE manual_requested_mode END,
                updated_at = updated_at
-           WHERE owner_id = $1 AND id = $2 AND lifecycle_state = 'LIVE'`,
-          [ownerId, checkId],
+           WHERE owner_id = $1 AND id = $2 AND lifecycle_state = 'LIVE'
+           RETURNING manual_requested_at, manual_requested_mode`,
+          [ownerId, checkId, mode],
         );
+        receiptMode = pending.rows[0]!.manual_requested_mode;
+        requestedAt = instant(pending.rows[0]!.manual_requested_at);
       }
       const receipt: ManualRunReceiptDto = {
         check_id: checkId,
         disposition,
-        mode,
+        mode: receiptMode,
         request_id: requestId,
         requested_at: requestedAt,
       };
@@ -1395,10 +1415,10 @@ export class CheckService implements CheckServicePort {
   readonly #checkSelect = `SELECT id, group_id, name, url, interval_seconds, timeout_ms,
       expected_status_code, expected_body_substring, execution_state,
       resource_version::text, probe_generation::text, schedule_generation::text,
-      created_at, updated_at FROM app.checks`;
+      created_at, updated_at, manual_requested_at, manual_requested_mode FROM app.checks`;
 
-  async #lockCheck(client: PoolClient, ownerId: string, checkId: string): Promise<CheckRow> {
-    const result = await client.query<CheckRow>(
+  async #lockCheck(client: PoolClient, ownerId: string, checkId: string): Promise<LockedCheckRow> {
+    const result = await client.query<LockedCheckRow>(
       `${this.#checkSelect}
        WHERE owner_id = $1 AND id = $2 AND lifecycle_state = 'LIVE'
        FOR UPDATE`,
