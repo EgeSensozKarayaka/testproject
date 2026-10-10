@@ -26,7 +26,8 @@
     "lint": "node scripts/run-lint.mjs",
     "test": "node scripts/run-tests.mjs",
     "test:capacity": "node scripts/run-vitest.mjs capacity",
-    "test:e2e": "playwright test",
+    "test:e2e": "pnpm test:e2e:prepare && playwright test",
+    "test:e2e:prepare": "pnpm --filter @site-monitor/notifications... build",
     "test:integration": "node scripts/run-vitest.mjs integration",
     "test:unit": "node scripts/run-vitest.mjs unit",
     "typecheck": "node scripts/run-typecheck.mjs"
