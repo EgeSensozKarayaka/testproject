@@ -1,7 +1,7 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 09:50 +06:00
-**Genel durum:** Aşama 5 doğrulandı; Aşama 6 yerel uygulama ve kapanış kanıtları tamamlandı, push sonrası GitHub CI bekleniyor
+**Son güncelleme:** 2026-10-10 09:53 +06:00
+**Genel durum:** Aşama 0–6 tamamlandı ve doğrulandı; Aşama 7 güvenli HTTP kontrol motoru tasarımı sırada
 
 ## Tamamlanan
 
@@ -45,6 +45,7 @@
 - Check API sonrası tam Compose stack temizden rebuild edildi; migration logu revision 13'ün uygulandığını, schema compatibility head değerinin `13` olduğunu ve bütün uygulama servislerinin healthy olduğunu gösterdi. Canlı readiness `200`, oturumsuz check list/tekil yolları beklenen `401` döndürdü.
 - Aşama 6 group API GitHub Actions koşusu [`38015275133`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38015275133) başarıyla tamamlandı: Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin beşi de geçti.
 - Aşama 6 check API GitHub Actions koşusu [`38018138265`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38018138265) başarıyla tamamlandı: Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin beşi de geçti.
+- Aşama 6 React yönetim ve kapanış koşusu [`38022028585`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38022028585) başarıyla tamamlandı: Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin beşi de geçti.
 - `pnpm typecheck`: ortak paketler, React, API, iki worker ve target simulator için strict TypeScript kontrolü geçti.
 - Playwright (sistem Edge): auth frontend smoke, iki bağımsız browser context ve UI → Mailpit → verification → login → group/check CRUD → manual run → pause/resume → ikinci oturum update → stale ilk oturum `412` recovery → delete → logout akışı **3/3 geçti**.
 - UI kabul testi API'nin varsayılan CORS method listesinin `PATCH` içermediğini gerçek browser preflight'ında yakaladı; explicit method allowlist ve API regresyon testi eklendikten sonra aynı senaryo geçti.
@@ -79,4 +80,4 @@
 
 ## Sıradaki İş
 
-Aşama 6 değişikliklerini anlamlı commit'lerle `origin/main` dalına göndermek, GitHub CI sonucunu kaydetmek ve ardından Aşama 7 güvenli HTTP kontrol motoru tasarım belgesine geçmek.
+Aşama 7 güvenli HTTP kontrol motorunu kodlamadan önce `docs/CHECK_ENGINE.md` içinde DNS/IP pinning, redirect politikası, connect/total timeout, streaming/body sınırı, hata taksonomisi ve SSRF/DNS-rebinding savunmalarını nihai hale getirmek.

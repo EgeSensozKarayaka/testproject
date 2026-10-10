@@ -171,7 +171,7 @@ Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ile
 
 ## Dürüst durum
 
-Aşama 0–5 tamamlanmıştır; Aşama 6 sürmektedir. On üç immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları, group/check API'si ve React yapılandırma yönetimi uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
+Aşama 0–6 tamamlanmıştır; sıradaki çalışma Aşama 7 güvenli HTTP kontrol motorunun tasarımıdır. On üç immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları, group/check API'si ve React yapılandırma yönetimi uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
 
 Scheduler, HTTP probe motoru, sonuç kaynaklı incident geçişleri, bakım reconciliation, incident bildirimleri, history sorguları, SSE, canlı monitoring dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran güvenli yapılandırma yönetimini sağlar; henüz canlı durum paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
 

@@ -205,7 +205,7 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 6 — Kontrol ve Grup Yönetimi
 
-**Durum:** Yerel uygulama ve doğrulama tamamlandı — push sonrası GitHub CI kanıtı bekleniyor
+**Durum:** Tamamlandı — yerel ve GitHub CI doğrulamaları geçti
 
 **Amaç:** Monitoring çalıştırılmadan önce kontrol yapılandırmasının güvenilir CRUD modelini oluşturmak.
 
@@ -608,4 +608,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 5 — Kimlik Doğrulama ve Kullanıcı İzolasyonu** tamamlanmıştır. Opaque session, Argon2id/parola politikası, CSRF/origin, enumeration-safe token akışları, PostgreSQL rate limiting, encrypted durable auth e-postası, profil ETag'i ve RLS sahiplik sınırı revision 8–11 ile uygulanmıştır. Unit, PostgreSQL integration, Mailpit ve Playwright kabul akışları geçmiştir.
 
-**Aktif çalışma Aşama 6 — Kontrol ve Grup Yönetimi**dir. Tasarım, domain, revision 12–13, owner-scoped API ve generated sözleşme tiplerini kullanan React yönetim ekranı uygulanmıştır. İki bağımsız tarayıcıda stale `If-Match` çatışması, CRUD, pause/resume ve manual-run kabul akışı; 20/200/500 PostgreSQL cursor profili; 500 kayıtlık bounded UI fixture'ı ve hassas alan log/audit/outbox redaction kanıtı geçmiştir. Yerel kapanış tamamdır; push sonrası GitHub CI sonucu kaydedildikten sonra Aşama 7 tasarımına geçilecektir.
+**Aşama 6 — Kontrol ve Grup Yönetimi** tamamlanmıştır. Tasarım, domain, revision 12–13, owner-scoped API ve generated sözleşme tiplerini kullanan React yönetim ekranı uygulanmıştır. İki bağımsız tarayıcıda stale `If-Match` çatışması, CRUD, pause/resume ve manual-run kabul akışı; 20/200/500 PostgreSQL cursor profili; 500 kayıtlık bounded UI fixture'ı ve hassas alan log/audit/outbox redaction kanıtı geçmiştir. GitHub Actions [`38022028585`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38022028585) beş işin tamamında başarılıdır.
+
+**Sıradaki çalışma Aşama 7 — Güvenli HTTP Kontrol Motoru ve Hedef Simülatörü tasarımı**dır. Kodlamadan önce DNS/IP pinning, redirect, timeout, streaming/body sınırı, hata taksonomisi ve SSRF/DNS-rebinding savunmaları `docs/CHECK_ENGINE.md` içinde nihai hale getirilecektir.
