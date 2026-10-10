@@ -1,8 +1,10 @@
-import { loadDatabaseUrl, loadRuntimeConfig } from '@site-monitor/config';
+import { loadDatabaseUrl, loadProbeRuntimeConfig, loadRuntimeConfig } from '@site-monitor/config';
 import type { ServiceHealth } from '@site-monitor/contracts';
 import { createDatabasePool, isDatabaseReady } from '@site-monitor/database';
 import { createLogger } from '@site-monitor/observability';
 import Fastify from 'fastify';
+
+import { createMonitorProbeEngine } from './probe-runtime.js';
 
 const config = loadRuntimeConfig({ defaultPort: 3011, serviceName: 'monitor-worker' });
 const logger = createLogger({
@@ -10,12 +12,15 @@ const logger = createLogger({
   service: config.serviceName,
   version: config.version,
 });
-const database = createDatabasePool({
-  applicationName: config.serviceName,
-  connectionString: loadDatabaseUrl(),
-  databaseRole: 'site_monitor_monitor',
-  maxConnections: 2,
-});
+const runtime = {
+  database: createDatabasePool({
+    applicationName: config.serviceName,
+    connectionString: loadDatabaseUrl(),
+    databaseRole: 'site_monitor_monitor',
+    maxConnections: 2,
+  }),
+  probeEngine: createMonitorProbeEngine(loadProbeRuntimeConfig()),
+};
 const app = Fastify({ loggerInstance: logger });
 
 function payload(status: ServiceHealth['status']): ServiceHealth {
@@ -29,7 +34,7 @@ function payload(status: ServiceHealth['status']): ServiceHealth {
 
 app.get('/health/live', () => payload('ok'));
 app.get('/health/ready', async (_request, reply) => {
-  const ready = await isDatabaseReady(database);
+  const ready = await isDatabaseReady(runtime.database);
   if (!ready) reply.code(503);
   return payload(ready ? 'ok' : 'unavailable');
 });
@@ -40,7 +45,7 @@ async function stop(signal: string): Promise<void> {
   stopping = true;
   logger.info({ signal }, 'shutting down');
   await app.close();
-  await database.end();
+  await runtime.database.end();
 }
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {

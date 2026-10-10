@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@site-monitor/check-engine": "workspace:*",
     "@site-monitor/config": "workspace:*",
     "@site-monitor/contracts": "workspace:*",
     "@site-monitor/database": "workspace:*",

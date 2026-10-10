@@ -1310,6 +1310,7 @@ export class CheckService implements CheckServicePort {
             checkId,
             mode,
             JSON.stringify({
+              schema_version: 1,
               expected_body_substring: current.expected_body_substring,
               expected_status_code: current.expected_status_code,
               interval_seconds: current.interval_seconds,

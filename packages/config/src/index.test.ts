@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { loadDatabaseUrl, loadResourceRuntimeConfig, loadRuntimeConfig } from './index.js';
+import {
+  loadDatabaseUrl,
+  loadProbeRuntimeConfig,
+  loadResourceRuntimeConfig,
+  loadRuntimeConfig,
+} from './index.js';
 
 describe('configuration', () => {
   it('uses explicit defaults and validates numeric ports', () => {
@@ -38,5 +43,49 @@ describe('resource configuration', () => {
     expect(() => loadResourceRuntimeConfig({ GROUPS_PER_OWNER_LIMIT: '0' })).toThrow(
       'GROUPS_PER_OWNER_LIMIT must be a positive integer or unlimited',
     );
+  });
+});
+
+describe('probe configuration', () => {
+  it('uses bounded public-only defaults', () => {
+    expect(loadProbeRuntimeConfig({})).toEqual({
+      allowedPorts: [80, 443],
+      connectTimeoutMs: 10_000,
+      developmentAllowedOrigins: [],
+      maxDnsResults: 16,
+      maxHeaderBytes: 16_384,
+      maxRedirects: 5,
+      maxResponseBytes: 1_048_576,
+      userAgent: 'SiteAvailabilityMonitor/0.1',
+    });
+  });
+
+  it('accepts an exact local origin only outside production', () => {
+    expect(
+      loadProbeRuntimeConfig({
+        NODE_ENV: 'development',
+        PROBE_ALLOWED_PORTS: '80,443,4010',
+        PROBE_DEV_ALLOWED_ORIGINS: 'http://target-simulator:4010',
+      }),
+    ).toMatchObject({
+      allowedPorts: [80, 443, 4010],
+      developmentAllowedOrigins: ['http://target-simulator:4010'],
+    });
+    expect(() =>
+      loadProbeRuntimeConfig({
+        NODE_ENV: 'production',
+        PROBE_DEV_ALLOWED_ORIGINS: 'http://target-simulator:4010',
+      }),
+    ).toThrow('PROBE_DEV_ALLOWED_ORIGINS is forbidden in production');
+  });
+
+  it('rejects malformed ports, origins and header injection', () => {
+    expect(() => loadProbeRuntimeConfig({ PROBE_ALLOWED_PORTS: '80,nope' })).toThrow();
+    expect(() =>
+      loadProbeRuntimeConfig({ PROBE_DEV_ALLOWED_ORIGINS: 'http://example.com/path' }),
+    ).toThrow();
+    expect(() =>
+      loadProbeRuntimeConfig({ PROBE_USER_AGENT: 'monitor\r\nX-Test: injected' }),
+    ).toThrow();
   });
 });

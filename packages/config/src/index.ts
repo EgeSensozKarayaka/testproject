@@ -176,3 +176,80 @@ export function loadTransactionalEmailConfig(
     smtpPort: parsed.SMTP_PORT,
   };
 }
+
+export interface ProbeRuntimeConfig {
+  allowedPorts: number[];
+  connectTimeoutMs: number;
+  developmentAllowedOrigins: string[];
+  maxDnsResults: number;
+  maxHeaderBytes: number;
+  maxRedirects: number;
+  maxResponseBytes: number;
+  userAgent: string;
+}
+
+function commaSeparatedPorts(value: string): number[] {
+  const ports = [...new Set(value.split(',').map((part) => Number(part.trim())))];
+  if (
+    ports.length === 0 ||
+    ports.some((port) => !Number.isInteger(port) || port < 1 || port > 65_535)
+  ) {
+    throw new Error('PROBE_ALLOWED_PORTS must be a comma-separated list of TCP ports');
+  }
+  return ports;
+}
+
+function commaSeparatedOrigins(value: string): string[] {
+  if (value.trim() === '') return [];
+  return [...new Set(value.split(',').map((part) => part.trim()))].map((origin) => {
+    const parsed = new URL(origin);
+    if (parsed.origin !== origin || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')) {
+      throw new Error('PROBE_DEV_ALLOWED_ORIGINS must contain canonical HTTP(S) origins');
+    }
+    return origin;
+  });
+}
+
+export function loadProbeRuntimeConfig(
+  environment: NodeJS.ProcessEnv = process.env,
+): ProbeRuntimeConfig {
+  const nodeEnvironment = runtimeEnvironmentSchema
+    .default('development')
+    .parse(environment.NODE_ENV);
+  const parsed = z
+    .object({
+      PROBE_ALLOWED_PORTS: z.string().default('80,443'),
+      PROBE_CONNECT_TIMEOUT_MS: z.coerce.number().int().min(1).max(60_000).default(10_000),
+      PROBE_DEV_ALLOWED_ORIGINS: z.string().default(''),
+      PROBE_MAX_DNS_RESULTS: z.coerce.number().int().min(1).max(32).default(16),
+      PROBE_MAX_HEADER_BYTES: z.coerce.number().int().min(1_024).max(65_536).default(16_384),
+      PROBE_MAX_REDIRECTS: z.coerce.number().int().min(0).max(10).default(5),
+      PROBE_MAX_RESPONSE_BYTES: z.coerce
+        .number()
+        .int()
+        .min(1_024)
+        .max(10_485_760)
+        .default(1_048_576),
+      PROBE_USER_AGENT: z
+        .string()
+        .min(1)
+        .max(256)
+        .refine((value) => !value.includes('\r') && !value.includes('\n'))
+        .default('SiteAvailabilityMonitor/0.1'),
+    })
+    .parse(environment);
+  const developmentAllowedOrigins = commaSeparatedOrigins(parsed.PROBE_DEV_ALLOWED_ORIGINS);
+  if (nodeEnvironment === 'production' && developmentAllowedOrigins.length > 0) {
+    throw new Error('PROBE_DEV_ALLOWED_ORIGINS is forbidden in production');
+  }
+  return {
+    allowedPorts: commaSeparatedPorts(parsed.PROBE_ALLOWED_PORTS),
+    connectTimeoutMs: parsed.PROBE_CONNECT_TIMEOUT_MS,
+    developmentAllowedOrigins,
+    maxDnsResults: parsed.PROBE_MAX_DNS_RESULTS,
+    maxHeaderBytes: parsed.PROBE_MAX_HEADER_BYTES,
+    maxRedirects: parsed.PROBE_MAX_REDIRECTS,
+    maxResponseBytes: parsed.PROBE_MAX_RESPONSE_BYTES,
+    userAgent: parsed.PROBE_USER_AGENT,
+  };
+}

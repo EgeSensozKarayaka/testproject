@@ -120,6 +120,9 @@ importers:
 
   apps/monitor-worker:
     dependencies:
+      '@site-monitor/check-engine':
+        specifier: workspace:*
+        version: link:../../packages/check-engine
       '@site-monitor/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -225,6 +228,12 @@ importers:
       '@site-monitor/domain':
         specifier: workspace:*
         version: link:../domain
+      ipaddr.js:
+        specifier: 2.5.0
+        version: 2.5.0
+      undici:
+        specifier: 8.11.2
+        version: 8.11.2
 
   packages/config:
     dependencies:
