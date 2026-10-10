@@ -29,7 +29,8 @@ export interface DatabasePoolOptions {
     | 'site_monitor_monitor'
     | 'site_monitor_notifier'
     | 'site_monitor_predictor'
-    | 'site_monitor_public';
+    | 'site_monitor_public'
+    | 'site_monitor_housekeeper';
   maxConnections?: number;
 }
 

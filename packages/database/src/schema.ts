@@ -231,6 +231,7 @@ export interface IncidentTable extends CreatedUpdatedRow, OwnedRow {
   confirmed_at: Timestamp;
   first_failure_run_finished_at: Timestamp;
   first_failure_run_id: string;
+  group_id_at_open: string | null;
   id: GeneratedUuid;
   last_failure_category: string | null;
   observation_mode: 'OBSERVED' | 'UNOBSERVED';
@@ -301,6 +302,17 @@ export interface HealthIntervalTable extends OwnedRow {
   started_at: Timestamp;
 }
 
+export interface RunEvidenceTable extends OwnedRow {
+  check_id: string;
+  created_at: GeneratedTimestamp;
+  failure_category: string | null;
+  finished_at: Timestamp;
+  id: string;
+  outcome: 'FAIL' | 'PASS';
+  recorded_at: Timestamp;
+  total_ms: number;
+}
+
 export interface RollupTable extends OwnedRow {
   accepted_run_count: number;
   bucket_start: Timestamp;
@@ -322,11 +334,50 @@ export interface RollupTable extends OwnedRow {
 }
 
 export interface RollupCheckpointTable {
+  cursor_check_id: string | null;
+  cursor_owner_id: string | null;
+  cursor_source_at: Timestamp | null;
+  cursor_source_id: string | null;
+  data_through: Timestamp | null;
   last_error_code: string | null;
   last_partition: string | null;
   processor_name: string;
+  revision: GeneratedBigInt;
   updated_at: GeneratedTimestamp;
   watermark_at: Timestamp;
+}
+
+export interface RollupRebuildRangeTable extends CreatedUpdatedRow, OwnedRow {
+  attempt_count: number;
+  check_id: string;
+  id: GeneratedUuid;
+  last_error_code: string | null;
+  next_bucket_start: Timestamp;
+  range_end: Timestamp;
+  range_start: Timestamp;
+  reason: 'BACKFILL' | 'INTERVAL_FINALIZED' | 'MINUTE_CHANGED' | 'REPAIR' | 'RUN_RECORDED';
+  resolution: 'HOUR' | 'MINUTE';
+  source_fingerprint: Buffer;
+  state: 'COMPLETED' | 'FAILED' | 'PENDING';
+}
+
+export interface PartitionRetentionRunTable extends CreatedUpdatedRow {
+  child_name: string;
+  child_schema: string;
+  detached_at: Timestamp | null;
+  drop_after: Timestamp | null;
+  dropped_at: Timestamp | null;
+  id: GeneratedUuid;
+  last_error_code: string | null;
+  parent_relation:
+    | 'monitoring.check_runs'
+    | 'monitoring.health_intervals'
+    | 'monitoring.rollups_hour'
+    | 'monitoring.rollups_minute';
+  partition_end: Timestamp;
+  partition_start: Timestamp;
+  row_count: BigIntValue;
+  state: 'CANCELLED' | 'DETACHED' | 'DISCOVERED' | 'DROPPED' | 'FAILED';
 }
 
 export interface OutboxEventTable {
@@ -585,6 +636,7 @@ export interface DatabaseSchema {
   'infra.outbox_events': OutboxEventTable;
   'infra.api_idempotency_records': ApiIdempotencyRecordTable;
   'infra.destination_activations': DestinationActivationTable;
+  'infra.partition_retention_runs': PartitionRetentionRunTable;
   'monitoring.check_current_states': CheckCurrentStateTable;
   'monitoring.check_job_attempts': CheckJobAttemptTable;
   'monitoring.check_jobs': CheckJobTable;
@@ -593,7 +645,9 @@ export interface DatabaseSchema {
   'monitoring.incident_segments': IncidentSegmentTable;
   'monitoring.incidents': IncidentTable;
   'monitoring.open_health_intervals': OpenHealthIntervalTable;
+  'monitoring.run_evidence': RunEvidenceTable;
   'monitoring.rollup_checkpoints': RollupCheckpointTable;
+  'monitoring.rollup_rebuild_ranges': RollupRebuildRangeTable;
   'monitoring.rollups_hour': RollupTable;
   'monitoring.rollups_minute': RollupTable;
   'notification.deliveries': NotificationDeliveryTable;

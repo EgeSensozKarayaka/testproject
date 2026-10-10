@@ -774,7 +774,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-083 — Availability run oranı değil gözlemlenmiş süre oranıdır
 
 - **Tarih:** 2026-10-10 17:27 +06:00
-- **Durum:** Accepted — Aşama 12 nihai mimarisi
+- **Durum:** Accepted — saf aggregation testleriyle doğrulandı
 - **Bağlam:** Kontrollerin interval'ları değişebilir; server duruşu, pause ve henüz doğrulanmamış ilk hata run sayısına dayalı oranı yanıltır. Veri boşluğu düşüş olarak gösterilmemelidir.
 - **Karar:** Availability `UP / (UP + DOWN)` gözlemlenmiş süre oranıdır. `UNKNOWN` ve açık `PROVISIONAL` paydadan çıkarılır; coverage ayrıca `(UP + DOWN) / requested_window` olarak döner. Her pencere ve bucket `UP + DOWN + UNKNOWN + PROVISIONAL = requested duration` invariant'ını korur.
 - **Alternatifler:** Başarılı run/toplam run oranı; boşluğu DOWN saymak; UNKNOWN süresini availability paydasına katmak.
@@ -784,7 +784,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-084 — Geçmiş çıktısı sabit bütçeli, rollup düzeltmesi kaynak-temelli ve bounded'dır
 
 - **Tarih:** 2026-10-10 17:27 +06:00
-- **Durum:** Accepted — Aşama 12 nihai mimarisi
+- **Durum:** Accepted — Revision 21 şema temeli uygulandı; runtime dilimi sırada
 - **Bağlam:** 30 saniyelik run'ları ay görünümünde doğrudan taramak büyümeyle doğrusal maliyet yaratır. Geç finalize edilen uzun interval'lar geçmiş bucket'ları düzeltebildiği için yalnız monoton zaman watermark'ı yeterli değildir.
 - **Karar:** Day/week/month sırasıyla en fazla 288/336/360 bucket döndürür; minute ve hour rollup'lar source-of-truth'tan deterministik yeniden hesaplanır. Source cursor değişen aralığı bounded, ilerlemeli rebuild range olarak kuyruğa alır. Minute düzeltmesi hour düzeltmesini tetikler; average-of-average yasaktır.
 - **Alternatifler:** İstek anında raw tarama; yalnız append-only watermark; her interval finalize olduğunda bütün bucket'ları tek transaction'da yazmak; yaklaşık availability.
@@ -804,9 +804,19 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-086 — Retention, ham run'dan bağımsız kompakt lineage kanıtı kullanır
 
 - **Tarih:** 2026-10-10 17:27 +06:00
-- **Durum:** Accepted — Aşama 12 nihai mimarisi
+- **Durum:** Accepted — Revision 21 yükseltme ve retention güvenlik testiyle doğrulandı
 - **Bağlam:** Mevcut `check_runs → jobs/attempts` ile `incidents/current-state/segments/open-health/finalized-health → check_runs` foreign key zinciri 30 günlük queue, 90 günlük raw run ve 400 günlük sağlık/incident retention hedeflerini aynı anda uygulanamaz kılar.
 - **Karar:** Forward-only Revision 21 kabul edilmiş stateful run'lar için kompakt `run_evidence` yazar ve uzun ömürlü state, incident ve health-interval referanslarını buraya taşır. Raw run içindeki job/attempt locator'ları korunur fakat kalıcı FK kaldırılır; owner/check/job/attempt eşleşmesi yeni run yazılırken trigger/fonksiyonla doğrulanır. Migration her referans türünü backfill edip sayısal bütünlük kontrolü yapmadan constraint değiştirmez.
 - **Alternatifler:** Bütün raw run/job/attempt verisini 400 gün saklamak; incident FK'lerini kanıtsız kaldırmak; cascading delete; retention hedeflerini sessizce uygulamamak.
 - **Gerekçe:** Tarihsel incident bütünlüğünü korurken geniş raw partition'ları ve terminal queue satırlarını kendi sürelerinde temizleyebilmek.
 - **Sonuçlar:** Referanslı evidence FK `RESTRICT` ile yaşar, referanssız evidence kısa grace sonrası bounded temizlenir. `started_at` ile partition edilen health interval child'ı, içindeki en yeni `ended_at` retention cutoff'tan eski olmadan düşürülemez. İlk production partition drop'u backfill, migration güvenlik ve restore testleri geçmeden aktive edilmez.
+
+## D-087 — History pencere sonu source rollup çözünürlüğüne hizalanır
+
+- **Tarih:** 2026-10-10 17:44 +06:00
+- **Durum:** Accepted — saf window-plan testleriyle doğrulandı
+- **Bağlam:** Minute/hour rollup satırları UTC kaynak sınırlarına hizalıdır. Arbitrary saniyede biten sabit sayıda output bucket, her bucket'ın iki tarafında kısmi source row gerektirir ve aggregate veriden exact süreyi yeniden üretmeyi imkânsızlaştırır.
+- **Karar:** History transaction'ı gerçek DB zamanını `generated_at` olarak korur; day/week `to` değerini UTC dakikaya, month `to` değerini UTC saate aşağı yuvarlar. Rolling pencere ve output bucket'lar bu source-aligned `to` değerinden geriye kurulur.
+- **Alternatifler:** Arbitrary `to` ile bütün dönem raw interval taraması; kısmi source row'ları yaklaşık orantılamak; gelecekteki kısmı UNKNOWN olan ceil-aligned pencere.
+- **Gerekçe:** En fazla 59 dakikalık month data edge'i karşılığında bounded aggregate üzerinden exact, tekrarlanabilir ve cache edilebilir hesap sağlamak; yaklaşık availability üretmemek.
+- **Sonuçlar:** API `generated_at`, aligned `to` ve `data_through` alanlarını ayrı taşır. UI güncellik farkını gizlemez; day/week gecikmesi bir dakikadan, month kaynak kenarı bir saatten küçüktür.

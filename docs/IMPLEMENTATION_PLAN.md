@@ -362,7 +362,7 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 12 — Geçmiş, Rollup, Availability ve Housekeeping
 
-**Durum:** Nihai mimari hazır; uygulama sırada — 2026-10-10 17:27 +06:00
+**Durum:** Uygulama devam ediyor; dilim 1 tamamlandı — 2026-10-10 17:44 +06:00
 
 **Amaç:** Ham veri büyürken günlük, haftalık ve aylık geçmişin hızlı ve doğru açılmasını sağlamak.
 
@@ -633,4 +633,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 12 — Geçmiş, Rollup, Availability ve Housekeeping nihai mimarisi** tamamlanmıştır. Zaman ağırlıklı availability/coverage, sabit day/week/month bucket bütçeleri, bounded yeniden hesaplama kuyruğu, ayrı housekeeping process'i, incident journal cursor semantiği ve detach→grace→drop retention yaşam döngüsü `docs/HISTORY_AND_RETENTION.md` içinde kesinleştirilmiştir. Mevcut foreign key zincirlerinin belgelenmiş retention sürelerini uygulanamaz kıldığı görülmüş; Revision 21 için kompakt run evidence ve yazım-anı lineage doğrulaması tasarlanmıştır.
 
-**Sıradaki çalışma, kullanıcı belgeyi okuduktan sonra Aşama 12 uygulama dilimi 1'dir:** forward-only Revision 21, saf bucket/availability fonksiyonları ve migration güvenlik testleri. Bu plan güncellemesinde üretim kodu veya migration uygulanmamıştır.
+**Aşama 12 uygulama dilimi 1** tamamlanmıştır. Forward-only Revision 21; kompakt run evidence ve FK rewiring, write-time queue lineage doğrulaması, incident group-at-open snapshot'ı, typed rollup cursor/rebuild range, retention manifest ve source-discovery indekslerini ekler. Saf domain katmanı source-aligned sabit pencereleri, exact duration muhasebesini, availability/coverage sınıflandırmasını ve sum/count response aggregation'ını uygular. Revision 20→21 yükseltmesi, raw-run/queue retention bağımsızlığı, least privilege ve mevcut PostgreSQL akışları doğrulanmıştır.
+
+**Sıradaki çalışma Aşama 12 uygulama dilimi 2'dir:** ayrı `housekeeping-worker` runtime'ı, source discovery, bounded minute/hour recompute, partition/default guard ve retention/purge loop'ları.

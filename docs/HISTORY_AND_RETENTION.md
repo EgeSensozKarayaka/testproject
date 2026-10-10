@@ -1,8 +1,10 @@
 # Geçmiş, Rollup, Availability ve Housekeeping Mimarisi
 
-**Durum:** Aşama 12 nihai mimarisi — uygulama başlamadı
+**Durum:** Aşama 12 nihai mimarisi — uygulama dilimi 1 tamamlandı
 
 **Tarih:** 2026-10-10 17:27 +06:00
+
+**Son uygulama güncellemesi:** 2026-10-10 17:44 +06:00
 
 **Kapsam:** FR-HIST-001–008, AC-011, AC-035, AC-060–065, NFR-DATA-002
 
@@ -22,7 +24,7 @@ Bu aşama React grafik ekranını, SSE güncellemelerini, public status projecti
 
 - Bütün kalıcı ve dış API zamanları UTC'dir.
 - Bütün aralıklar `[from,to)` biçiminde yarı açıktır.
-- `period=day|week|month` istemci saatinden değil, history transaction'ının PostgreSQL `transaction_timestamp()` değerinden türetilen `to` anına sabitlenir.
+- `period=day|week|month` istemci saatinden değil, history transaction'ının PostgreSQL `transaction_timestamp()` değerinden türetilen `to` anına sabitlenir. Exact rollup toplamı için day/week `to` değeri UTC dakikaya, month `to` değeri UTC saate aşağı yuvarlanır; gerçek transaction zamanı ayrıca `generated_at` olur.
 - V1 istemcisi keyfi bir geçmiş `to` değeri göndermez. Böylece cache, sorgu bütçesi ve cursor davranışı bounded kalır.
 - Server kapalıyken kaçırılan run'lar üretilmez. Bu zaman `UNKNOWN/no data` olur; FAIL veya DOWN olarak backfill edilmez.
 
@@ -110,13 +112,13 @@ Fastify history/incident API
 
 Worker yalnız `site_monitor_housekeeper` login/rolüyle, küçük ve ayrı bir DB pool'u üzerinden çalışır. API veya monitor readiness'i housekeeper readiness'ine bağlı değildir; history projection aşırı geri kalırsa yalnız history endpoint'i kontrollü hata verir.
 
-## 5. Planlanan Forward-Only Revision 21
+## 5. Uygulanan Forward-Only Revision 21
 
-Revision 21 uygulanmış migration'ları değiştirmez ve aşağıdaki temeli ekler.
+Revision 21 uygulanmış migration'ları değiştirmeden aşağıdaki temeli ekledi.
 
 ### 5.1 Uzun ömürlü run evidence
 
-`monitoring.run_evidence` yalnız current state ve incident lineage'ının uzun süre ihtiyaç duyduğu bounded run özetidir:
+`monitoring.run_evidence` current state, incident ve health-interval lineage'ının uzun süre ihtiyaç duyduğu bounded run özetidir:
 
 | Alan                                      | Anlam                                      |
 | ----------------------------------------- | ------------------------------------------ |
@@ -391,12 +393,12 @@ Referans dataset en az 500 check × 30 saniye × 35 gün eşdeğer dağılım ta
 
 ## 14. Uygulama Dilimleri
 
-1. **Revision 21 + saf aggregation:** run evidence ve FK/retention düzeltmesi, checkpoint/range/manifest şeması, duration/bucket domain fonksiyonları ve migration güvenlik testleri.
+1. **Revision 21 + saf aggregation — tamamlandı (17:44):** run evidence ve FK/retention düzeltmesi, checkpoint/range/manifest şeması, duration/bucket domain fonksiyonları ve migration güvenlik testleri.
 2. **Housekeeping runtime:** source discovery, bounded minute/hour recompute, partition/default guard, retention/purge loop'ları, readiness ve restart/iki-replica testleri.
 3. **Private API:** canonical OpenAPI history/incident düzeltmeleri, owner-scoped service/routes, cursor, projection-lag davranışı ve contract testleri.
 4. **Kapanış kanıtı:** correctness matrisi, 20/200/500 rollup profili, 35 günlük history capacity/plan raporu, full CI ve durum belgeleri.
 
-Her dilim ayrı küçük commit olur. Revision 21 uygulanmadan mevcut migration dosyaları değiştirilmez. İlk production retention drop'u, evidence migration/backfill ve restore testi geçmeden aktive edilmez.
+Her dilim ayrı küçük commit olur. Revision 21 mevcut migration dosyalarını değiştirmeden uygulandı. İlk production retention drop'u, evidence migration/backfill ve restore testi geçmeden aktive edilmez.
 
 ## 15. Bilinçli Olarak Kapsam Dışında
 

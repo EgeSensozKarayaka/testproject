@@ -122,6 +122,7 @@ databaseSuite('monitor runtime capacity profile', () => {
        SET result_recorded_at = NULL, result_run_finished_at = NULL, result_run_id = NULL`,
     );
     await schemaPool.query(`DELETE FROM monitoring.check_runs`);
+    await schemaPool.query(`DELETE FROM monitoring.run_evidence`);
     await schemaPool.query(`DELETE FROM monitoring.check_job_attempts`);
     await schemaPool.query(`DELETE FROM monitoring.check_jobs`);
     await schemaPool.query(`DELETE FROM app.checks`);

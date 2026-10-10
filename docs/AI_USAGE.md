@@ -1,6 +1,6 @@
 # AI Kullanımı
 
-**Son güncelleme:** 2026-10-10 17:27 +06:00
+**Son güncelleme:** 2026-10-10 17:44 +06:00
 
 ## Araç ve model
 
@@ -44,6 +44,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 26. Aşama 11 recipient/policy diliminde AI generated OpenAPI'yi 58 operasyona çıkardı; owner-scoped Fastify/service katmanı ile encrypted recipient verification/test queue bağlantısını uyguladı. Gerçek PostgreSQL testleri üç SQL tür/isim belirsizliğini yakaladı ve açık cast/alias ile kapattı. Lifecycle incelemesi token rotasyonundan sonra eski doğrulama işlerinin gönderilebilmesini buldu; yalnız claim edilmemiş işler güvenli biçimde iptal edildi, PROCESSING SMTP çağrısı geriye dönük iptal edilmiş gösterilmedi. Incident outbox consumer ve `NOTIFICATION` cutover hâlâ kapalıdır.
 27. Aşama 11 kapanışında AI iki-worker delivery claim/fencing, materialization sonrası maintenance, restart ile deferred recovery ve SMTP kalıcı sonuç matrisini gerçek PostgreSQL testine ekledi. Browser kabulü production API/worker üzerinden recipient verification ve test mailini; production renderer üzerinden üç operational template'in gerçek Mailpit text/HTML gövdelerini doğruladı. SMTP servisi durdurularak API/monitor izolasyonu gözlendi; socket timeout'un retry yerine terminal `DELIVERY_UNKNOWN` olması mimarideki conservative duplicate politikasına uygun kaydedildi.
 28. Aşama 12 mimarisinde AI mevcut partition, rollup, health interval, incident ve scheduler tablolarını retention hedefleriyle birlikte inceledi. Ham run'ın queue satırlarına; incident, current-state ve health-interval kanıtının da ham run'a bağlı FK zincirinin 30/90/400 günlük temizliği uygulanamaz kıldığı bulundu. Tasarım; kompakt uzun ömürlü run evidence, yazım-anı queue lineage doğrulaması, cursor indeksleri, bounded deterministic rebuild range'leri, ayrı fakat aynı domain içinde housekeeping process'i, zaman ağırlıklı availability/coverage ve sabit bucket bütçeleriyle bu boşluğu kodlamadan önce kapattı.
+29. Aşama 12 dilim 1'de AI Revision 20 verisiyle gerçek yükseltme fixture'ı kurdu; yalnız durable locator'ları backfill eden Revision 21'in ham run ve terminal queue retention'ını ayırdığını doğruladı. İlk test fixture'ında terminal timestamp invariant'ı ve PostgreSQL parametre tür belirsizliği görüldü; üretim migration'ı değiştirilmeden fixture doğru lifecycle ve açık cast'lerle düzeltildi. Saf aggregation uygulamasında output penceresi exact minute/hour rollup toplamı için source resolution'a hizalandı; interval overlap ve eksik duration fail-closed invariant oldu. Tam CI ve yerel idempotent migration doğrulandı.
 
 ## Güvenlik ve gizlilik
 

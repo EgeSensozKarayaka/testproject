@@ -1,11 +1,16 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 17:27 +06:00
+**Son güncelleme:** 2026-10-10 17:44 +06:00
 
-**Genel durum:** Aşama 0–11 tamamlandı; Aşama 12 nihai mimarisi hazır, uygulaması başlamadı
+**Genel durum:** Aşama 0–11 tamamlandı; Aşama 12 uygulama dilimi 1 tamamlandı, housekeeping runtime sırada
 
 ## Tamamlanan
 
+- Revision 21 ile kompakt accepted-run evidence, queue-lineage trigger'ı, state/incident/health FK rewiring'i, incident group-at-open snapshot'ı, typed rollup checkpoint/rebuild range, retention manifest ve source-discovery indeksleri
+- Revision 20→21 gerçek PostgreSQL yükseltme paketi **3/3** geçti: durable reference backfill'i, raw run + terminal attempt/job temizleme bağımsızlığı, yeni evidence capture, yanlış lineage reddi, group snapshot ve housekeeper direct-DML yasağı
+- Saf history domain katmanında source-aligned day/week/month pencere planı, exact duration/accounting, availability/coverage/classification, half-open kırpım ve sum/count response aggregation; odaklı testler **9/9** geçti
+- Aşama 12 dilim 1 tam kalite kapısı: format, 58-operation contract drift, lint, strict workspace typecheck, **28 dosyada 209/209 unit**, **13 dosyada 80/80 integration** ve bütün production build'leri geçti
+- Yerel PostgreSQL Revision 21'e yükseltildi ve ikinci migration koşusu idempotent `applied none` döndürdü; çalışan Compose servisleri migration sonrasında healthy kaldı
 - Aşama 12 için zaman ağırlıklı availability/coverage, sabit day/week/month bucket bütçeleri, deterministic bounded rollup düzeltmesi, ayrı housekeeping process'i, incident journal ve partition retention yaşam döngüsünü kesinleştiren `docs/HISTORY_AND_RETENTION.md`
 - Mevcut 30/90/400 günlük retention hedeflerini engelleyen queue→raw run→state/incident/health-interval foreign key zincirinin tespiti; Revision 21 için kompakt run evidence, insert-time lineage doğrulaması, cursor indeksleri, typed rebuild queue, group-at-open snapshot ve detach/grace/drop manifest çözümünün kaydı
 - Revision 16–20 ile default/group policy reconciliation'ı, recipient transactional-email lineage'ı, public confirm/enqueue/cancel sınırları, incident delivery/attempt state machine'i, dar notifier claim/complete fonksiyonları, `NOTIFICATION` activation ve açık-incident source reconciliation'ı
@@ -151,7 +156,7 @@
 ## Bilinçli Olarak Henüz Yapılmayan
 
 - Notification recipient/policy yönetim arayüzü (backend ve worker tamam; yönetim frontend'i Aşama 14 kapsamındadır)
-- Mimarisi hazır olan rollup/retention background işleri ile history/incident API implementasyonu ve grafikler
+- Şema temeli hazır olan housekeeping/rollup/retention runtime'ı ile history/incident API implementasyonu ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
 - Predictor analiz algoritması/model lifecycle'ı
 - MFA/passkey, OAuth/OIDC, organizasyon/üyelik/rol modeli ve kullanıcıya açık session/device yönetimi
@@ -165,7 +170,7 @@
 - Yerel Compose kolaylığı için tek PostgreSQL bootstrap login'i dar `NOLOGIN` rollere geçer. Production'da servis başına ayrı login wrapper/secret gerekir.
 - Yerel HTTP ortamında session cookie `Secure=false`; production config fail-fast secret ve HTTPS/Secure cookie gerektirir.
 - Auth security audit olaylarının temel mutation kayıtları vardır; ayrıntılı deny/metric/export kapsamı Aşama 17 gözlemlenebilirlik sertleştirmesinde genişletilecektir.
-- Partition helper'ları hazırdır fakat otomatik periyodik housekeeper henüz yoktur.
+- Partition helper'ları ve Revision 21 queue/manifest temeli hazırdır fakat otomatik periyodik housekeeper ve hiçbir retention drop/purge işlemi henüz aktif değildir.
 - Local restore provası production RPO/RTO/PITR garantisi değildir.
 - Soğuk Docker image build'i registry bağlantı hızına bağlı olarak birkaç dakika sürebilir; warm build ve normal `up` akışı daha hızlıdır. Build cache mount/prune optimizasyonu Aşama 17 operasyonel sertleştirme kapsamındadır.
 - Host `5432` ve `3000` başka projeler tarafından kullanıldığından PostgreSQL `15432`, API `13000`, web `15173` portundadır.
@@ -174,4 +179,4 @@
 
 ## Sıradaki İş
 
-Kullanıcı `docs/HISTORY_AND_RETENTION.md` belgesini inceledikten sonra Aşama 12 uygulama dilimi 1 başlatılacaktır: forward-only Revision 21, saf bucket/availability fonksiyonları ve migration güvenlik testleri. Housekeeping runtime, private API ve kapasite kapanışı sonraki ayrı dilimlerdir.
+Aşama 12 uygulama dilimi 2 başlatılacaktır: ayrı `housekeeping-worker` process'i, source discovery, bounded minute/hour recompute, partition/default guard, retention/purge loop'ları ve restart/iki-replica testleri. Private API ve kapasite kapanışı sonraki ayrı dilimlerdir.
