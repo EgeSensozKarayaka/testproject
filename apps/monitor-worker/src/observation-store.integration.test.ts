@@ -154,6 +154,7 @@ databaseSuite('monitor PostgreSQL observation store', () => {
     await schemaPool.query(`DELETE FROM monitoring.check_runs`);
     await schemaPool.query(`DELETE FROM monitoring.check_job_attempts`);
     await schemaPool.query(`DELETE FROM monitoring.check_jobs`);
+    await schemaPool.query(`DELETE FROM app.maintenance_windows`);
     await schemaPool.query(`DELETE FROM app.checks`);
   });
 
@@ -428,6 +429,83 @@ databaseSuite('monitor PostgreSQL observation store', () => {
     expect(runs.rows[2]!.finished_at.getTime()).toBeGreaterThan(
       runs.rows[1]!.finished_at.getTime(),
     );
+  });
+
+  it('continues probes and incident facts while maintenance is active', async () => {
+    const checkId = '00000000-0000-4000-8000-000000010009';
+    await insertCheck({ id: checkId });
+    await schemaPool.query(
+      `INSERT INTO app.maintenance_windows
+         (owner_id, check_id, note, starts_at, ends_at)
+       VALUES ($1, $2, 'acceptance fixture',
+               statement_timestamp() - interval '1 minute',
+               statement_timestamp() + interval '1 hour')`,
+      [ownerId, checkId],
+    );
+    const { queue, store } = runtime('monitor-worker:maintenance-acceptance');
+
+    for (const [suffix, result] of [
+      ['1', failingResult],
+      ['2', failingResult],
+      ['3', passingResult],
+    ] as const) {
+      const jobId = `00000000-0000-7000-8000-00000001009${suffix}`;
+      await insertJob({ checkId, id: jobId });
+      const claimed = await claimStarted(queue, checkId, jobId);
+      await expect(store.persistResult(claimed, result)).resolves.toMatchObject({
+        accepted: true,
+        jobOutcome: 'COMPLETED',
+      });
+    }
+
+    const state = await schemaPool.query<{
+      health_state: string;
+      incident_status: string;
+      runs: string;
+    }>(
+      `SELECT state.health_state, incident.status AS incident_status,
+              (SELECT count(*)::text FROM monitoring.check_runs run
+               WHERE run.owner_id = $1 AND run.check_id = $2) AS runs
+       FROM monitoring.check_current_states AS state
+       JOIN monitoring.incidents AS incident
+         ON incident.owner_id = state.owner_id AND incident.check_id = state.check_id
+       WHERE state.owner_id = $1 AND state.check_id = $2`,
+      [ownerId, checkId],
+    );
+    expect(state.rows[0]).toEqual({
+      health_state: 'UP',
+      incident_status: 'CLOSED',
+      runs: '3',
+    });
+
+    const facts = await schemaPool.query<{
+      event_type: string;
+      maintenance_suppressed: boolean;
+      notification_dispatches: string;
+    }>(
+      `SELECT event.event_type,
+              (event.payload->>'maintenance_suppressed')::boolean AS maintenance_suppressed,
+              count(dispatch.*) FILTER (WHERE dispatch.destination = 'NOTIFICATION')::text
+                AS notification_dispatches
+       FROM infra.outbox_events AS event
+       LEFT JOIN infra.outbox_dispatches AS dispatch ON dispatch.event_id = event.id
+       WHERE event.owner_id = $1 AND event.aggregate_type = 'incident'
+       GROUP BY event.id, event.event_type, event.occurred_at
+       ORDER BY event.occurred_at, event.event_type`,
+      [ownerId],
+    );
+    expect(facts.rows).toEqual([
+      {
+        event_type: 'incident.opened',
+        maintenance_suppressed: true,
+        notification_dispatches: '1',
+      },
+      {
+        event_type: 'incident.closed',
+        maintenance_suppressed: true,
+        notification_dispatches: '1',
+      },
+    ]);
   });
 
   it('records a diagnostic run without mutating health state', async () => {

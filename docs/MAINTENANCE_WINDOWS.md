@@ -1,6 +1,6 @@
 # Bakım Pencereleri Mimarisi
 
-**Durum:** Onaylandı; revision 15/domain temeli, CRUD API ve çapraz kaynak davranışı uygulandı, kapanış kanıtı sırada
+**Durum:** Tamamlandı ve doğrulandı
 **Tarih:** 2026-10-10 15:46 +06:00  
 **Bağımlılıklar:** Aşama 6 check/group yönetimi, Aşama 8 health/incident modeli, Aşama 9 kalıcı worker ve outbox altyapısı  
 **Sonraki aşama sınırı:** E-posta alıcıları, policy çözümleme ve SMTP delivery state machine'i Aşama 11'e aittir.
@@ -268,4 +268,4 @@ Hızlı fakat geri alınabilir ilerleme için Aşama 10 dört küçük dilimde u
 
 Her dilim ayrı anlamlı commit olur. Aşama 10 tamamlanmadan `NOTIFICATION` destination aktive edilmez; bu aktivasyon ve gerçek delivery Aşama 11'de yapılır.
 
-**2026-10-10 uygulama durumu:** 1–3 tamamlandı. CRUD API; zaman filtreli OpenAPI, yapılandırılabilir owner kotası, atomik create receipt'i, güçlü ETag/If-Match, soft cancel, redacted audit/outbox ve DB-zamanlı türetilmiş state ile production API'ye bağlandı. Check group değişimi güncel üyelikten anında yeniden projekte edilir; check/group silme açık hedef pencerelerini deterministik kilit sırasıyla iptal eder, bitmiş geçmişi korur ve notification/realtime wake-up olayları üretir. Owner izolasyonu, eşzamanlı create/patch/delete, exact replay/conflict, filter-bound cursor ve immutable history gerçek PostgreSQL üzerinde doğrulandı. Sıradaki dilim 4'tür.
+**2026-10-10 uygulama durumu:** Dört dilim tamamlandı. CRUD API; zaman filtreli OpenAPI, yapılandırılabilir owner kotası, atomik create receipt'i, güçlü ETag/If-Match, soft cancel, redacted audit/outbox ve DB-zamanlı türetilmiş state ile production API'ye bağlandı. Check group değişimi güncel üyelikten anında yeniden projekte edilir; check/group silme açık hedef pencerelerini deterministik kilit sırasıyla iptal eder, bitmiş geçmişi korur ve notification/realtime wake-up olayları üretir. Owner izolasyonu, eşzamanlı create/patch/delete, exact replay/conflict, filter-bound cursor ve immutable history gerçek PostgreSQL üzerinde doğrulandı. Kapanışta exact `[start,end)` sınırları, direct+group overlap, yeni pool ile restart sonrası durable projection ve bakım sırasında probe/incident devamlılığı gerçek PostgreSQL üzerinde kanıtlandı. Notification paketi source-of-truth eligibility ile ortak maintenance projection'ını `CANCEL`, `DEFER` veya `PROCEED` sonucuna indiren saf gate'i sağlar; recipient/policy, kalıcı intent consumer'ı ve SMTP delivery Aşama 11'e aittir.

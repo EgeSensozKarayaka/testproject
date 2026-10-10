@@ -309,6 +309,8 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 10 — Bakım Pencereleri
 
+**Durum:** Tamamlandı ve doğrulandı — 2026-10-10 16:19 +06:00
+
 **Amaç:** Kontrolleri durdurmadan bildirimleri bastıran, zaman ve yarış koşulları açık bir bakım modeli uygulamak.
 
 **Tasarım çıktısı:**
@@ -621,4 +623,4 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 9 — Kalıcı Scheduler ve Monitor Worker** tamamlanmıştır. Revision 14, typed monitor config, cancellation/manual-intent temeli, partition-aware result pointer, activation-aware ortak outbox writer, saf cadence/backoff yardımcıları, check-first materializer, claim/lease/heartbeat/fencing adapter'ı, global/owner/hostname bounded probe dispatcher, cancellation acknowledgement, infrastructure retry/DEAD, expired-lease recovery, atomik observation transaction, deadline freshness reconciler, dört bağımsız production loop'u, loop-aware readiness, mevcut/sonraki ay storage preflight'i, bounded graceful shutdown, 20/200/500 gerçek PostgreSQL kapasite profili, process-kill→doğal lease expiry→reclaim→stale-result fencing ve iki gerçek worker altında API izolasyonu doğrulanmıştır.
 
-**Aşama 10 — Bakım Pencereleri nihai mimarisi** ile revision 15/domain temeli, owner-scoped CRUD API ve çapraz check/group davranışı tamamlanmıştır. Ortak DB projection'ı, least-privilege sınırı, saf zaman/mutation politikası, zaman filtreli cursor, create idempotency, ETag/cancel, dinamik grup kapsamı ve kaynak silmede açık pencere iptali gerçek PostgreSQL ile doğrulanmıştır. **Sıradaki çalışma**, zaman kontrollü overlap/restart/notification-decision kapanış kanıtlarıdır.
+**Aşama 10 — Bakım Pencereleri** tamamlanmıştır. Revision 15/domain temeli, owner-scoped CRUD API, çapraz check/group davranışı, ortak DB projection'ı, least-privilege sınırı, saf zaman/mutation politikası, zaman filtreli cursor, create idempotency, ETag/cancel, dinamik grup kapsamı ve kaynak silmede açık pencere iptali uygulanmıştır. Exact `[start,end)` sınırları, direct+group overlap, yeni process pool'uyla restart sonrası durable projection, bakım sırasında probe/incident devamlılığı ve notification maintenance gate'i doğrulanmıştır. **Sıradaki çalışma Aşama 11 — Transactional E-posta ve Bildirim Sistemi nihai mimarisidir.**

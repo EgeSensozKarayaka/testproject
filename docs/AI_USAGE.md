@@ -1,6 +1,6 @@
 # AI Kullanımı
 
-**Son güncelleme:** 2026-10-10 16:12 +06:00
+**Son güncelleme:** 2026-10-10 16:19 +06:00
 
 ## Araç ve model
 
@@ -38,6 +38,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 20. Aşama 10'un ilk uygulama diliminde AI OpenAPI `note` ile eski DB `name` uyumsuzluğunu forward-only revision 15 ile giderdi; fiziksel maintenance delete ve hedef update yetkilerini kapattı. API, monitor ve ileride notifier'ın aynı half-open check+current-group kuralını kullanması için security-invoker DB projection'ı oluşturuldu; exact sınırlar ve overlap saf domain testleriyle, RLS/grant/fonksiyon davranışı gerçek PostgreSQL ile doğrulandı.
 21. Aşama 10'un ikinci uygulama diliminde AI owner-scoped maintenance CRUD service/routes katmanını, zaman filtreli OpenAPI'yi ve yapılandırılabilir kotayı uyguladı. İncelemede zamanla türetilen state için güncel kaynağı idempotency replay'inde yeniden okumanın genel exact replay sözleşmesini bozacağı görüldü; ilk body/ETag receipt'ten aynen döndürüldü ve güncel temsil `GET` sınırında bırakıldı. Kilit bekleyebilen mutation'larda yaşam döngüsü kararı transaction başlangıcı yerine kilit alındıktan sonraki DB saatiyle yapıldı. Concurrent create/patch, owner izolasyonu, cursor ve redaction gerçek PostgreSQL ile doğrulandı.
 22. Aşama 10'un üçüncü uygulama diliminde AI mevcut check/group transaction ve kilit sırasını bakım create/cancel yarışlarıyla birlikte inceledi. Yeni job veya migration eklemeden ortak effect helper'ı check/group silmede yalnız açık hedef pencerelerini version'lı iptal edecek şekilde bağlandı; bitmiş kayıtlar geçmiş olarak korundu. Group change/delete ve check delete olayları ileride aktive edilecek notification consumer'a da yönlendirildi. Test fixture'ı production cutover'ı değiştirmeden `NOTIFICATION` hedefini yalnız routing kanıtı için aktive etti; dinamik grup kapsamı, create-delete yarışı ve atomik detach/cancel gerçek PostgreSQL üzerinde doğrulandı.
+23. Aşama 10 kapanışında AI bildirim kapsamını erken SMTP uygulamasına genişletmeden maintenance gate'i saf üretim kararı olarak ayırdı. Güncel event eligibility'si ortak DB maintenance projection'ıyla `CANCEL/DEFER/PROCEED` sonucuna indirildi; exact zaman sınırları, overlap, yeni pool ile restart ve bakım sırasında devam eden probe/incident akışı gerçek PostgreSQL acceptance testleriyle doğrulandı. Policy/recipient çözümleme ve kalıcı intent/delivery consumer'ı Aşama 11'e bırakıldı.
 
 ## Güvenlik ve gizlilik
 

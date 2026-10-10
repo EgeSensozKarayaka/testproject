@@ -412,6 +412,57 @@ databaseSuite('PostgreSQL persistence architecture', () => {
     expect(columns.rows).toEqual([{ column_name: 'note', is_nullable: 'YES' }]);
   });
 
+  it('uses exact half-open boundaries and restores overlapping maintenance from durable rows', async () => {
+    const directId = '00000000-0000-7000-8000-000000000917';
+    const groupId = '00000000-0000-7000-8000-000000000918';
+    const directStart = new Date('2030-01-01T01:00:00.000Z');
+    const groupStart = new Date('2030-01-01T02:00:00.000Z');
+    const directEnd = new Date('2030-01-01T03:00:00.000Z');
+    const groupEnd = new Date('2030-01-01T04:00:00.000Z');
+    await pool.query(
+      `INSERT INTO app.maintenance_windows
+         (id, owner_id, check_id, note, starts_at, ends_at)
+       VALUES ($1, $2, $3, 'direct boundary fixture', $4, $5)`,
+      [directId, ownerA, checkA, directStart, directEnd],
+    );
+    await pool.query(
+      `INSERT INTO app.maintenance_windows
+         (id, owner_id, group_id, note, starts_at, ends_at)
+       VALUES ($1, $2, $3, 'group boundary fixture', $4, $5)`,
+      [groupId, ownerA, groupA, groupStart, groupEnd],
+    );
+
+    async function projectedUntil(at: Date, sourcePool: Pool = pool): Promise<Date | null> {
+      const projected = await withRole(sourcePool, 'site_monitor_api', ownerA, async (client) => {
+        const result = await client.query<{ until: Date | null }>(
+          `SELECT app.effective_maintenance_until($1, $2, $3) AS until`,
+          [ownerA, checkA, at],
+        );
+        return { until: result.rows[0]?.until ?? null };
+      });
+      return projected.until;
+    }
+
+    await expect(projectedUntil(new Date(directStart.getTime() - 1))).resolves.toBeNull();
+    await expect(projectedUntil(directStart)).resolves.toEqual(directEnd);
+    await expect(projectedUntil(groupStart)).resolves.toEqual(groupEnd);
+    await expect(projectedUntil(directEnd)).resolves.toEqual(groupEnd);
+    await expect(projectedUntil(groupEnd)).resolves.toBeNull();
+
+    const restartedPool = createDatabasePool({
+      applicationName: 'maintenance-restart-acceptance',
+      connectionString,
+      maxConnections: 1,
+    });
+    try {
+      await expect(
+        projectedUntil(new Date('2030-01-01T02:30:00.000Z'), restartedPool),
+      ).resolves.toEqual(groupEnd);
+    } finally {
+      await restartedPool.end();
+    }
+  });
+
   it('executes the least-privilege account, session, throttle, and email lifecycle', async () => {
     const tokenDigest = Buffer.alloc(32, 41);
     const sessionDigest = Buffer.alloc(32, 42);

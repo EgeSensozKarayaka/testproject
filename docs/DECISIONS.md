@@ -730,3 +730,13 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Ayrı maintenance reconciliation tablosu ve worker; yalnız process timer'ı; her pencere için geleceğe zamanlanmış ve iptal edilmesi gereken outbox job'ı.
 - **Gerekçe:** Restart güvenliğini var olan kalıcı primitive ile sağlamak, pencere uzatma/kısaltma yarışlarında tek truth kullanmak ve Aşama 10–11 arasında gereksiz altyapı oluşturmamak.
 - **Sonuçlar:** Notification worker deadline geldiğinde hâlâ etkin başka pencere varsa intent'i yeniden erteler. Mutation/group-change event'leri erken bitişi geciktirmez. Stage 11 destination aktivasyonunda açık incident ve nonterminal intent backfill'i zorunludur; tarihsel outbox körlemesine e-posta üretmez.
+
+## D-079 — Maintenance gate, notification eligibility ve delivery'den ayrı saf karardır
+
+- **Tarih:** 2026-10-10 16:19 +06:00
+- **Durum:** Accepted — Aşama 10 kapanış testleriyle doğrulandı
+- **Bağlam:** Aşama 10 bakım davranışının bildirim kararına etkisini kanıtlamalıdır; ancak recipient/policy çözümleme, DOWN/RECOVERY lineage'ı ve SMTP state machine'i Aşama 11 kapsamıdır. Event payload'ındaki `maintenance_suppressed` tanı alanını gönderim kararı yapmak pencere değişikliği ve restart sonrasında stale sonuç üretir.
+- **Karar:** Notification domain'i, güncel event eligibility'si ile aynı değerlendirme anında `app.effective_maintenance_until` fonksiyonundan okunan sonucu saf maintenance gate'e verir. Uygun değilse `CANCEL`, etkin bakım varsa en uzak aktif bitişe `DEFER`, aksi halde `PROCEED` üretilir. Gate recipient seçmez, intent/delivery yazmaz ve SMTP çağırmaz.
+- **Alternatifler:** Aşama 10'da notification worker'ı kısmen uygulamak; event-time suppression flag'ini source of truth yapmak; maintenance kararını her consumer'da ayrı SQL ile tekrarlamak; incident uygunluğunu maintenance helper'ına gömmek.
+- **Gerekçe:** Aşama sınırını korurken bakımın kritik kararını üretim kodu ve deterministik testle kanıtlamak; stale olay bilgisi yerine durable source of truth kullanmak ve Aşama 11'in recipient başına kurallarını bağımsız geliştirebilmek.
+- **Sonuçlar:** Aşama 11 adapter'ı `PROCEED/DEFER/CANCEL` sonucunu kalıcı intent state'lerine eşleyecektir. Recovery eligibility'si recipient delivery lineage'ına göre ayrıca hesaplanır; geçersiz veya süresi geçmiş maintenance timestamp'i gate tarafından reddedilir.

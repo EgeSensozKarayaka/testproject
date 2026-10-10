@@ -1,8 +1,8 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 16:12 +06:00
+**Son güncelleme:** 2026-10-10 16:19 +06:00
 
-**Genel durum:** Aşama 0–9 tamamlandı ve doğrulandı; Aşama 10'un revision/domain, CRUD API ve çapraz kaynak dilimleri tamamlandı, kapanış kanıtı sırada
+**Genel durum:** Aşama 0–10 tamamlandı ve doğrulandı; sıradaki çalışma Aşama 11 bildirim mimarisi
 
 ## Tamamlanan
 
@@ -16,6 +16,10 @@
 - Check/group silmede yalnız henüz bitmemiş hedef bakım pencerelerini ID sırasıyla kilitleyip version'lı `CANCELLED` yapan, bitmiş geçmişi koruyan ve her iptal için redacted `maintenance.cancelled` event/audit kaydı üreten ortak effect helper'ı
 - Çapraz kaynak PostgreSQL paketi **3/3**, check/group/maintenance birleşik regresyon paketi **28/28** geçti. Group move scope değişimi, create-vs-check-delete yarışı, group delete detach/cancel ve test-only notification destination routing doğrulandı; production `NOTIFICATION` aktivasyonu Aşama 11'e bırakıldı
 - Çapraz kaynak dilimi final `pnpm run ci` kapısında format, contract drift, lint, strict typecheck, **176/176 unit**, tüm gerçek PostgreSQL/socket/process entegrasyonları ve production build'leriyle geçti
+- Exact `[start,end)` başlangıç/bitiş davranışı, direct+group overlap'te en uzak aktif bitiş ve yeni bağlantı havuzuyla restart sonrası durable projection gerçek PostgreSQL üzerinde doğrulandı
+- Bakım aktifken production observation adapter'ı üç accepted probe'u sakladı, incident'ı açıp kapattı ve hem `incident.opened` hem `incident.closed` notification fact'ini `maintenance_suppressed=true` tanısıyla üretti; maintenance health/incident akışını durdurmadı
+- Notification paketine event-time diagnostic alanına güvenmeyen saf maintenance gate eklendi: güncel eligibility ve ortak DB projection'ından `CANCEL`, `DEFER` veya `PROCEED` kararı üretir; policy/recipient ve SMTP delivery Aşama 11 sınırında kalır
+- Aşama 10 final `pnpm run ci` kapısı PostgreSQL test admin bağlantısıyla format, 57-operation contract drift, lint, bütün workspace strict typecheck'leri, **25 dosyada 180/180 unit**, **10 dosyada 70/70 gerçek PostgreSQL/socket/process integration** ve bütün production build'leriyle geçti; 500-check tekrarında 500/500 run kabul edildi
 - Aşama 10 için check/group scope, `[start,end)`, overlap, mutation, group membership, incident/notification ayrımı ve restart-safe reconciliation kararlarını içeren `docs/MAINTENANCE_WINDOWS.md`
 - Ayrı job tablosu eklemeden `notification.intents.maintenance_until` deadline'ını doğal bakım bitişi, transactional outbox wake-up'larını erken bitiş/kapsam değişikliği için kullanan D-078 kararı
 - İki gerçek production monitor-worker ve ayrı production API prosesinin aynı PostgreSQL üzerinde eşzamanlı çalıştığı 200-check kabul profili; 200 job/attempt/run/accepted result ve 200 hedef isteği tam eşleşirken iki worker da iş aldı
@@ -135,7 +139,7 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Check/group mutation'larından maintenance reconciliation ve incident e-posta politikaları
+- Notification outbox consumer'ı, kalıcı intent reconciliation'ı, recipient/policy yönetimi ve incident e-posta teslimi
 - Rollup/retention background işleri, history sorguları ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
 - Predictor analiz algoritması/model lifecycle'ı
@@ -159,4 +163,4 @@
 
 ## Sıradaki İş
 
-Aşama 10 kapanışında exact zaman sınırları, overlap, restart ve notification-decision fixture'ları birlikte doğrulanacaktır.
+Aşama 11 için transactional e-posta ve bildirim sisteminin nihai mimarisi hazırlanacaktır; mimari onayından sonra consumer, intent/delivery state machine'i ve SMTP adapter'ı uygulanacaktır.
