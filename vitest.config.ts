@@ -7,7 +7,11 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
     },
     environment: 'node',
-    include: ['apps/**/*.{test,spec}.{ts,tsx}', 'packages/**/*.{test,spec}.{ts,tsx}'],
+    include: [
+      'apps/**/*.{test,spec}.{ts,tsx}',
+      'capacity/**/*.{test,spec}.{ts,tsx}',
+      'packages/**/*.{test,spec}.{ts,tsx}',
+    ],
     passWithNoTests: false,
     setupFiles: ['./apps/web/src/test-setup.ts'],
   },

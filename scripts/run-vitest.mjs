@@ -41,6 +41,15 @@ if (mode === 'integration') {
     '--no-file-parallelism',
     'apps/monitor-worker/src/capacity-profile.integration.test.ts',
   ];
+} else if (mode === 'history-capacity') {
+  process.env.HISTORY_CAPACITY = '1';
+  vitestArgs = [
+    'exec',
+    'vitest',
+    'run',
+    '--no-file-parallelism',
+    'capacity/history-capacity.integration.test.ts',
+  ];
 } else {
   vitestArgs = [
     'exec',

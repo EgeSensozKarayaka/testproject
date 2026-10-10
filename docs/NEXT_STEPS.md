@@ -1,19 +1,21 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 18:29 +06:00
+**Son güncelleme:** 2026-10-10 19:02 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–11 ve Aşama 12 private API tamamlandı; kapasite kapanışı sırada
+**Mevcut kilometre taşı:** Aşama 0–12 tamamlandı; Aşama 13 nihai mimarisi sırada
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
-## 1. Sıradaki Çalışma — Aşama 12 Kapasite Kapanışı
+## 1. Sıradaki Çalışma — Aşama 13 Canlı Güncelleme Altyapısı
 
-`docs/HISTORY_AND_RETENTION.md` sözleşmesine göre:
+`docs/REALTIME_CONTRACT.md` başlangıç sözleşmesine göre:
 
-- 20/200/500 check için source discovery ve minute→hour rollup throughput'unu ölç
-- 500-check eşdeğer 35 günlük deterministic dataset üzerinde month query süresini ve `EXPLAIN (ANALYZE, BUFFERS)` planını kaydet
-- Housekeeper yükü altında private history API pool/latency izolasyonunu doğrula
-- Correctness matrisini, kapasite raporunu ve Aşama 12 durum belgelerini kapat
+- PostgreSQL `LISTEN/NOTIFY` yalnız wake-up olacak şekilde durable snapshot/cursor sınırını kesinleştir
+- Authenticated ve ileride public SSE kanalında sahiplik izolasyonu, heartbeat ve reconnect davranışını tanımla
+- Replica değişimi ve kaçırılmış event sonrasında snapshot ile yakınsama kuralını belirle
+- Connection/rate limit, proxy buffering ve polling fallback kabul matrisini oluştur
+
+Aşama 12 kapanış ölçümleri [history kapasite raporunda](./HISTORY_CAPACITY_REPORT.md) saklanır.
 
 ## 2. Aşama 10 Kapanış Kanıtları
 

@@ -829,7 +829,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Karar:** Minute ve hour birbirinden bağımsız iki advisory-lock lane'idir. Her `housekeeping_process_rollup_range` çağrısı kendi çözünürlük lock'unu transaction süresince alır, ardından bounded `SKIP LOCKED` işlemcisini çağırır. Revision 22 değiştirilmedi; wrapper forward-only Revision 23 ile eklendi.
 - **Alternatifler:** Yalnız range row lock'una güvenmek; tablo trigger'larıyla yarış sonrası düzeltme; check/bucket başına yüksek kardinaliteli lock; duplicate hatasını retry etmek.
 - **Gerekçe:** Bounded batch ve iki bağımsız lane ile basit, kanıtlanabilir doğruluk sağlamak; overlapping correction'ın sessiz kaybını veya unique yarışını önlemek.
-- **Sonuçlar:** İki replica arıza devri ve güvenli paralel claim sağlar fakat aynı çözünürlükte throughput yatay replica sayısıyla doğrusal artmaz. 20/200/500 kapasite kapanışında bu bilinçli taviz ölçülecek; gerekirse lock kapsamı check shard'ına daraltılacaktır.
+- **Sonuçlar:** İki replica arıza devri ve güvenli paralel claim sağlar fakat aynı çözünürlükte throughput yatay replica sayısıyla doğrusal artmaz. Kapanış profilinde 500-check projection 9,54 saniye ve 52,41 check/s ölçüldü; v1 için check-shard lock karmaşıklığına gerek görülmedi. Daha yüksek ölçek ihtiyacı yeni ölçümle değerlendirilir.
 
 ## D-089 — Retention projection backlog'unu geçemez
 
@@ -850,3 +850,13 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Her istekte tüm raw pencereyi taramak; projection lag'i yok saymak; global checkpoint tablolarını API rolüne açmak; housekeeper readiness'ini bütün API readiness'ine bağlamak.
 - **Gerekçe:** Sabit sorgu maliyeti, doğru no-data semantiği, least privilege ve housekeeper arızasının yalnız history özelliğine indirgenmesini birlikte korumak.
 - **Sonuçlar:** History tek read-only `REPEATABLE READ` transaction, DB zamanı ve bounded statement timeout kullanır. Tombstone sahibi geçmişi okuyabilir; cross-owner check/incident/filter kimlikleri `404` olur. History kısa private cache alır, incident journal `no-store` kalır; dashboard ve worker readiness projection backlog'undan etkilenmez.
+
+## D-091 — History kapasite profili eşdeğer rollup dağılımını normal CI'dan ayrı çalıştırır
+
+- **Tarih:** 2026-10-10 19:02 +06:00
+- **Durum:** Accepted — Aşama 12 kapasite kapanışıyla doğrulandı
+- **Bağlam:** 500 check'in 30 saniyelik cadence ile 35 günlük ham dağılımı 50,4 milyon run eder. Month API tasarım gereği bu raw satırları değil hour rollup'ı okur; her CI koşusunda 50 milyon alakasız raw insert yapmak süre ve kaynak maliyetini sorgulanan production yolundan koparır.
+- **Karar:** Büyük fixture, her hour satırında 120 örnek taşıyan 420.000 deterministic rollup satırıyla aynı sorgu kardinalitesini temsil eder. Profil `pnpm test:history-capacity` ile açıkça çalışır; normal CI küçük correctness, migration ve izolasyon testlerini korur. 20/200/500 gerçek source discovery/minute→hour ölçümü aynı ağır profilde ayrı fixture kullanır.
+- **Alternatifler:** Normal CI'da 50,4 milyon raw run; yalnız küçük fixture ile performans iddiası; production'dan alınmış veri dump'ı; hiçbir otomatik bütçe koymamak.
+- **Gerekçe:** Tekrarlanabilirliği ve gerçek month query planını korurken CI maliyetini bounded tutmak; sentetik eşdeğerlik ile raw-ingest iddiasını birbirine karıştırmamak.
+- **Sonuçlar:** Rapor dataset satırı ile eşdeğer raw sample sayısını ayrı gösterir. Ölçümler production SLO değildir; raw ingest monitor kapasite raporunda, history query/housekeeping kapasitesi bu profilde kanıtlanır.

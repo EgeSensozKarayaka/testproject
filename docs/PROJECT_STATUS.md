@@ -1,11 +1,15 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 18:29 +06:00
+**Son güncelleme:** 2026-10-10 19:02 +06:00
 
-**Genel durum:** Aşama 0–11 tamamlandı; Aşama 12 uygulama dilimleri 1–3 tamamlandı, kapasite kapanışı sırada
+**Genel durum:** Aşama 0–12 tamamlandı; Aşama 13 canlı güncelleme mimarisi sırada
 
 ## Tamamlanan
 
+- Aşama 12 ağır kapasite kapanışı **4/4** geçti: 20/200/500 source discovery + minute→hour rollup, 420.000 hour satırlık/50,4 milyon raw örnek eşdeğeri 35 günlük month fixture'ı, indeksli partition-pruned plan ve API–housekeeper izolasyonu
+- 500-check rollup projection **9,54 sn / 52,41 check/s**; month service sorgusu **25,32 ms**, `EXPLAIN ANALYZE` **4,568 ms**, output **360 bucket** ve tek `rollups_hour_2026` partition'ı; 3.840 bucket housekeeper yükünde 40/40 API isteği, p95 **15,20 ms**, max **15,59 ms**
+- Tekrarlanabilir `pnpm test:history-capacity` komutu, ayrı ağır-profil runner'ı, kök strict TypeScript/lint kapsamı ve metodoloji/bütçe/sınırlamaları içeren `docs/HISTORY_CAPACITY_REPORT.md`
+- Aşama 12 kapanışından sonraki tam `pnpm run ci`; format, 58-operation contract drift, lint, kök harness dahil bütün strict typecheck'ler, **217/217 unit**, **87/87 gerçek PostgreSQL/socket/process integration** ve bütün production build'leriyle geçti; monitor 500-check regresyonu **58,87 check/s** ölçtü
 - Owner-scoped `GET /checks/{id}/history`, `GET /incidents` ve `GET /incidents/{id}` private API'si; source-aligned 288/336/360 bucket, rollup+bounded raw/open tail, DB-zamanı anchor, tombstone erişimi, kısa private cache ve fail-closed projection lag/timeout davranışı
 - Incident journal'da current/tombstone check adı, immutable group-at-open filtresi, status/time overlap, signed/filter-bound snapshot cursor, exact observed/wall duration ve leading/intermediate/trailing `UNOBSERVED` gap sentezi
 - Revision 26 ile API rolüne housekeeping queue/checkpoint SELECT'i vermeden owner-scoped source horizon ve pending range durumunu döndüren dar `security_api.history_projection_status` fonksiyonu
@@ -188,4 +192,4 @@
 
 ## Sıradaki İş
 
-Aşama 12 kapasite kapanışı başlatılacaktır: 20/200/500 rollup profili, 35 günlük deterministic history dataset/sorgu planı ve housekeeper yükü altında private API izolasyonu.
+Aşama 13 canlı güncelleme altyapısının nihai mimarisi hazırlanacaktır: durable snapshot/cursor ile `LISTEN/NOTIFY` wake-up sınırı, authenticated/public SSE sahiplik izolasyonu, heartbeat/reconnect, replica değişimi, connection limitleri ve polling fallback.

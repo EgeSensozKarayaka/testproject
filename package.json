@@ -28,6 +28,7 @@
     "test:capacity": "node scripts/run-vitest.mjs capacity",
     "test:e2e": "pnpm test:e2e:prepare && playwright test",
     "test:e2e:prepare": "pnpm --filter @site-monitor/notifications... build",
+    "test:history-capacity": "node scripts/run-vitest.mjs history-capacity",
     "test:integration": "node scripts/run-vitest.mjs integration",
     "test:unit": "node scripts/run-vitest.mjs unit",
     "typecheck": "node scripts/run-typecheck.mjs"

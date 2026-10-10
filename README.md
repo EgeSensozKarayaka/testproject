@@ -100,6 +100,7 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm test:capacity
+pnpm test:history-capacity
 pnpm build
 pnpm run ci
 ```
@@ -107,6 +108,8 @@ pnpm run ci
 `pnpm run ci`, format, lint, typecheck, unit/integration test ve build kapılarının yerel birleşimidir. `pnpm ci` yazılmamalıdır; pnpm bunu kendi temiz kurulum komutu olarak yorumlar.
 
 `pnpm test:capacity`, gerçek PostgreSQL üzerinde production scheduler→queue→dispatcher→observation yolunu 20/200/500 due check ile profiller. Gerekli test admin bağlantısı ve ölçüm yorumları [monitor kapasite raporunda](docs/MONITOR_CAPACITY_REPORT.md) belgelenmiştir.
+
+`pnpm test:history-capacity`, 20/200/500 housekeeping rollup throughput'unu, 500-check eşdeğer 35 günlük ay sorgusunu ve API–housekeeper izolasyonunu ayrı ağır profilde ölçer. Tekrarlama yöntemi ve bütçeler [history kapasite raporunda](docs/HISTORY_CAPACITY_REPORT.md) bulunur.
 
 Process-kill/doğal lease recovery/stale-result fencing kanıtı [failure recovery raporunda](docs/MONITOR_FAILURE_RECOVERY_REPORT.md); iki gerçek worker prosesi altında API readiness ve authenticated list izolasyonu [runtime izolasyon raporunda](docs/MONITOR_RUNTIME_ISOLATION_REPORT.md) belgelenmiştir.
 

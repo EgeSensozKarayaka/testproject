@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 const steps = [
   ['-r', '--filter', './packages/*', '--if-present', 'build'],
   ['-r', '--if-present', 'typecheck'],
+  ['exec', 'tsc', '-p', 'tsconfig.json', '--noEmit'],
 ];
 const pnpmCli = process.env.npm_execpath;
 if (!pnpmCli) throw new Error('pnpm must invoke this script');

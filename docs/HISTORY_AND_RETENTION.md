@@ -1,10 +1,10 @@
 # Geçmiş, Rollup, Availability ve Housekeeping Mimarisi
 
-**Durum:** Aşama 12 nihai mimarisi — uygulama dilimleri 1–3 tamamlandı
+**Durum:** Tamamlandı — uygulama, correctness ve kapasite kapanışları doğrulandı
 
 **Tarih:** 2026-10-10 17:27 +06:00
 
-**Son uygulama güncellemesi:** 2026-10-10 18:29 +06:00
+**Son uygulama güncellemesi:** 2026-10-10 19:02 +06:00
 
 **Kapsam:** FR-HIST-001–008, AC-011, AC-035, AC-060–065, NFR-DATA-002
 
@@ -350,6 +350,8 @@ Warmed referans ortam hedefleri:
 
 Referans dataset en az 500 check × 30 saniye × 35 gün eşdeğer dağılım taşır. Her CI koşusunda milyonlarca row üretmek yerine küçük correctness fixture zorunlu, büyük deterministic SQL dataset ayrı `test:history-capacity` profili olur. Ölçülen makine/CPU/RAM/PostgreSQL sürümü ve `EXPLAIN (ANALYZE,BUFFERS)` özeti raporda saklanır. Bütçe aşılırsa özellik başarılı ilan edilmez; ölçüm ve dar boğaz dürüstçe yazılır.
 
+Kapanış profili 20/200/500 check'te source discovery ve minute→hour hattını; 420.000 hour satırıyla 50,4 milyon raw örneğe eşdeğer 35 günlük dağılımı ve housekeeper yükü altında private API'yi doğruladı. 500-check projection 9,54 saniye, month service sorgusu 25,32 ms, plan execution 4,568 ms oldu; sorgu tek yıl partition'ında indeks kullandı ve 360 bucket döndürdü. Ayrıntılar [`HISTORY_CAPACITY_REPORT.md`](./HISTORY_CAPACITY_REPORT.md) içindedir.
+
 ## 13. Zorunlu Test ve Kabul Matrisi
 
 ### 13.1 Domain/correctness
@@ -396,7 +398,7 @@ Referans dataset en az 500 check × 30 saniye × 35 gün eşdeğer dağılım ta
 1. **Revision 21 + saf aggregation — tamamlandı (17:44):** run evidence ve FK/retention düzeltmesi, checkpoint/range/manifest şeması, duration/bucket domain fonksiyonları ve migration güvenlik testleri.
 2. **Housekeeping runtime — tamamlandı (17:52):** source discovery, bounded minute/hour recompute, partition/default guard, retention/purge loop'ları, readiness ve restart/iki-replica testleri.
 3. **Private API — tamamlandı (18:29):** canonical OpenAPI history/incident sözleşmesi, owner-scoped service/routes, tombstone erişimi, filter-bound cursor, bounded raw-tail overlay ve projection-lag davranışı.
-4. **Kapanış kanıtı:** correctness matrisi, 20/200/500 rollup profili, 35 günlük history capacity/plan raporu, full CI ve durum belgeleri.
+4. **Kapanış kanıtı — tamamlandı (19:02):** correctness matrisi, 20/200/500 rollup profili, 35 günlük history capacity/plan raporu, API–housekeeper izolasyonu, full CI ve durum belgeleri.
 
 Her dilim ayrı küçük commit olur. Revision 21–26 mevcut migration dosyalarını değiştirmeden forward-only uygulandı. Revision 26 API'ye housekeeping tablolarında doğrudan SELECT vermeden owner-scoped projection durumu döndüren dar `security_api.history_projection_status` sınırını ekledi. Source scan horizon gecikmesi veya pending rebuild backlog'u varken retention fail-closed ertelenir. Retention, önce detach+manifest kaydı oluşturur; fiziksel drop ancak 24 saatlik geri dönüş grace süresi dolduğunda ayrı bir turda gerçekleşir.
 

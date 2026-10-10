@@ -362,7 +362,7 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 12 — Geçmiş, Rollup, Availability ve Housekeeping
 
-**Durum:** Uygulama devam ediyor; dilim 1 tamamlandı — 2026-10-10 17:44 +06:00
+**Durum:** Tamamlandı — 2026-10-10 19:02 +06:00
 
 **Amaç:** Ham veri büyürken günlük, haftalık ve aylık geçmişin hızlı ve doğru açılmasını sağlamak.
 
@@ -639,4 +639,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 12 uygulama dilimi 3** tamamlanmıştır. Revision 26 dar projection-status fonksiyonunu; private API ise source-aligned day/week/month sorgularını, rollup+bounded raw/open tail birleşimini, tombstone erişimini, signed/filter-bound incident cursor'ını ve observed/unobserved segment sentezini uygular. Cross-owner kimlikler `404`, aşırı projection lag/timeout kontrollü `503` olur.
 
-**Sıradaki çalışma Aşama 12 kapanış dilimidir:** 20/200/500 rollup throughput profili, 35 günlük deterministic dataset üzerinde month query/partition planı ve eşzamanlı API-housekeeper izolasyonu.
+**Aşama 12 kapanış dilimi** tamamlanmıştır. Ayrı ağır kapasite harness'ı 20/200/500 source discovery ve minute→hour throughput'unu; 420.000 hour satırıyla 50,4 milyon raw örneğe eşdeğer 35 günlük dağılımı; indeksli/pruned month sorgusunu ve 3.840 bucket'lık eşzamanlı housekeeper yükünde private API izolasyonunu doğrular. 500-check projection 9,54 saniye, month service sorgusu 25,32 ms ve yüklü API p95 15,20 ms ölçülmüştür.
+
+**Sıradaki çalışma Aşama 13 — Canlı Güncelleme Altyapısı nihai mimarisidir.** Mevcut `REALTIME_CONTRACT.md` gereksinimleri production SSE/LISTEN-NOTIFY sınırı, reconnect/snapshot semantiği, connection limitleri ve polling fallback açısından yeniden incelenecektir.
