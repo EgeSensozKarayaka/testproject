@@ -55,6 +55,7 @@ databaseSuite('history and retention foundation migration', () => {
       rm(path.join(legacyMigrations, '000022_housekeeping_runtime.sql')),
       rm(path.join(legacyMigrations, '000023_rollup_replica_serialization.sql')),
       rm(path.join(legacyMigrations, '000024_retention_projection_gate.sql')),
+      rm(path.join(legacyMigrations, '000025_source_scan_horizon.sql')),
     ]);
     const legacy = await runMigrations(pool, {
       appBuild: 'history-foundation-v20',
@@ -182,7 +183,7 @@ databaseSuite('history and retention foundation migration', () => {
   it('backfills every durable run reference before rewiring foreign keys', async () => {
     const migration = await runMigrations(pool, { appBuild: 'history-foundation-v21' });
     expect(migration).toEqual({
-      applied: [21, 22, 23, 24],
+      applied: [21, 22, 23, 24, 25],
       currentRevision: TARGET_SCHEMA_REVISION,
     });
 

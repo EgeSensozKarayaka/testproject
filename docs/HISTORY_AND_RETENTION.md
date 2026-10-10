@@ -398,7 +398,7 @@ Referans dataset en az 500 check × 30 saniye × 35 gün eşdeğer dağılım ta
 3. **Private API:** canonical OpenAPI history/incident düzeltmeleri, owner-scoped service/routes, cursor, projection-lag davranışı ve contract testleri.
 4. **Kapanış kanıtı:** correctness matrisi, 20/200/500 rollup profili, 35 günlük history capacity/plan raporu, full CI ve durum belgeleri.
 
-Her dilim ayrı küçük commit olur. Revision 21–24 mevcut migration dosyalarını değiştirmeden forward-only uygulandı. Source cursor gecikmesi veya pending rebuild backlog'u varken retention fail-closed ertelenir. Retention, önce detach+manifest kaydı oluşturur; fiziksel drop ancak 24 saatlik geri dönüş grace süresi dolduğunda ayrı bir turda gerçekleşir.
+Her dilim ayrı küçük commit olur. Revision 21–25 mevcut migration dosyalarını değiştirmeden forward-only uygulandı. Source scan horizon gecikmesi veya pending rebuild backlog'u varken retention fail-closed ertelenir. Retention, önce detach+manifest kaydı oluşturur; fiziksel drop ancak 24 saatlik geri dönüş grace süresi dolduğunda ayrı bir turda gerçekleşir.
 
 ## 15. Bilinçli Olarak Kapsam Dışında
 

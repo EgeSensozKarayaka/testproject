@@ -784,7 +784,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-084 — Geçmiş çıktısı sabit bütçeli, rollup düzeltmesi kaynak-temelli ve bounded'dır
 
 - **Tarih:** 2026-10-10 17:27 +06:00
-- **Durum:** Accepted — Revision 21–24 şema ve housekeeping runtime ile doğrulandı
+- **Durum:** Accepted — Revision 21–25 şema ve housekeeping runtime ile doğrulandı
 - **Bağlam:** 30 saniyelik run'ları ay görünümünde doğrudan taramak büyümeyle doğrusal maliyet yaratır. Geç finalize edilen uzun interval'lar geçmiş bucket'ları düzeltebildiği için yalnız monoton zaman watermark'ı yeterli değildir.
 - **Karar:** Day/week/month sırasıyla en fazla 288/336/360 bucket döndürür; minute ve hour rollup'lar source-of-truth'tan deterministik yeniden hesaplanır. Source cursor değişen aralığı bounded, ilerlemeli rebuild range olarak kuyruğa alır. Minute düzeltmesi hour düzeltmesini tetikler; average-of-average yasaktır.
 - **Alternatifler:** İstek anında raw tarama; yalnız append-only watermark; her interval finalize olduğunda bütün bucket'ları tek transaction'da yazmak; yaklaşık availability.
@@ -836,7 +836,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Tarih:** 2026-10-10 18:01 +06:00
 - **Durum:** Accepted — Revision 24 ve gerçek PostgreSQL backlog testiyle doğrulandı
 - **Bağlam:** Worker uzun süre kapalı kaldığında source cursor retention sınırından ilerliyor olabilir. Aynı anda raw veya minute partition detach edilirse henüz rollup'a yansımamış kaynak geri dönüşsüz kaybedilebilir.
-- **Karar:** Her iki source cursor son beş dakika içine gelmeden veya herhangi bir pending rebuild range varken partition retention ve reference purge fail-closed `DEFERRED_PROJECTION_BACKLOG` döner. Mevcut Revision 22 işlemi değiştirilmedi; Revision 24 güvenlik wrapper'ı yalnız güvenli durumda bounded adıma delege eder.
+- **Karar:** Her iki source için exact row cursor'dan ayrı `data_through` scan horizon'u son beş dakika içine gelmeden veya herhangi bir pending rebuild range varken partition retention ve reference purge fail-closed `DEFERRED_PROJECTION_BACKLOG` döner. Revision 24 kapıyı, Revision 25 boş/sessiz taramayı kanıtlayan ayrı horizon'u ekler; mevcut Revision 22 işlemi değiştirilmez.
 - **Alternatifler:** Retention'ı wall-clock cutoff'a göre koşulsuz çalıştırmak; yalnız pending range sayısına bakmak; silme sonrası backup'tan rollup onarmayı normal akış saymak.
 - **Gerekçe:** Saklama süresini birkaç tur uzatmak, doğru history üretmek için gerekli kaynağı silmekten daha güvenlidir.
-- **Sonuçlar:** Büyük backlog sırasında partition ve row purge gecikir ve metric/logda görünür. Backlog boşalıp cursor'lar güncel olduğunda otomatik devam eder; API/monitor/notification readiness bundan etkilenmez.
+- **Sonuçlar:** Büyük backlog sırasında partition ve row purge gecikir ve metric/logda görünür. Batch limitinden az satır okuyan başarılı tarama horizon'u ilerletir; hiç yeni run üretmeyen paused sistem kilitlenmez. Backlog boşaldığında otomatik devam eder; API/monitor/notification readiness bundan etkilenmez.

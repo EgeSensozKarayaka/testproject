@@ -1,20 +1,20 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 18:06 +06:00
+**Son güncelleme:** 2026-10-10 18:11 +06:00
 
 **Genel durum:** Aşama 0–11 tamamlandı; Aşama 12 uygulama dilimleri 1–2 tamamlandı, private history/incident API sırada
 
 ## Tamamlanan
 
 - Ayrı `housekeeping-worker` process/container'ı, dar `security_api` sınırı ve dört bağımsız bounded loop: source discovery, minute/hour rollup, partition/default guard ve retention/purge
-- Revision 22–24 ile atomik full-tuple cursor+range enqueue, source-of-truth minute recompute, sum/count hour aggregation, üç aylık partition horizon, DEFAULT görünürlüğü, projection-backlog retention kapısı, detach→24 saat grace→drop manifest'i ve replica-safe çözünürlük lane kilidi
+- Revision 22–25 ile atomik full-tuple cursor+range enqueue, sessiz sistem scan horizon'u, source-of-truth minute recompute, sum/count hour aggregation, üç aylık partition horizon, DEFAULT görünürlüğü, projection-backlog retention kapısı, detach→24 saat grace→drop manifest'i ve replica-safe çözünürlük lane kilidi
 - İzole PostgreSQL housekeeping kabulü **3/3** geçti: iki replica + process restart yakınsaması, exact üç minute/tek hour sonucu, duplicate discovery yokluğu, DEFAULT guard, bounded purge, partition detach grace ve direct-DML yasağı
 - Aşama 12 dilim 2 tam kalite kapısı: format, 58-operation contract drift, lint, strict workspace typecheck, **29 dosyada 212/212 unit**, **14 dosyada 83/83 integration** ve bütün production build'leri geçti
 - Revision 21 ile kompakt accepted-run evidence, queue-lineage trigger'ı, state/incident/health FK rewiring'i, incident group-at-open snapshot'ı, typed rollup checkpoint/rebuild range, retention manifest ve source-discovery indeksleri
 - Revision 20→21 gerçek PostgreSQL yükseltme paketi **3/3** geçti: durable reference backfill'i, raw run + terminal attempt/job temizleme bağımsızlığı, yeni evidence capture, yanlış lineage reddi, group snapshot ve housekeeper direct-DML yasağı
 - Saf history domain katmanında source-aligned day/week/month pencere planı, exact duration/accounting, availability/coverage/classification, half-open kırpım ve sum/count response aggregation; odaklı testler **9/9** geçti
 - Aşama 12 dilim 1 tam kalite kapısı: format, 58-operation contract drift, lint, strict workspace typecheck, **28 dosyada 209/209 unit**, **13 dosyada 80/80 integration** ve bütün production build'leri geçti
-- Yerel PostgreSQL Revision 24'e yükseltildi; housekeeping production-benzeri container image'i build edildi ve Compose readiness'i healthy kaldı
+- Yerel PostgreSQL Revision 25'e yükseltildi; housekeeping production-benzeri container image'i build edildi ve Compose readiness'i healthy kaldı
 - Aşama 12 için zaman ağırlıklı availability/coverage, sabit day/week/month bucket bütçeleri, deterministic bounded rollup düzeltmesi, ayrı housekeeping process'i, incident journal ve partition retention yaşam döngüsünü kesinleştiren `docs/HISTORY_AND_RETENTION.md`
 - Mevcut 30/90/400 günlük retention hedeflerini engelleyen queue→raw run→state/incident/health-interval foreign key zincirinin tespiti; Revision 21 için kompakt run evidence, insert-time lineage doğrulaması, cursor indeksleri, typed rebuild queue, group-at-open snapshot ve detach/grace/drop manifest çözümünün kaydı
 - Revision 16–20 ile default/group policy reconciliation'ı, recipient transactional-email lineage'ı, public confirm/enqueue/cancel sınırları, incident delivery/attempt state machine'i, dar notifier claim/complete fonksiyonları, `NOTIFICATION` activation ve açık-incident source reconciliation'ı

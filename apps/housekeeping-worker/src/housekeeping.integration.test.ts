@@ -239,6 +239,14 @@ databaseSuite('housekeeping runtime', () => {
 
     const repeated = await replicaOne.discoverSources(100);
     expect(repeated).toEqual({ intervalSources: 0, rangesEnqueued: 0, runSources: 0 });
+
+    const horizons = await pool.query<{ current_count: string }>(
+      `SELECT count(*)::text AS current_count
+       FROM monitoring.rollup_checkpoints
+       WHERE processor_name IN ('runs-minute-source', 'intervals-minute-source')
+         AND data_through >= statement_timestamp() - interval '5 minutes'`,
+    );
+    expect(horizons.rows[0]?.current_count).toBe('2');
   });
 
   it('reports DEFAULT rows without blocking readiness', async () => {
