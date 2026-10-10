@@ -611,4 +611,9 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 
 - GitHub Actions run `38062943937`, 500-check fixture'ını 100'er kayıtla sınırlayan UI testinin varsayılan 5 saniye sınırında timeout olduğunu annotation ile gösterdi; diğer job'lar çalışmaya devam etti.
 - Test gerçek yerel koşuda **6/6** geçti ve tek dosya toplam süresi **4,72 sn** ölçüldü. Bilinçli ağır DOM fixture'ına 15 saniyelik test-local bütçe verildi; global timeout veya ürün sayfalama davranışı gevşetilmedi.
+
+### 21:21 — Teslim demo seed'i
+
+- Seed dokümantasyonundaki eski “auth henüz yok” ifadesi güncel kayıt/Mailpit akışına göre düzeltildi. Predictor kapsam dışı olduğu için placeholder model metadata'sı seed'den çıkarıldı.
+- Seed'in parola/session üretmediği açıkça belirtildi; tarayıcı kabulü normal kullanıcı kaydıyla yapılır. Güncel idempotent fixture çalışan Revision 33 veritabanına başarıyla uygulandı.
 - Compose image rebuild'i sırasında npm registry bağlantısı çok sayıda `ECONNRESET/error 23` yeniden denemesine girdiği için dış ağ bekleyişi sonlandırıldı. Kaynak production bundle'ı host bağımlılıklarıyla başarıyla build edildi ve yalnız yerel E2E için mevcut sağlıklı web container'ına kopyalandı; bu nedenle bu dilim temiz Docker image rebuild kanıtı iddia etmez. Dockerfile değişmedi, CI production build'i geçti.

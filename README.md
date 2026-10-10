@@ -16,7 +16,7 @@ Aşama 0–14'ün teslim kapsamı tamamlanmıştır. Güvenli hesap ve owner-sco
 docker compose --profile app up --detach --build --wait
 ```
 
-Bu akış PostgreSQL sağlıklı olduktan sonra tek-seferlik `migrate` işini çalıştırır; API ve worker'lar yalnız migration başarıyla tamamlanırsa başlar. İlk demo verisini eklemek isterseniz stack başladıktan sonra `pnpm db:seed` çalıştırın.
+Bu akış PostgreSQL sağlıklı olduktan sonra tek-seferlik `migrate` işini çalıştırır; API ve worker'lar yalnız migration başarıyla tamamlanırsa başlar. İlk worker/veri inceleme fixture'ını eklemek isterseniz stack başladıktan sonra `pnpm db:seed` çalıştırın. Seed hesabı giriş parolası üretmez; tarayıcı demosu aşağıdaki normal kayıt ve Mailpit doğrulama akışıyla yapılır.
 
 Başlangıçtan sonra:
 

@@ -167,23 +167,3 @@ VALUES (
   true
 )
 ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO prediction.model_versions (
-  id,
-  name,
-  version,
-  artifact_digest,
-  feature_schema_version,
-  status,
-  metadata
-)
-VALUES (
-  '00000000-0000-4000-8000-000000000701',
-  'baseline-placeholder',
-  '0.0.0',
-  'not-trained',
-  1,
-  'CANDIDATE',
-  '{"purpose":"schema and UI fixture only"}'::jsonb
-)
-ON CONFLICT (id) DO NOTHING;

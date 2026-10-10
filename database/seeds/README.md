@@ -6,4 +6,6 @@ Bu dizindeki SQL dosyaları yalnız development/test ortamında çalışan idemp
 pnpm db:seed
 ```
 
-Başlangıç seed'i kullanıcı, grup, check, current UNKNOWN state, notification policy/recipient, taslak public sayfa ve predictor model metadata'sı oluşturur. Authentication Aşama 5'te uygulanacağı için demo password veya session üretmez; repository içinde parola/hash örneği saklanmaz.
+Başlangıç seed'i kullanıcı, grup, check, current UNKNOWN state, notification policy/recipient ve taslak public sayfa oluşturur. Seed kullanıcısı yalnız veri inceleme/worker demosu içindir; parola veya session üretmez. Tarayıcı demosu için normal kayıt → Mailpit doğrulama → giriş akışı kullanılmalıdır.
+
+Python predictor teslim kapsamından çıkarıldığı için seed tahmin modeli veya skoru oluşturmaz.
