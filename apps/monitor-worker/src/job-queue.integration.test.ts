@@ -309,4 +309,263 @@ databaseSuite('monitor PostgreSQL job queue', () => {
       state: 'RUNNING',
     });
   });
+
+  it('acknowledges cancellation and atomically materializes coalesced manual intent', async () => {
+    const checkId = '00000000-0000-4000-8000-000000006001';
+    const jobId = '00000000-0000-7000-8000-000000006001';
+    await insertCheck({ id: checkId, ownerId: ownerA });
+    await insertPendingJob({ checkId, id: jobId, ownerId: ownerA });
+
+    const queue = new PostgresJobQueue(monitorPool, 'monitor-worker:cancel', 15_000);
+    const claim = await queue.claimCandidate({ checkId, jobId, ownerId: ownerA });
+    if (claim.outcome !== 'CLAIMED') throw new Error('Fixture job was not claimed.');
+    await expect(queue.startClaim(claim.job)).resolves.toMatchObject({ outcome: 'ACTIVE' });
+
+    await schemaPool.query(
+      `UPDATE app.checks
+       SET manual_requested_at = statement_timestamp(), manual_requested_mode = 'STATEFUL'
+       WHERE owner_id = $1 AND id = $2`,
+      [ownerA, checkId],
+    );
+    await schemaPool.query(
+      `UPDATE monitoring.check_jobs
+       SET cancellation_requested_at = statement_timestamp(),
+           cancellation_reason = 'CONFIGURATION_CHANGED'
+       WHERE owner_id = $1 AND check_id = $2 AND id = $3`,
+      [ownerA, checkId, jobId],
+    );
+
+    const settlement = await queue.settleInfrastructureFault(claim.job, 'CANCELLED');
+    expect(settlement).toMatchObject({ outcome: 'CANCELLED' });
+    if (settlement.outcome !== 'CANCELLED') throw new Error('Cancellation was not settled.');
+    expect(settlement.manualJobId).toEqual(expect.any(String));
+
+    const persisted = await schemaPool.query<{
+      active_jobs: string;
+      attempt_reason: string;
+      manual_requested_at: Date | null;
+      manual_requested_mode: string | null;
+      old_reason: string;
+      old_state: string;
+      replacement_mode: string;
+      replacement_state: string;
+      replacement_trigger: string;
+    }>(
+      `SELECT old.state AS old_state, old.terminal_reason AS old_reason,
+              attempt.terminal_reason AS attempt_reason,
+              replacement.state AS replacement_state,
+              replacement.trigger_kind AS replacement_trigger,
+              replacement.manual_mode AS replacement_mode,
+              check_row.manual_requested_at, check_row.manual_requested_mode,
+              (SELECT count(*)::text FROM monitoring.check_jobs active
+               WHERE active.owner_id = old.owner_id AND active.check_id = old.check_id
+                 AND active.state IN ('PENDING', 'LEASED', 'RUNNING')) AS active_jobs
+       FROM monitoring.check_jobs AS old
+       JOIN monitoring.check_job_attempts AS attempt ON attempt.job_id = old.id
+       JOIN monitoring.check_jobs AS replacement ON replacement.id = $2
+       JOIN app.checks AS check_row
+         ON check_row.owner_id = old.owner_id AND check_row.id = old.check_id
+       WHERE old.id = $1`,
+      [jobId, settlement.manualJobId],
+    );
+    expect(persisted.rows[0]).toEqual({
+      active_jobs: '1',
+      attempt_reason: 'CANCELLED',
+      manual_requested_at: null,
+      manual_requested_mode: null,
+      old_reason: 'CONFIGURATION_CHANGED',
+      old_state: 'CANCELLED',
+      replacement_mode: 'STATEFUL',
+      replacement_state: 'PENDING',
+      replacement_trigger: 'MANUAL',
+    });
+  });
+
+  it('retries transient infrastructure faults and dead-letters unsupported snapshots', async () => {
+    const retryCheckId = '00000000-0000-4000-8000-000000007001';
+    const retryJobId = '00000000-0000-7000-8000-000000007001';
+    const deadCheckId = '00000000-0000-4000-8000-000000007002';
+    const deadJobId = '00000000-0000-7000-8000-000000007002';
+    const exhaustedCheckId = '00000000-0000-4000-8000-000000007003';
+    const exhaustedJobId = '00000000-0000-7000-8000-000000007003';
+    await insertCheck({ id: retryCheckId, ownerId: ownerA });
+    await insertPendingJob({ checkId: retryCheckId, id: retryJobId, ownerId: ownerA });
+    await insertCheck({ id: deadCheckId, ownerId: ownerA });
+    await insertPendingJob({ checkId: deadCheckId, id: deadJobId, ownerId: ownerA });
+    await insertCheck({ id: exhaustedCheckId, ownerId: ownerA });
+    await insertPendingJob({
+      checkId: exhaustedCheckId,
+      id: exhaustedJobId,
+      ownerId: ownerA,
+    });
+    await schemaPool.query(`UPDATE monitoring.check_jobs SET max_attempts = 1 WHERE id = $1`, [
+      exhaustedJobId,
+    ]);
+
+    const queue = new PostgresJobQueue(monitorPool, 'monitor-worker:faults', 15_000);
+    const retryClaim = await queue.claimCandidate({
+      checkId: retryCheckId,
+      jobId: retryJobId,
+      ownerId: ownerA,
+    });
+    if (retryClaim.outcome !== 'CLAIMED') throw new Error('Retry fixture was not claimed.');
+    await queue.startClaim(retryClaim.job);
+    const retry = await queue.settleInfrastructureFault(retryClaim.job, 'ENGINE_ERROR');
+    expect(retry).toMatchObject({ outcome: 'RETRY_SCHEDULED' });
+
+    const deadClaim = await queue.claimCandidate({
+      checkId: deadCheckId,
+      jobId: deadJobId,
+      ownerId: ownerA,
+    });
+    if (deadClaim.outcome !== 'CLAIMED') throw new Error('Dead fixture was not claimed.');
+    await queue.startClaim(deadClaim.job);
+    const dead = await queue.settleInfrastructureFault(deadClaim.job, 'UNSUPPORTED_JOB_SNAPSHOT');
+    expect(dead).toEqual({ manualJobId: null, outcome: 'DEAD' });
+
+    const exhaustedClaim = await queue.claimCandidate({
+      checkId: exhaustedCheckId,
+      jobId: exhaustedJobId,
+      ownerId: ownerA,
+    });
+    if (exhaustedClaim.outcome !== 'CLAIMED') {
+      throw new Error('Exhausted fixture was not claimed.');
+    }
+    await queue.startClaim(exhaustedClaim.job);
+    await expect(
+      queue.settleInfrastructureFault(exhaustedClaim.job, 'ENGINE_ERROR'),
+    ).resolves.toEqual({ manualJobId: null, outcome: 'DEAD' });
+
+    const persisted = await schemaPool.query<{
+      attempt_reason: string;
+      available_at: Date;
+      completed_at: Date | null;
+      job_id: string;
+      state: string;
+      terminal_reason: string | null;
+    }>(
+      `SELECT job.id::text AS job_id, job.state, job.available_at, job.completed_at,
+              job.terminal_reason, attempt.terminal_reason AS attempt_reason
+       FROM monitoring.check_jobs AS job
+       JOIN monitoring.check_job_attempts AS attempt ON attempt.job_id = job.id
+       WHERE job.id IN ($1, $2, $3)
+       ORDER BY job.id`,
+      [retryJobId, deadJobId, exhaustedJobId],
+    );
+    expect(persisted.rows).toEqual([
+      expect.objectContaining({
+        attempt_reason: 'INTERNAL_ERROR',
+        completed_at: null,
+        job_id: retryJobId,
+        state: 'PENDING',
+        terminal_reason: null,
+      }),
+      expect.objectContaining({
+        attempt_reason: 'INTERNAL_ERROR',
+        job_id: deadJobId,
+        state: 'DEAD',
+        terminal_reason: 'UNSUPPORTED_JOB_SNAPSHOT',
+      }),
+      expect.objectContaining({
+        attempt_reason: 'INTERNAL_ERROR',
+        job_id: exhaustedJobId,
+        state: 'DEAD',
+        terminal_reason: 'ENGINE_ERROR_RETRY_EXHAUSTED',
+      }),
+    ]);
+    expect(persisted.rows[0]!.available_at.getTime()).toBeGreaterThan(Date.now());
+    expect(persisted.rows[1]!.completed_at).toBeInstanceOf(Date);
+    expect(persisted.rows[2]!.completed_at).toBeInstanceOf(Date);
+  });
+
+  it('recovers one expired lease once under concurrent sweepers', async () => {
+    const checkId = '00000000-0000-4000-8000-000000008001';
+    const jobId = '00000000-0000-7000-8000-000000008001';
+    await insertCheck({ id: checkId, ownerId: ownerB });
+    await insertPendingJob({ checkId, id: jobId, ownerId: ownerB });
+
+    const owner = new PostgresJobQueue(monitorPool, 'monitor-worker:expired-owner', 15_000);
+    const first = new PostgresJobQueue(monitorPool, 'monitor-worker:sweeper-a', 15_000);
+    const second = new PostgresJobQueue(monitorPool, 'monitor-worker:sweeper-b', 15_000);
+    const claim = await owner.claimCandidate({ checkId, jobId, ownerId: ownerB });
+    if (claim.outcome !== 'CLAIMED') throw new Error('Expired fixture was not claimed.');
+    await owner.startClaim(claim.job);
+    await schemaPool.query(
+      `UPDATE monitoring.check_jobs
+       SET lease_expires_at = statement_timestamp() - interval '1 second'
+       WHERE owner_id = $1 AND check_id = $2 AND id = $3`,
+      [ownerB, checkId, jobId],
+    );
+
+    await expect(first.listExpiredLeaseCandidates(10)).resolves.toEqual([
+      { checkId, jobId, ownerId: ownerB },
+    ]);
+    const settlements = await Promise.all([
+      first.recoverExpiredLease({ checkId, jobId, ownerId: ownerB }),
+      second.recoverExpiredLease({ checkId, jobId, ownerId: ownerB }),
+    ]);
+    expect(settlements.map((item) => item.outcome).sort()).toEqual(['RETRY_SCHEDULED', 'STALE']);
+
+    const persisted = await schemaPool.query<{
+      attempt_reason: string;
+      fencing_token: string | null;
+      lease_owner: string | null;
+      state: string;
+    }>(
+      `SELECT job.state, job.lease_owner, job.fencing_token::text,
+              attempt.terminal_reason AS attempt_reason
+       FROM monitoring.check_jobs AS job
+       JOIN monitoring.check_job_attempts AS attempt ON attempt.job_id = job.id
+       WHERE job.id = $1`,
+      [jobId],
+    );
+    expect(persisted.rows[0]).toEqual({
+      attempt_reason: 'LEASE_LOST',
+      fencing_token: null,
+      lease_owner: null,
+      state: 'PENDING',
+    });
+  });
+
+  it('cancels rather than retries an expired lease with a cancellation request', async () => {
+    const checkId = '00000000-0000-4000-8000-000000009001';
+    const jobId = '00000000-0000-7000-8000-000000009001';
+    await insertCheck({ id: checkId, ownerId: ownerB });
+    await insertPendingJob({ checkId, id: jobId, ownerId: ownerB });
+
+    const owner = new PostgresJobQueue(monitorPool, 'monitor-worker:cancel-expired', 15_000);
+    const sweeper = new PostgresJobQueue(monitorPool, 'monitor-worker:cancel-sweeper', 15_000);
+    const claim = await owner.claimCandidate({ checkId, jobId, ownerId: ownerB });
+    if (claim.outcome !== 'CLAIMED') throw new Error('Cancellation fixture was not claimed.');
+    await owner.startClaim(claim.job);
+    await schemaPool.query(
+      `UPDATE monitoring.check_jobs
+       SET cancellation_requested_at = statement_timestamp(),
+           cancellation_reason = 'CHECK_PAUSED',
+           lease_expires_at = statement_timestamp() - interval '1 second'
+       WHERE owner_id = $1 AND check_id = $2 AND id = $3`,
+      [ownerB, checkId, jobId],
+    );
+
+    await expect(sweeper.recoverExpiredLease({ checkId, jobId, ownerId: ownerB })).resolves.toEqual(
+      { manualJobId: null, outcome: 'CANCELLED' },
+    );
+    const persisted = await schemaPool.query<{
+      attempt_reason: string;
+      state: string;
+      terminal_reason: string;
+    }>(
+      `SELECT job.state, job.terminal_reason,
+              attempt.terminal_reason AS attempt_reason
+       FROM monitoring.check_jobs AS job
+       JOIN monitoring.check_job_attempts AS attempt ON attempt.job_id = job.id
+       WHERE job.id = $1`,
+      [jobId],
+    );
+    expect(persisted.rows[0]).toEqual({
+      attempt_reason: 'CANCELLED',
+      state: 'CANCELLED',
+      terminal_reason: 'CHECK_PAUSED',
+    });
+  });
 });

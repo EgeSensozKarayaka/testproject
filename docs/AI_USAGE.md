@@ -1,6 +1,6 @@
 # AI Kullanımı
 
-**Son güncelleme:** 2026-10-10 13:03 +06:00
+**Son güncelleme:** 2026-10-10 13:48 +06:00
 
 ## Araç ve model
 
@@ -28,6 +28,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 10. Aşama 9'un ilk uygulama diliminde AI revision 14, typed worker config ve ortak activation-aware outbox writer'ı hazırladı. Gerçek PostgreSQL testi helper'ın `INSERT ... RETURNING` nedeniyle API rolünden gereksiz `SELECT` istediğini gösterince rolü genişletmek yerine helper yalnız mevcut dar `INSERT` yetkisiyle çalışacak şekilde düzeltildi.
 11. Aşama 9'un ikinci uygulama diliminde AI sabit cadence/deterministik retry yardımcılarını ve check-first PostgreSQL job queue adapter'ını uyguladı. Owner-fair seçim pencere fonksiyonuyla global limitten önce hesaplandı; iki worker yarışı, attempt lineage, monoton fence, conditional start/heartbeat ve cancellation görünürlüğü gerçek PostgreSQL üzerinde doğrulandı.
 12. Aşama 9'un üçüncü uygulama diliminde AI process-secret HMAC anahtarlı owner/hostname slotları, global-owner-host bounded concurrency, active-task registry, strict snapshot decode, lease heartbeat/cancellation abort ve typed result/fault sink sınırı olan probe dispatcher'ı uyguladı. Atomik result sink henüz bulunmadığı için production polling loop'unu erken aktive etmeyerek `RUNNING` job bırakma ve sonuç kaybı riski önlendi.
+13. Aşama 9'un dördüncü uygulama diliminde AI cancellation acknowledgement, typed infrastructure retry/DEAD ve owner-fair expired-lease recovery'yi check→job→attempt kilit sırasıyla uyguladı. PostgreSQL testi gerçek request timestamp'inin sürücüde mikrosaniyeden milisaniyeye yuvarlanması nedeniyle eski manual-intent temizleme eşitliğinin hatalı olduğunu yakaladı; satır zaten kilitli olduğundan kırılgan timestamp karşılaştırması kaldırıldı ve coalesced intent'in terminal geçişle aynı transaction'da materialize edilmesi doğrulandı.
 
 ## Güvenlik ve gizlilik
 

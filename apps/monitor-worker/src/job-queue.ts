@@ -1,5 +1,8 @@
 import type { Pool, PoolClient } from '@site-monitor/database';
 import { writeActivatedOutboxEvent } from '@site-monitor/database';
+import type { ProbeInfrastructureErrorCode } from '@site-monitor/check-engine';
+
+import { retryBackoffMs } from './scheduling.js';
 
 export interface CheckCandidate {
   checkId: string;
@@ -41,6 +44,17 @@ export interface ClaimedJob extends JobCandidate {
 
 export type ClaimResult = { job: ClaimedJob; outcome: 'CLAIMED' } | { outcome: 'SKIPPED' };
 
+export type JobSettlement =
+  | {
+      manualJobId: string | null;
+      outcome: 'CANCELLED' | 'DEAD';
+    }
+  | {
+      nextAvailableAt: string;
+      outcome: 'RETRY_SCHEDULED';
+    }
+  | { outcome: 'STALE' };
+
 type CancellationReason = 'CHECK_DELETED' | 'CHECK_PAUSED' | 'CONFIGURATION_CHANGED';
 
 export type LeaseStatus =
@@ -79,6 +93,15 @@ interface LockedJobRow {
   schedule_generation: string;
   scheduled_for: Date | string;
   trigger_kind: 'MANUAL' | 'SCHEDULED';
+}
+
+interface LockedActiveJobRow extends LockedJobRow {
+  cancellation_reason: CancellationReason | null;
+  cancellation_requested_at: Date | string | null;
+  fencing_token: string;
+  lease_expires_at: Date | string;
+  lease_owner: string;
+  state: 'LEASED' | 'RUNNING';
 }
 
 function instant(value: Date | string): string {
@@ -133,6 +156,110 @@ export class PostgresJobQueue {
     if (!Number.isInteger(leaseGraceMs) || leaseGraceMs < 1_000 || leaseGraceMs > 300_000) {
       throw new TypeError('leaseGraceMs must be an integer from 1000 through 300000.');
     }
+  }
+
+  async #lockCheck(client: PoolClient, candidate: CheckCandidate): Promise<LockedCheckRow | null> {
+    const result = await client.query<LockedCheckRow>(
+      `SELECT cadence_anchor_at, execution_state, expected_body_substring,
+              expected_status_code, interval_seconds, lifecycle_state,
+              manual_requested_at, manual_requested_mode, next_run_at,
+              probe_generation::text, resource_version::text,
+              schedule_generation::text, timeout_ms, url,
+              (next_run_at IS NOT NULL AND next_run_at <= transaction_timestamp()) AS is_due
+       FROM app.checks
+       WHERE owner_id = $1 AND id = $2
+       FOR UPDATE SKIP LOCKED`,
+      [candidate.ownerId, candidate.checkId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async #materializePendingManualIntent(
+    client: PoolClient,
+    candidate: CheckCandidate,
+    check: LockedCheckRow,
+  ): Promise<string | null> {
+    if (check.manual_requested_at === null) return null;
+    if (check.manual_requested_mode === null) {
+      throw new Error('Manual request mode invariant violated.');
+    }
+
+    const scheduledFor = check.manual_requested_at;
+    const manualMode = check.manual_requested_mode;
+    if (
+      check.lifecycle_state === 'DELETED' ||
+      (check.execution_state === 'PAUSED' && manualMode === 'STATEFUL')
+    ) {
+      const cleared = await client.query(
+        `UPDATE app.checks
+         SET manual_requested_at = NULL, manual_requested_mode = NULL,
+             updated_at = updated_at
+         WHERE owner_id = $1 AND id = $2
+           AND manual_requested_at IS NOT NULL AND manual_requested_mode = $3`,
+        [candidate.ownerId, candidate.checkId, manualMode],
+      );
+      if (cleared.rowCount !== 1) throw new Error('Manual request changed while locked.');
+      return null;
+    }
+
+    const inserted = await client.query<{ available_at: Date | string; id: string }>(
+      `INSERT INTO monitoring.check_jobs
+         (owner_id, check_id, trigger_kind, manual_mode, scheduled_for,
+          available_at, priority, state, config_snapshot, resource_version,
+          probe_generation, schedule_generation)
+       VALUES ($1, $2, 'MANUAL', $3, $4, transaction_timestamp(), 100,
+               'PENDING', $5::jsonb, $6::bigint, $7::bigint, $8::bigint)
+       RETURNING id::text, available_at`,
+      [
+        candidate.ownerId,
+        candidate.checkId,
+        manualMode,
+        scheduledFor,
+        JSON.stringify(probeSnapshot(check)),
+        check.resource_version,
+        check.probe_generation,
+        check.schedule_generation,
+      ],
+    );
+    const jobId = inserted.rows[0]!.id;
+    const availableAt = instant(inserted.rows[0]!.available_at);
+    const cleared = await client.query(
+      `UPDATE app.checks
+       SET manual_requested_at = NULL, manual_requested_mode = NULL,
+           updated_at = updated_at
+       WHERE owner_id = $1 AND id = $2
+         AND manual_requested_at IS NOT NULL AND manual_requested_mode = $3`,
+      [candidate.ownerId, candidate.checkId, manualMode],
+    );
+    if (cleared.rowCount !== 1) throw new Error('Manual request changed while locked.');
+
+    const payload = {
+      check_id: candidate.checkId,
+      job_id: jobId,
+      job_kind: 'MANUAL',
+      not_before: availableAt,
+      probe_generation: check.probe_generation,
+      schedule_generation: check.schedule_generation,
+    };
+    await client.query(
+      `INSERT INTO audit.events
+         (occurred_at, owner_id, actor_type, actor_id, action, resource_type,
+          resource_id, correlation_id, result, metadata)
+       VALUES (transaction_timestamp(), $1, 'WORKER', $2, 'check.job_available',
+               'check_job', $3, $3, 'SUCCESS', $4::jsonb)`,
+      [candidate.ownerId, this.workerId, jobId, JSON.stringify(payload)],
+    );
+    await writeActivatedOutboxEvent(client, {
+      aggregateId: jobId,
+      aggregateType: 'check_job',
+      aggregateVersion: check.resource_version,
+      correlationId: jobId,
+      destinations: ['AUDIT'],
+      eventType: 'check.job_available',
+      ownerId: candidate.ownerId,
+      payload,
+    });
+    return jobId;
   }
 
   async listMaterializationCandidates(limit: number): Promise<CheckCandidate[]> {
@@ -251,8 +378,8 @@ export class PostgresJobQueue {
            SET manual_requested_at = NULL, manual_requested_mode = NULL,
                updated_at = updated_at
            WHERE owner_id = $1 AND id = $2
-             AND manual_requested_at = $3 AND manual_requested_mode = $4`,
-          [candidate.ownerId, candidate.checkId, scheduledFor, manualMode],
+             AND manual_requested_at IS NOT NULL AND manual_requested_mode = $3`,
+          [candidate.ownerId, candidate.checkId, manualMode],
         );
         if (cleared.rowCount !== 1) throw new Error('Manual request changed while locked.');
       } else {
@@ -556,5 +683,309 @@ export class PostgresJobQueue {
       };
     }
     return { leaseExpiresAt: instant(row.lease_expires_at), outcome: 'ACTIVE' };
+  }
+
+  async settleInfrastructureFault(
+    claimed: ClaimedJob,
+    code: ProbeInfrastructureErrorCode,
+  ): Promise<JobSettlement> {
+    return inTransaction(this.pool, async (client) => {
+      const check = await this.#lockCheck(client, claimed);
+      if (!check) return { outcome: 'STALE' };
+
+      const jobResult = await client.query<LockedActiveJobRow>(
+        `SELECT attempt_count, cancellation_reason, cancellation_requested_at,
+                config_snapshot, fencing_token::text, lease_expires_at, lease_owner,
+                manual_mode, max_attempts, probe_generation::text,
+                resource_version::text, schedule_generation::text, scheduled_for,
+                state, trigger_kind
+         FROM monitoring.check_jobs
+         WHERE owner_id = $1 AND check_id = $2 AND id = $3
+           AND state IN ('LEASED', 'RUNNING') AND lease_owner = $4
+           AND fencing_token = $5::bigint
+           AND lease_expires_at > transaction_timestamp()
+         FOR UPDATE`,
+        [claimed.ownerId, claimed.checkId, claimed.jobId, this.workerId, claimed.fencingToken],
+      );
+      const job = jobResult.rows[0];
+      if (!job) return { outcome: 'STALE' };
+
+      const attempt = await client.query<{ id: string }>(
+        `SELECT id::text
+         FROM monitoring.check_job_attempts
+         WHERE owner_id = $1 AND check_id = $2 AND job_id = $3 AND id = $4
+           AND worker_id = $5 AND fencing_token = $6::bigint AND ended_at IS NULL
+         FOR UPDATE`,
+        [
+          claimed.ownerId,
+          claimed.checkId,
+          claimed.jobId,
+          claimed.attemptId,
+          this.workerId,
+          claimed.fencingToken,
+        ],
+      );
+      if (attempt.rowCount !== 1) return { outcome: 'STALE' };
+
+      if (job.cancellation_requested_at !== null) {
+        const ended = await client.query(
+          `UPDATE monitoring.check_job_attempts
+           SET ended_at = transaction_timestamp(), terminal_reason = 'CANCELLED'
+           WHERE owner_id = $1 AND check_id = $2 AND job_id = $3 AND id = $4
+             AND ended_at IS NULL`,
+          [claimed.ownerId, claimed.checkId, claimed.jobId, claimed.attemptId],
+        );
+        if (ended.rowCount !== 1) throw new Error('Open attempt changed while locked.');
+        const cancelled = await client.query(
+          `UPDATE monitoring.check_jobs
+           SET state = 'CANCELLED', completed_at = transaction_timestamp(),
+               terminal_reason = cancellation_reason,
+               lease_owner = NULL, lease_expires_at = NULL, heartbeat_at = NULL,
+               fencing_token = NULL, updated_at = transaction_timestamp()
+           WHERE owner_id = $1 AND check_id = $2 AND id = $3
+             AND state IN ('LEASED', 'RUNNING') AND lease_owner = $4
+             AND fencing_token = $5::bigint`,
+          [claimed.ownerId, claimed.checkId, claimed.jobId, this.workerId, claimed.fencingToken],
+        );
+        if (cancelled.rowCount !== 1) throw new Error('Active job changed while locked.');
+        const manualJobId = await this.#materializePendingManualIntent(client, claimed, check);
+        return { manualJobId, outcome: 'CANCELLED' };
+      }
+
+      const attemptReason = code === 'CANCELLED' ? 'CANCELLED' : 'INTERNAL_ERROR';
+      const retryable = code !== 'UNSUPPORTED_JOB_SNAPSHOT';
+      if (retryable && job.attempt_count < job.max_attempts) {
+        const delayMs = retryBackoffMs(job.attempt_count, claimed.jobId);
+        const ended = await client.query(
+          `UPDATE monitoring.check_job_attempts
+           SET ended_at = transaction_timestamp(), terminal_reason = $5
+           WHERE owner_id = $1 AND check_id = $2 AND job_id = $3 AND id = $4
+             AND ended_at IS NULL`,
+          [claimed.ownerId, claimed.checkId, claimed.jobId, claimed.attemptId, attemptReason],
+        );
+        if (ended.rowCount !== 1) throw new Error('Open attempt changed while locked.');
+        const retried = await client.query<{ available_at: Date | string }>(
+          `UPDATE monitoring.check_jobs
+           SET state = 'PENDING',
+               available_at = transaction_timestamp() + $6::integer * interval '1 millisecond',
+               lease_owner = NULL, lease_expires_at = NULL, heartbeat_at = NULL,
+               fencing_token = NULL, started_at = NULL, completed_at = NULL,
+               terminal_reason = NULL, cancellation_requested_at = NULL,
+               cancellation_reason = NULL, updated_at = transaction_timestamp()
+           WHERE owner_id = $1 AND check_id = $2 AND id = $3
+             AND state IN ('LEASED', 'RUNNING') AND lease_owner = $4
+             AND fencing_token = $5::bigint
+           RETURNING available_at`,
+          [
+            claimed.ownerId,
+            claimed.checkId,
+            claimed.jobId,
+            this.workerId,
+            claimed.fencingToken,
+            delayMs,
+          ],
+        );
+        if (retried.rowCount !== 1) throw new Error('Active job changed while locked.');
+        return {
+          nextAvailableAt: instant(retried.rows[0]!.available_at),
+          outcome: 'RETRY_SCHEDULED',
+        };
+      }
+
+      const ended = await client.query(
+        `UPDATE monitoring.check_job_attempts
+         SET ended_at = transaction_timestamp(), terminal_reason = $5
+         WHERE owner_id = $1 AND check_id = $2 AND job_id = $3 AND id = $4
+           AND ended_at IS NULL`,
+        [claimed.ownerId, claimed.checkId, claimed.jobId, claimed.attemptId, attemptReason],
+      );
+      if (ended.rowCount !== 1) throw new Error('Open attempt changed while locked.');
+      const terminalReason =
+        code === 'UNSUPPORTED_JOB_SNAPSHOT'
+          ? 'UNSUPPORTED_JOB_SNAPSHOT'
+          : `${code}_RETRY_EXHAUSTED`;
+      const dead = await client.query(
+        `UPDATE monitoring.check_jobs
+         SET state = 'DEAD', completed_at = transaction_timestamp(),
+             terminal_reason = $6,
+             lease_owner = NULL, lease_expires_at = NULL, heartbeat_at = NULL,
+             fencing_token = NULL, updated_at = transaction_timestamp()
+         WHERE owner_id = $1 AND check_id = $2 AND id = $3
+           AND state IN ('LEASED', 'RUNNING') AND lease_owner = $4
+           AND fencing_token = $5::bigint`,
+        [
+          claimed.ownerId,
+          claimed.checkId,
+          claimed.jobId,
+          this.workerId,
+          claimed.fencingToken,
+          terminalReason,
+        ],
+      );
+      if (dead.rowCount !== 1) throw new Error('Active job changed while locked.');
+      const manualJobId = await this.#materializePendingManualIntent(client, claimed, check);
+      return { manualJobId, outcome: 'DEAD' };
+    });
+  }
+
+  async listExpiredLeaseCandidates(limit: number): Promise<JobCandidate[]> {
+    requireBatchSize(limit);
+    const result = await this.pool.query<{ check_id: string; id: string; owner_id: string }>(
+      `WITH ranked AS (
+         SELECT j.id, j.owner_id, j.check_id, j.lease_expires_at,
+                row_number() OVER (
+                  PARTITION BY j.owner_id
+                  ORDER BY j.lease_expires_at, j.id
+                ) AS owner_rank
+         FROM monitoring.check_jobs AS j
+         WHERE j.state IN ('LEASED', 'RUNNING')
+           AND j.lease_expires_at <= statement_timestamp()
+       )
+       SELECT id::text, owner_id::text, check_id::text
+       FROM ranked
+       ORDER BY owner_rank, lease_expires_at, owner_id, id
+       LIMIT $1`,
+      [limit],
+    );
+    return result.rows.map((row) => ({
+      checkId: row.check_id,
+      jobId: row.id,
+      ownerId: row.owner_id,
+    }));
+  }
+
+  async recoverExpiredBatch(limit: number): Promise<JobSettlement[]> {
+    const candidates = await this.listExpiredLeaseCandidates(limit);
+    const settlements: JobSettlement[] = [];
+    for (const candidate of candidates) {
+      settlements.push(await this.recoverExpiredLease(candidate));
+    }
+    return settlements;
+  }
+
+  async recoverExpiredLease(candidate: JobCandidate): Promise<JobSettlement> {
+    return inTransaction(this.pool, async (client) => {
+      const check = await this.#lockCheck(client, candidate);
+      if (!check) return { outcome: 'STALE' };
+
+      const jobResult = await client.query<LockedActiveJobRow>(
+        `SELECT attempt_count, cancellation_reason, cancellation_requested_at,
+                config_snapshot, fencing_token::text, lease_expires_at, lease_owner,
+                manual_mode, max_attempts, probe_generation::text,
+                resource_version::text, schedule_generation::text, scheduled_for,
+                state, trigger_kind
+         FROM monitoring.check_jobs
+         WHERE owner_id = $1 AND check_id = $2 AND id = $3
+           AND state IN ('LEASED', 'RUNNING')
+           AND lease_expires_at <= transaction_timestamp()
+         FOR UPDATE`,
+        [candidate.ownerId, candidate.checkId, candidate.jobId],
+      );
+      const job = jobResult.rows[0];
+      if (!job) return { outcome: 'STALE' };
+
+      const attempt = await client.query<{ id: string }>(
+        `SELECT id::text
+         FROM monitoring.check_job_attempts
+         WHERE owner_id = $1 AND check_id = $2 AND job_id = $3
+           AND fencing_token = $4::bigint AND ended_at IS NULL
+         FOR UPDATE`,
+        [candidate.ownerId, candidate.checkId, candidate.jobId, job.fencing_token],
+      );
+      const attemptId = attempt.rows[0]?.id;
+      if (!attemptId || attempt.rowCount !== 1) {
+        throw new Error('Expired active job does not have exactly one open attempt.');
+      }
+
+      let cancellationReason = job.cancellation_reason;
+      if (!cancellationReason && check.lifecycle_state === 'DELETED') {
+        cancellationReason = 'CHECK_DELETED';
+      }
+      if (
+        !cancellationReason &&
+        (job.probe_generation !== check.probe_generation ||
+          job.schedule_generation !== check.schedule_generation)
+      ) {
+        cancellationReason = 'CONFIGURATION_CHANGED';
+      }
+      if (
+        !cancellationReason &&
+        check.execution_state === 'PAUSED' &&
+        !(job.trigger_kind === 'MANUAL' && job.manual_mode === 'DIAGNOSTIC')
+      ) {
+        cancellationReason = 'CHECK_PAUSED';
+      }
+
+      if (cancellationReason) {
+        const ended = await client.query(
+          `UPDATE monitoring.check_job_attempts
+           SET ended_at = transaction_timestamp(), terminal_reason = 'CANCELLED'
+           WHERE owner_id = $1 AND check_id = $2 AND job_id = $3 AND id = $4
+             AND ended_at IS NULL`,
+          [candidate.ownerId, candidate.checkId, candidate.jobId, attemptId],
+        );
+        if (ended.rowCount !== 1) throw new Error('Open attempt changed while locked.');
+        const cancelled = await client.query(
+          `UPDATE monitoring.check_jobs
+           SET state = 'CANCELLED', completed_at = transaction_timestamp(),
+               terminal_reason = $4,
+               cancellation_requested_at = COALESCE(cancellation_requested_at, transaction_timestamp()),
+               cancellation_reason = $4,
+               lease_owner = NULL, lease_expires_at = NULL, heartbeat_at = NULL,
+               fencing_token = NULL, updated_at = transaction_timestamp()
+           WHERE owner_id = $1 AND check_id = $2 AND id = $3
+             AND state IN ('LEASED', 'RUNNING')`,
+          [candidate.ownerId, candidate.checkId, candidate.jobId, cancellationReason],
+        );
+        if (cancelled.rowCount !== 1) throw new Error('Expired job changed while locked.');
+        const manualJobId = await this.#materializePendingManualIntent(client, candidate, check);
+        return { manualJobId, outcome: 'CANCELLED' };
+      }
+
+      const ended = await client.query(
+        `UPDATE monitoring.check_job_attempts
+         SET ended_at = transaction_timestamp(), terminal_reason = 'LEASE_LOST'
+         WHERE owner_id = $1 AND check_id = $2 AND job_id = $3 AND id = $4
+           AND ended_at IS NULL`,
+        [candidate.ownerId, candidate.checkId, candidate.jobId, attemptId],
+      );
+      if (ended.rowCount !== 1) throw new Error('Open attempt changed while locked.');
+
+      if (job.attempt_count < job.max_attempts) {
+        const delayMs = retryBackoffMs(job.attempt_count, candidate.jobId);
+        const retried = await client.query<{ available_at: Date | string }>(
+          `UPDATE monitoring.check_jobs
+           SET state = 'PENDING',
+               available_at = transaction_timestamp() + $4::integer * interval '1 millisecond',
+               lease_owner = NULL, lease_expires_at = NULL, heartbeat_at = NULL,
+               fencing_token = NULL, started_at = NULL, completed_at = NULL,
+               terminal_reason = NULL, cancellation_requested_at = NULL,
+               cancellation_reason = NULL, updated_at = transaction_timestamp()
+           WHERE owner_id = $1 AND check_id = $2 AND id = $3
+             AND state IN ('LEASED', 'RUNNING')
+           RETURNING available_at`,
+          [candidate.ownerId, candidate.checkId, candidate.jobId, delayMs],
+        );
+        if (retried.rowCount !== 1) throw new Error('Expired job changed while locked.');
+        return {
+          nextAvailableAt: instant(retried.rows[0]!.available_at),
+          outcome: 'RETRY_SCHEDULED',
+        };
+      }
+
+      const dead = await client.query(
+        `UPDATE monitoring.check_jobs
+         SET state = 'DEAD', completed_at = transaction_timestamp(),
+             terminal_reason = 'LEASE_RETRY_EXHAUSTED',
+             lease_owner = NULL, lease_expires_at = NULL, heartbeat_at = NULL,
+             fencing_token = NULL, updated_at = transaction_timestamp()
+         WHERE owner_id = $1 AND check_id = $2 AND id = $3
+           AND state IN ('LEASED', 'RUNNING')`,
+        [candidate.ownerId, candidate.checkId, candidate.jobId],
+      );
+      if (dead.rowCount !== 1) throw new Error('Expired job changed while locked.');
+      const manualJobId = await this.#materializePendingManualIntent(client, candidate, check);
+      return { manualJobId, outcome: 'DEAD' };
+    });
   }
 }

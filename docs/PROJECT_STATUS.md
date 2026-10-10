@@ -1,8 +1,8 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 13:34 +06:00
+**Son güncelleme:** 2026-10-10 13:48 +06:00
 
-**Genel durum:** Aşama 0–8 tamamlandı ve doğrulandı; Aşama 9 bounded dispatcher/probe orchestration dilimi tamamlandı, fault/result persistence ve production loop uygulaması devam ediyor
+**Genel durum:** Aşama 0–8 tamamlandı ve doğrulandı; Aşama 9 fault settlement/lease recovery dilimi tamamlandı, result persistence ve production loop uygulaması devam ediyor
 
 ## Tamamlanan
 
@@ -16,6 +16,8 @@
 - Claim öncesi global/owner/hostname slotu alan, doymuş adayı lease etmeden batch içindeki diğer owner/host işlerine ilerleyen bounded dispatcher
 - Process-secret HMAC fingerprint kullanan ve hostname/owner değerlerini log/metric label yapmayan process-local concurrency gate; idempotent slot bırakma ve boş bucket temizliği
 - Strict snapshot decode, task-scoped abort controller, heartbeat/cancellation gözetimi, lease-loss fencing, izole promise registry ve typed target-result/infrastructure-fault sink sınırıyla probe orchestration
+- Current worker/fence/attempt/lease guard'lı cancellation acknowledgement; transient engine/cancellation fault için deterministik bounded retry, desteklenmeyen snapshot veya tükenen bütçe için `DEAD`
+- Owner-fair expired-lease taraması; check→job→attempt kilit sırasıyla tek recovery, `LEASE_LOST` attempt lineage, geçersiz generation/pause/delete/cancellation için terminal cancel ve terminal geçişle aynı transaction'da coalesced manual intent materialization
 - Aşama 8 saf state reducer'ı; immutable snapshot/invariant doğrulaması, canonical observation acceptance precedence, sabit iki-failure threshold, provisional timeline çözümleme, incident segment/duration effect'leri, deadline reconciliation ve bounded event fact'leri
 - Check ve group API sorgularında reconciler'dan bağımsız `fresh_until` read-time override'ı; effective UNKNOWN/UNOBSERVED görünümü, incident duration cap'i ve aynı semantiği kullanan set-based group aggregate
 - Scheduler/DB'den bağımsız güvenli HTTP probe motoru; versioned snapshot doğrulama, frozen DNS candidate pinning, public IPv4/IPv6 policy, redirect, total deadline/cancellation, bounded streaming/decompression ve typed hata taksonomisi
@@ -50,6 +52,8 @@
 
 ## Doğrulama Kanıtları
 
+- Aşama 9 fault/recovery diliminde cancellation + manual-intent atomikliği, transient retry, unsupported snapshot ve tükenen retry bütçesi için `DEAD`, iki eşzamanlı sweeper'ın tek expired lease'i yalnız bir kez recover etmesi ve expired cancellation'ın retry edilmemesi gerçek PostgreSQL üzerinde **7/7** job-queue testiyle geçti.
+- Fault/recovery sonrasında final `pnpm run ci` kapısı format, 57-operation contract drift, lint, bütün workspace strict typecheck'leri, **21 dosyada 161/161 unit**, **5 dosyada 43/43 gerçek PostgreSQL/socket integration** ve bütün production build'leriyle geçti.
 - Aşama 9 dispatcher diliminde concurrency gate, active-task isolation, saturated-candidate scan, unsupported snapshot, heartbeat cancellation ve heartbeat-hang safety deadline senaryoları **6/6** geçti. Doymuş büyük owner içindeki aday claim edilmezken aynı batch'teki başka owner ilerledi; task tamamlanınca bütün slot bucket'ları temizlendi.
 - Dispatcher sonrası bütün unit paket **21 dosyada 161/161**, gerçek PostgreSQL/socket integration paketi **5 dosyada 39/39** geçti.
 - Dispatcher dilimi final `pnpm run ci` kapısı format, 57-operation contract drift, lint, bütün workspace strict typecheck'leri, **161/161 unit**, **39/39 integration** ve bütün production build'leriyle geçti.
@@ -91,7 +95,7 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Dispatcher'ın production polling loop'una bağlanması, cancellation acknowledgement/lease recovery ve probe sonucu kalıcılığı
+- Dispatcher'ın production polling loop'una bağlanması ve probe sonucu kalıcılığı
 - Saf health/incident planlarının PostgreSQL observation transaction'ına bağlanması, maintenance reconciliation ve incident e-posta politikaları
 - Rollup/retention background işleri, history sorguları ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
@@ -116,4 +120,4 @@
 
 ## Sıradaki İş
 
-Aşama 9'un sıradaki dilimi: cancellation acknowledgement, infrastructure retry/DEAD ve expired-lease recovery. Ardından atomik observation adapter ile production loop aktivasyonu, freshness reconciler ve 20/200/500 dayanıklılık kanıtları gelecek.
+Aşama 9'un sıradaki dilimi: probe sonucunu saf sağlık/incident planına bağlayan atomik observation adapter. Ardından production loop aktivasyonu, freshness reconciler ve 20/200/500 dayanıklılık kanıtları gelecek.
