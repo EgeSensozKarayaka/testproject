@@ -276,3 +276,14 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Redirect, phase timing, hata precedence/taksonomisi, production port allowlist'i, exact-origin local simulator istisnası, simulator endpoint'leri, concurrency/resource ve tamamlanma kapıları ayrıntılandırıldı.
 - Node DNS/performance API'leri, Undici düşük seviye client/dispatcher sözleşmeleri, IANA IPv4/IPv6 special-purpose registries ve `ipaddr.js` resmi API'si birincil kaynaklardan doğrulandı. D-059–D-061 kararları implementation-ready olarak kaydedildi.
 - Bu turda dependency, runtime, migration veya test kodu değiştirilmedi. Tasarım kullanıcı incelemesine bırakıldı; sonraki prompt ile Aşama 7 uygulama dilimleri başlayabilir.
+
+### 10:44 — Aşama 7 güvenli HTTP kontrol motoru uygulaması
+
+- Versioned/legacy immutable job snapshot decoder, public-only IPv4/IPv6 address policy, per-hop A/AAAA resolver ve DNS çağrısı yapamayan pinlenmiş Undici direct connector uygulandı. Mixed public/private cevaplar fail-closed; TLS hostname/SNI doğrulaması URL hostuna bağlıdır.
+- Tek monotonic total deadline DNS, connect, TLS, header ve body tüketimini kapsar. Wire/decoded byte hard cap'leri, gzip/deflate/Brotli streaming, byte-level bounded substring matcher, redirect loop/limit/downgrade kuralları ve ham body/query/IP taşımayan sonuç sözleşmesi eklendi.
+- `monitor-worker` motoru config/resolver/transport bağımlılıklarıyla oluşturur; scheduler/job claim ve persistence bilinçli olarak Aşama 9'a bırakıldı. Manual job snapshot'ı `schema_version: 1` üretir.
+- Target simulator body match/mismatch, chunked stream, bounded large/compressed response, redirect/loop/custom target, deterministic flaky ve early-close fixture'larıyla genişletildi. Local simulator erişimi exact origin istisnasıdır ve production bu istisnayla başlamaz.
+- Aşama 7 unit paketi **52/52**, gerçek socket entegrasyonları **4/4**, bütün unit paketi **131/131** ve gerçek PostgreSQL dahil integration paketi **32/32** geçti. Final `pnpm run ci` format, contract drift, lint, strict typecheck, testler ve bütün production build'leriyle tamamlandı.
+- Compose dosyasındaki yeni worker environment bloğunun ilk girintisi `docker compose config --quiet` tarafından yakalandı; servis seviyesine taşınarak düzeltildi. İlk soğuk rebuild registry indirme timeout'unda durdu; kod/test hatası değildi. Kısmi cache sonrası yalnız target-simulator ve monitor-worker imajları başarıyla üretildi.
+- İki container yeni imajlarla yeniden yaratıldı ve healthy oldu. Canlı match body, 64-byte bounded response, `302` redirect, sıkıştırılmış response ve monitor-worker readiness kontrolü beklenen sonucu verdi; tam Compose profilindeki bütün servisler healthy kaldı.
+- Uygulama ve test değişiklikleri `f5184ac` commit'iyle kaydedildi. Kapanış belgeleri ayrı commit olarak tutulacak; push sonrası GitHub Actions kanıtı bu günlüğe eklenecektir.

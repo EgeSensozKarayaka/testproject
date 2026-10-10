@@ -534,7 +534,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-059 — DNS çözümü doğrulanmış aday setine pinlenir
 
 - **Tarih:** 2026-10-10 10:01 +06:00
-- **Durum:** Accepted for implementation
+- **Durum:** Accepted — Aşama 7 uygulama ve testleriyle doğrulandı
 - **Bağlam:** URL'yi doğrularken görülen DNS cevabı ile socket açılırken yapılan ikinci çözüm farklılaşırsa DNS rebinding private/metadata hedeflerine erişim sağlayabilir. Yalnız API zamanında private literal engellemek runtime DNS ve redirect riskini çözmez.
 - **Karar:** Her request/redirect hop'u bir kez çözülür; bütün A/AAAA cevapları normalize edilip public-address policy'den geçer. Tek blocked cevap tüm hop'u fail-closed engeller. Connector yalnız immutable doğrulanmış aday setini kullanır ve yeni DNS çağrısı yapamaz. TLS hostname/SNI kontrolü URL hostname'ine karşı devam eder.
 - **Alternatifler:** URL kabulünde tek DNS kontrolü; bağlantı sırasında normal sistem resolver'ına yeniden bırakmak; mixed cevapta yalnız public adresi seçmek; sadece RFC1918 denylist'i.
@@ -544,7 +544,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-060 — Probe tek total deadline ve bounded streaming kullanır
 
 - **Tarih:** 2026-10-10 10:01 +06:00
-- **Durum:** Accepted for implementation
+- **Durum:** Accepted — Aşama 7 uygulama ve testleriyle doğrulandı
 - **Bağlam:** Hop/faz başına sıfırlanan timeout redirect veya dual-stack denemeleriyle kullanıcı bütçesini aşar. Full-body buffer ise büyük/sonsuz/sıkıştırılmış yanıtların worker belleğini tüketmesine ve yavaş hedefin diğerlerini etkilemesine yol açar.
 - **Karar:** Job `timeout_ms` değeri DNS'ten body EOF'a kadar tek monotonic deadline'dır. Alt timeout'lar yalnız kalan bütçeyi daraltır. Header, wire body ve decoded body ayrı hard cap'lerle streaming işlenir; expected substring bounded streaming matcher ile aranır ve ham body hiçbir katmana çıkmaz.
 - **Alternatifler:** Her faza tam timeout; yalnız Undici default timeout'ları; response'u string/buffer olarak toplamak; expected text bulununca socket'i başarı sayıp bırakmak.
@@ -554,7 +554,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-061 — Public-only direct egress ve kısa ömürlü per-hop client
 
 - **Tarih:** 2026-10-10 10:01 +06:00
-- **Durum:** Accepted for implementation
+- **Durum:** Accepted — Aşama 7 uygulama ve testleriyle doğrulandı
 - **Bağlam:** Ambient proxy ayarları, geniş connection pool'u veya genel private-network geliştirme bayrağı doğrulanmış egress sınırını görünmez biçimde değiştirebilir. Docker target simulator ise local demo için private adres gerektirir.
 - **Karar:** V1 yalnız public HTTP/HTTPS hedeflere, operator-controlled port allowlist'i üzerinden ve proxy kullanmadan bağlanır. Her redirect hop'u frozen candidate setine bağlı kısa ömürlü Undici client kullanır. Test/local simulator erişimi yalnız production'da reddedilen exact origin allowlist'iyle sağlanır; wildcard/CIDR private bypass yoktur.
 - **Alternatifler:** Global keep-alive pool; `ALLOW_PRIVATE=true`; proxy env'lerini otomatik kullanmak; simulator için production policy'yi gevşetmek.

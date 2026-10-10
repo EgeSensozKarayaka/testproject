@@ -230,7 +230,7 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 7 — Güvenli HTTP Kontrol Motoru ve Hedef Simülatörü
 
-**Durum:** Tasarım tamamlandı — 2026-10-10 10:01 +06:00; uygulama kullanıcı incelemesini bekliyor
+**Durum:** Tamamlandı ve doğrulandı — 2026-10-10 10:44 +06:00
 
 **Amaç:** Scheduler'dan bağımsız, deterministik ve güvenli bir HTTP kontrol motoru geliştirmek.
 
@@ -612,4 +612,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 6 — Kontrol ve Grup Yönetimi** tamamlanmıştır. Tasarım, domain, revision 12–13, owner-scoped API ve generated sözleşme tiplerini kullanan React yönetim ekranı uygulanmıştır. İki bağımsız tarayıcıda stale `If-Match` çatışması, CRUD, pause/resume ve manual-run kabul akışı; 20/200/500 PostgreSQL cursor profili; 500 kayıtlık bounded UI fixture'ı ve hassas alan log/audit/outbox redaction kanıtı geçmiştir. GitHub Actions [`38022028585`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38022028585) beş işin tamamında başarılıdır.
 
-**Sıradaki çalışma Aşama 7 — Güvenli HTTP Kontrol Motoru ve Hedef Simülatörü tasarımı**dır. Kodlamadan önce DNS/IP pinning, redirect, timeout, streaming/body sınırı, hata taksonomisi ve SSRF/DNS-rebinding savunmaları `docs/CHECK_ENGINE.md` içinde nihai hale getirilecektir.
+**Aşama 7 — Güvenli HTTP Kontrol Motoru ve Hedef Simülatörü** tamamlanmıştır. Resolve-once DNS/IP pinning, public-address policy, direct connector, tek total deadline, bounded streaming/decompression, redirect politikası, typed hata taksonomisi, genişletilmiş simulator ve gerçek socket entegrasyon testleri uygulanmıştır. Monitor worker motoru oluşturur; job claim, overlap/fairness ve sonuç kalıcılığı Aşama 9'a aittir.
+
+**Sıradaki çalışma Aşama 8 — Sağlık Durumu, Incident ve Grup Durumu tasarımı**dır. Kodlamadan önce probe sonuçlarından deterministik `UNKNOWN/UP/SUSPECT/DOWN` geçişleri, failure threshold, incident lifecycle, stale/fencing reddi ve grup status türetimi mevcut `STATE_MACHINES.md` dayanağıyla uygulama seviyesinde kesinleştirilecektir.

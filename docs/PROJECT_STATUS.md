@@ -1,11 +1,13 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 10:01 +06:00
-**Genel durum:** Aşama 0–6 tamamlandı ve doğrulandı; Aşama 7 güvenli HTTP kontrol motoru tasarımı tamamlandı, uygulama kullanıcı incelemesini bekliyor
+**Son güncelleme:** 2026-10-10 10:44 +06:00
+**Genel durum:** Aşama 0–7 tamamlandı ve doğrulandı; sıradaki çalışma Aşama 8 sağlık/incident/grup durumu tasarımıdır
 
 ## Tamamlanan
 
-- Aşama 7 için scheduler/DB'den bağımsız probe sözleşmesi; frozen DNS candidate pinning, public IPv4/IPv6 policy, redirect, total deadline/cancellation, bounded streaming, hata taksonomisi, simulator ve test mimarisi
+- Scheduler/DB'den bağımsız güvenli HTTP probe motoru; versioned snapshot doğrulama, frozen DNS candidate pinning, public IPv4/IPv6 policy, redirect, total deadline/cancellation, bounded streaming/decompression ve typed hata taksonomisi
+- DNS çağrısı yapmayan kısa ömürlü direct TCP/TLS connector; hostname/SNI sertifika doğrulaması, proxy bypass'ı, operator port allowlist'i ve production'da reddedilen exact-origin local simulator istisnası
+- Başarı/body/status, streaming, gecikme/hang, büyük/sıkıştırılmış body, redirect/loop, flaky ve erken bağlantı kapanması fixture'larıyla genişletilmiş hedef simülatörü
 - Aşama 0 gereksinim/kabul kriterleri, Aşama 1 domain/durum makineleri, Aşama 2 monorepo/runtime/CI temeli, Aşama 3 kalıcılık ve Aşama 4 API/event/hata sözleşmeleri
 - PostgreSQL 18.6 üzerinde on üç checksum'lı, immutable ve forward-only migration; schema-aware readiness, ayrı migration container'ı ve idempotent development seed'i
 - Private tablolar için composite sahiplik kısıtları, `FORCE RLS`, transaction-local owner context'i ve dar service rolleri
@@ -35,6 +37,11 @@
 
 ## Doğrulama Kanıtları
 
+- Aşama 7 odaklı unit paketi **6 dosyada 52/52**, gerçek socket HTTP/redirect/gzip/oversize/TLS/timeout ve 50 eşzamanlı probe entegrasyonu **4/4** geçti.
+- Final yerel `pnpm run ci`; format, generated-contract drift, lint, strict typecheck, **17 dosyada 131/131 unit test**, integration kapıları ve bütün production build'leriyle geçti.
+- Gerçek PostgreSQL admin URL'siyle birleşik integration paketi **4 dosyada 32/32** geçti; buna Aşama 7'nin gerçek socket entegrasyonları da dahildir.
+- Güncel target-simulator ve monitor-worker imajları üretildi; iki container healthy oldu. Canlı match body, 64-byte bounded response, `302` redirect ve sıkıştırılmış response `200`; worker readiness `200` döndürdü. Tam Compose profilindeki bütün servisler healthy kaldı.
+
 - `pnpm test:unit`: **13 dosyada 85/85 test geçti**.
 - Gerçek PostgreSQL admin URL'siyle birleşik paket: **28/28 test geçti**; sıfırdan migration `1..13`, checksum drift, RLS/context temizliği, auth/group/check transaction sınırları ve 20/200/500 cursor profili doğrulandı.
 - Aşama 6 domain/OpenAPI odaklı paket: **32/32 test geçti**; contract drift ve ilgili strict TypeScript kontrolleri geçti.
@@ -57,7 +64,7 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Tasarımı tamamlanan gerçek HTTP probe motoru ve target simulator genişletmesi; scheduler ve check overlap engeli
+- Scheduler/job claim, check overlap engeli, global concurrency/fairness ve probe sonucu kalıcılığı
 - Probe sonuçlarından incident/state geçişleri, maintenance reconciliation ve incident e-posta politikaları
 - Rollup/retention background işleri, history sorguları ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
@@ -67,7 +74,7 @@
 
 ## Bilinen Sınırlamalar
 
-- Authenticated ekran group/check yapılandırmasını yönetir; probe sonuçları ve SSE henüz uygulanmadığından nihai canlı monitoring dashboard'u değildir.
+- Authenticated ekran group/check yapılandırmasını yönetir; kontrol motoru henüz scheduler ve sonuç kalıcılığına bağlı olmadığından nihai canlı monitoring dashboard'u değildir.
 - Auth rate limit PostgreSQL fixed-window yaklaşımıdır. V1 ve yatay API replica'ları için tutarlıdır; yüksek hacimli internet trafiğinde edge WAF/CDN katmanı gerekir.
 - Yerel Compose kolaylığı için tek PostgreSQL bootstrap login'i dar `NOLOGIN` rollere geçer. Production'da servis başına ayrı login wrapper/secret gerekir.
 - Yerel HTTP ortamında session cookie `Secure=false`; production config fail-fast secret ve HTTPS/Secure cookie gerektirir.
@@ -81,4 +88,4 @@
 
 ## Sıradaki İş
 
-Kullanıcı `docs/CHECK_ENGINE.md` tasarımını inceledikten sonra Aşama 7'yi küçük uygulama dilimleriyle kodlamak; önce tip/snapshot ve public-address policy temelini kurup ardından resolver, pinlenmiş transport, bounded response işleme, redirect ve simulator entegrasyonuna geçmek.
+Aşama 8 sağlık/incident/grup durumu mimarisini mevcut kabul kriterleri ve `STATE_MACHINES.md` ile tam olarak planlamak; belge kullanıcı tarafından incelendikten sonra domain geçişlerini kodlamak.

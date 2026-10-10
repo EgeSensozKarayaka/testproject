@@ -1,6 +1,6 @@
 # Güvenli HTTP Kontrol Motoru ve Hedef Simülatörü
 
-**Durum:** Aşama 7 uygulama öncesi nihai tasarım  
+**Durum:** Aşama 7 uygulandı ve doğrulandı
 **Tarih:** 2026-10-10 10:01 +06:00  
 **Dayanak:** `AGENTS.md`, `REQUIREMENTS.md`, `ACCEPTANCE_CRITERIA.md`, `DOMAIN_MODEL.md`, `STATE_MACHINES.md`, `ARCHITECTURE.md`, `CHECKS_AND_GROUPS.md`, `DATABASE_SCHEMA.md`  
 **Uygulama paketi:** `packages/check-engine`  
@@ -478,7 +478,7 @@ Per-check response limit, redirect, header veya özel ağ exception'ı v1'de yok
 | `GET /large/:bytes`            | Bellekte tek buffer oluşturmadan streaming büyük body |
 | `GET /compressed/:encoding`    | gzip/deflate/br body                                  |
 | `GET /redirect/:remaining`     | Relative, sonu `/ok` olan zincir                      |
-| `GET /redirect-loop/a          | b`                                                    | Deterministik loop |
+| `GET /redirect-loop/a` ve `/b` | Deterministik loop                                    |
 | `GET /redirect-to?target=`     | Yalnız testte private/unsafe redirect doğrulaması     |
 | `GET /flaky/:key`              | İzole fixture instance'ında tanımlı 503/200 dizisi    |
 | `GET /close`                   | Response tamamlanmadan socket kapama                  |

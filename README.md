@@ -2,7 +2,7 @@
 
 Çok kullanıcılı ve kullanıcı bazlı sahiplik izolasyonuna sahip site erişilebilirlik izleme ürünü. Repository; React web uygulaması, Node.js API ve worker süreçleri, PostgreSQL, Mailpit, deterministik hedef simülatörü ve ana sistemden bağımsız opsiyonel Python predictor için çalışır bir geliştirme temeli içerir.
 
-Aşama 6 geliştirmesinde güvenli hesap akışlarına ek olarak owner-scoped group/check API'si ve bu sözleşmeyi kullanan React yönetim ekranı çalışır durumdadır. Gerçek probe, scheduler ve canlı durum akışları sonraki aşamalarda uygulanacaktır.
+Aşama 7 geliştirmesinde güvenli hesap ve owner-scoped group/check yönetimine ek olarak scheduler'dan bağımsız gerçek HTTP kontrol motoru ile deterministik hedef simülatörü uygulanmıştır. Scheduler, sonuç kalıcılığı ve canlı durum akışları sonraki aşamalarda bağlanacaktır.
 
 ## Ön koşullar
 
@@ -77,6 +77,8 @@ pnpm dev
 `.env.example` gerekirse `.env` olarak kopyalanabilir. `.env` Git tarafından dışlanır ve örnek dosyada gerçek secret bulunmaz.
 
 Canlı kaynak kotası ürünün sabit 50 kontrol varsayımı değildir. `CHECKS_PER_OWNER_LIMIT` ve `GROUPS_PER_OWNER_LIMIT` pozitif deployment değerleridir; bilinçli limitsiz yerel kurulum için yalnız `unlimited` literal'i kabul edilir.
+
+Probe egress portları, total deadline alt sınırları ve body/header/redirect limitleri `.env.example` içindeki `PROBE_*` değişkenleriyle yönetilir. Local hedef simülatörüne erişim yalnız exact-origin allowlist ile açılır; production ortamı bu geliştirme istisnası tanımlıysa fail-fast kapanır.
 
 ## Opsiyonel predictor
 
@@ -157,6 +159,11 @@ Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ile
 - `/status/:code` — istenen HTTP kodu
 - `/delay/:milliseconds` — sınırlandırılmış gecikme
 - `/hang` — bağlantıyı cevaplamadan açık tutma
+- `/stream/:chunks/:delay` — parçalara ayrılmış, gecikmeli body
+- `/body/match` ve `/body/mismatch` — body beklentisi senaryoları
+- `/large/:bytes` ve `/compressed/:encoding` — bounded büyük/sıkıştırılmış cevaplar
+- `/redirect/:remaining`, `/redirect-loop/:key` ve `/redirect-to?url=...` — redirect senaryoları
+- `/flaky/:key` ve `/close` — deterministik geçici hata ve erken bağlantı kapanması
 - `/health/live` ve `/health/ready` — container sağlık uçları
 
 ## Repository yapısı
@@ -171,8 +178,8 @@ Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ile
 
 ## Dürüst durum
 
-Aşama 0–6 tamamlanmıştır; sıradaki çalışma Aşama 7 güvenli HTTP kontrol motorunun tasarımıdır. On üç immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları, group/check API'si ve React yapılandırma yönetimi uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
+Aşama 0–7 tamamlanmıştır. On üç immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları, group/check API'si, React yapılandırma yönetimi ve güvenli HTTP kontrol motoru uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
 
-Scheduler, HTTP probe motoru, sonuç kaynaklı incident geçişleri, bakım reconciliation, incident bildirimleri, history sorguları, SSE, canlı monitoring dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran güvenli yapılandırma yönetimini sağlar; henüz canlı durum paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
+Monitor worker kontrol motorunu güvenli runtime bağımlılıklarıyla oluşturur; fakat scheduler/job claim, sonuç kalıcılığı, sonuç kaynaklı incident geçişleri, bakım reconciliation, incident bildirimleri, history sorguları, SSE, canlı monitoring dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran güvenli yapılandırma yönetimini sağlar; henüz canlı durum paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
 
 Güncel kapsam ve kanıtlar için [proje durumu](docs/PROJECT_STATUS.md), ayrıntılı araç zinciri için [geliştirme ortamı mimarisi](docs/DEVELOPMENT_ENVIRONMENT.md) belgelerine bakın.
