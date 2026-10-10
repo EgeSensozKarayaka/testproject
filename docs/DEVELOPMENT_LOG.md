@@ -266,3 +266,13 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Gerçek Fastify request logu ile audit/outbox JSON payload'larında URL query credential ve expected-body marker bulunmadığı negatif testle kanıtlandı. Hassas yapılandırma asıl check/idempotency kaydında işlevsel olarak korunurken dağıtım yüzeylerine taşınmıyor.
 - Son yerel `pnpm run ci`; format, contract drift, lint, strict typecheck, **85/85 unit**, **28/28 gerçek PostgreSQL integration** ve bütün production build'leriyle geçti. Bu noktada Aşama 6'nın yerel kapanışı tamamlanmış, yalnız push sonrası GitHub CI kanıtı açık kalmıştı.
 - Uygulama `3b580ba`, belgeler `bff394e` commit'leriyle `origin/main` dalına gönderildi. GitHub Actions [`38022028585`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38022028585) içindeki Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin beşi de başarıyla tamamlandı. Aşama 6 kapatıldı; sıradaki çalışma Aşama 7 tasarımıdır.
+
+### 10:01 — Aşama 7 güvenli HTTP kontrol motoru tasarımı
+
+- Gereksinim, kabul kriteri, domain/state machine, event, veritabanı ve Aşama 6 check snapshot kararları birlikte yeniden incelendi; bu tur uygulama kodu yazılmadan `docs/CHECK_ENGINE.md` oluşturuldu.
+- Motor scheduler ve PostgreSQL'den ayrıldı: immutable snapshot + caller abort sinyali alıp typed target sonucu veya ayrı altyapı fault'u üreten port tanımlandı. Caller cancellation'ın downtime sayılmaması ve engine exception'ının incident'a taşınmaması kesinleştirildi.
+- SSRF sınırı resolve-once-per-hop, bütün A/AAAA cevaplarını fail-closed doğrulama ve socket'i frozen candidate setine pinleme olarak tasarlandı. Mixed public/private DNS, IPv4-mapped IPv6, metadata/special-use blokları, redirect-to-private, HTTPS downgrade, ambient proxy ve DNS rebinding için negatif test matrisi çıkarıldı.
+- Job timeout'u DNS'ten body EOF'a kadar tek monotonic deadline yapıldı. Header, wire body ve decoded body bounded streaming; expected text byte-level streaming matcher; ham body/query/IP için log ve persistence yasağı kararlaştırıldı.
+- Redirect, phase timing, hata precedence/taksonomisi, production port allowlist'i, exact-origin local simulator istisnası, simulator endpoint'leri, concurrency/resource ve tamamlanma kapıları ayrıntılandırıldı.
+- Node DNS/performance API'leri, Undici düşük seviye client/dispatcher sözleşmeleri, IANA IPv4/IPv6 special-purpose registries ve `ipaddr.js` resmi API'si birincil kaynaklardan doğrulandı. D-059–D-061 kararları implementation-ready olarak kaydedildi.
+- Bu turda dependency, runtime, migration veya test kodu değiştirilmedi. Tasarım kullanıcı incelemesine bırakıldı; sonraki prompt ile Aşama 7 uygulama dilimleri başlayabilir.

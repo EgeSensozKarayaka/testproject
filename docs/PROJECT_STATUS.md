@@ -1,10 +1,11 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 09:53 +06:00
-**Genel durum:** Aşama 0–6 tamamlandı ve doğrulandı; Aşama 7 güvenli HTTP kontrol motoru tasarımı sırada
+**Son güncelleme:** 2026-10-10 10:01 +06:00
+**Genel durum:** Aşama 0–6 tamamlandı ve doğrulandı; Aşama 7 güvenli HTTP kontrol motoru tasarımı tamamlandı, uygulama kullanıcı incelemesini bekliyor
 
 ## Tamamlanan
 
+- Aşama 7 için scheduler/DB'den bağımsız probe sözleşmesi; frozen DNS candidate pinning, public IPv4/IPv6 policy, redirect, total deadline/cancellation, bounded streaming, hata taksonomisi, simulator ve test mimarisi
 - Aşama 0 gereksinim/kabul kriterleri, Aşama 1 domain/durum makineleri, Aşama 2 monorepo/runtime/CI temeli, Aşama 3 kalıcılık ve Aşama 4 API/event/hata sözleşmeleri
 - PostgreSQL 18.6 üzerinde on üç checksum'lı, immutable ve forward-only migration; schema-aware readiness, ayrı migration container'ı ve idempotent development seed'i
 - Private tablolar için composite sahiplik kısıtları, `FORCE RLS`, transaction-local owner context'i ve dar service rolleri
@@ -56,7 +57,7 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Scheduler, gerçek HTTP probe motoru ve check overlap engeli
+- Tasarımı tamamlanan gerçek HTTP probe motoru ve target simulator genişletmesi; scheduler ve check overlap engeli
 - Probe sonuçlarından incident/state geçişleri, maintenance reconciliation ve incident e-posta politikaları
 - Rollup/retention background işleri, history sorguları ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
@@ -80,4 +81,4 @@
 
 ## Sıradaki İş
 
-Aşama 7 güvenli HTTP kontrol motorunu kodlamadan önce `docs/CHECK_ENGINE.md` içinde DNS/IP pinning, redirect politikası, connect/total timeout, streaming/body sınırı, hata taksonomisi ve SSRF/DNS-rebinding savunmalarını nihai hale getirmek.
+Kullanıcı `docs/CHECK_ENGINE.md` tasarımını inceledikten sonra Aşama 7'yi küçük uygulama dilimleriyle kodlamak; önce tip/snapshot ve public-address policy temelini kurup ardından resolver, pinlenmiş transport, bounded response işleme, redirect ve simulator entegrasyonuna geçmek.
