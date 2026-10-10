@@ -219,4 +219,5 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Forward-only revision 12, group description kolonunu ve expected body 1..2048 UTF-8 byte constraint'ini ekledi. API'nin check/group fiziksel DELETE yetkisi kaldırıldı; config/current-state/manual-job/audit/outbox için dar owner-scoped yazma sınırı açıldı.
 - İlk entegrasyon turunda iki test-fixture kusuru (aynı PostgreSQL placeholder'ında UUID/text tip belirsizliği ve eski revision beklentisi) bulundu; migration geçmişi değiştirilmeden test kodu düzeltildi.
 - Sonuç: domain/OpenAPI **32/32**, gerçek PostgreSQL migration/rol/RLS paketi **13/13** geçti. Contract drift kontrolü ve ilgili strict TypeScript kontrolleri geçti.
+- İlk GitHub Node kalite koşusu, kontrol karakterlerini yakalayan regex'i ESLint `no-control-regex` kuralı nedeniyle reddetti. Aynı doğrulama explicit code-point taramasına çevrildi; davranış değişmeden lint, 29 domain testi ve strict domain type-check yeniden geçti.
 - Henüz check/group route, application service, React yönetim ekranı veya gerçek probe uygulanmadı; Aşama 6 tamamlandı sayılmıyor.

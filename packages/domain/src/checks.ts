@@ -189,7 +189,12 @@ export function canonicalizeCheckUrl(value: string): string {
   if (codePointLength(trimmed) < 1 || codePointLength(trimmed) > MAX_INPUT_URL_CODE_POINTS) {
     fail('url', 'invalid_length', 'url must contain from 1 through 2048 characters.');
   }
-  if (/[\u0000-\u001f\u007f]/u.test(trimmed)) {
+  if (
+    Array.from(trimmed).some((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint <= 0x1f || codePoint === 0x7f;
+    })
+  ) {
     fail('url', 'invalid_url', 'url must not contain control characters.');
   }
 
