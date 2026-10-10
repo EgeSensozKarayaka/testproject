@@ -205,6 +205,8 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 6 — Kontrol ve Grup Yönetimi
 
+**Durum:** Nihai tasarım hazır — 2026-10-10 06:52 +06:00; kullanıcı incelemesinde, uygulama başlamadı
+
 **Amaç:** Monitoring çalıştırılmadan önce kontrol yapılandırmasının güvenilir CRUD modelini oluşturmak.
 
 **Tasarım çıktısı:**

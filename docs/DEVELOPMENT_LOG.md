@@ -197,3 +197,15 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Yerel kapılar: 35/35 unit, 12/12 gerçek PostgreSQL integration, strict typecheck ve 3/3 Playwright geçti. Playwright tam akışı UI kaydı, Mailpit mesajı, doğrulama, giriş ve çıkışı doğruladı.
 - Docker'ın ilk Linux native dependency indirmesi yavaş sürdü fakat revision 11 migration ve bütün servis health kontrolleri tamamlandı.
 - Aşama 5 altı anlamlı uygulama commit'i olarak `origin/main` dalına gönderildi. GitHub Actions koşusu [`38002790366`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38002790366) içinde Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin tamamı geçti.
+
+### 06:52 — Aşama 6 kontrol ve grup yönetimi tasarımı
+
+- Check/group CRUD, pause/resume/delete, manual-run API sınırı, owner quota, ETag/idempotency, cursor ve audit/outbox davranışları `docs/CHECKS_AND_GROUPS.md` içinde baştan sona tasarlandı.
+- Mevcut şema, OpenAPI, domain modeli, state machine, event kataloğu ve kabul kriterleri çapraz incelendi. OpenAPI'deki group `description` alanının veritabanında bulunmadığı ve expected substring'in UTF-8 byte sınırının DB constraint'iyle korunmadığı saptandı; ikisi için forward-only revision 12 planlandı.
+- URL güvenliği iki katmana ayrıldı: API bariz local/private literal ve credential'ı reddedecek; DNS/redirect/IP pinning ile authoritative SSRF kararı Aşama 7 kontrol motorunda verilecek. API transaction'ı DNS veya hedef HTTP çağrısı yapmayacak.
+- PATCH alanları metadata, group, probe ve schedule sınıflarına ayrıldı; resource/probe/schedule version artışları, job invalidation, current-state/incident ve next-run sonuçları birleşik değişiklikler dahil kesinleştirildi.
+- Manuel çalıştırma aktif iş yoksa doğrudan durable job, varsa tek `manual_requested_at` niyeti üretir; ACTIVE stateful, PAUSED diagnostic kalır ve cadence değişmez.
+- Group delete'in check'leri aynı transaction'da ungroup edip her child ETag'ini artırması; move/delete yarışlarında deterministik group→check kilit sırası kullanılması seçildi.
+- Sabit 50 kontrol limiti reddedildi. Deployment-configurable, owner bazlı ve advisory-lock ile replica-safe quota; rate limit ve worker concurrency'den ayrı tasarlandı.
+- 20/200/500 fixture, iki sekmede stale ETag, concurrent manual coalescing, cross-owner 404, transaction rollback ve secret redaction dahil kabul/test matrisi çıkarıldı.
+- Bu turda migration, dependency, route, UI veya runtime kodu değiştirilmedi. Tasarım kullanıcı incelemesine bırakıldı; Aşama 6 uygulaması sonraki onaylı turda başlayacak.

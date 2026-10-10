@@ -440,3 +440,53 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Revision 8'i sessizce yeniden yazmak; notifier'a geniş schema/table yetkisi vermek; profile update için auth tablosuna genel DML açmak.
 - **Gerekçe:** Migration ledger güvenini ve least-privilege sınırını korurken temiz kurulum ile mevcut kurulumun aynı son duruma ulaşmasını sağlamak.
 - **Sonuçlar:** Schema head 11'dir. API ve notifier yalnız allowlist security-definer fonksiyonlarını çağırır; sıfırdan ve mevcut veritabanı upgrade yolları aynı entegrasyon paketinde doğrulanır.
+
+## D-050 — Check/group komutlarında tek owner transaction ve üç ayrı sürüm ekseni
+
+- **Tarih:** 2026-10-10 06:52 +06:00
+- **Durum:** Proposed — Aşama 6 tasarım incelemesinde
+- **Bağlam:** Aynı check'i iki sekme değiştirebilir; config değişimi job, current state, incident, audit ve outbox üzerinde birbirine bağlı sonuçlar doğurur. Tek bir genel version ise probe ile schedule geçerliliğini ayıramaz.
+- **Karar:** Her mutation transaction-local owner context içinde, gerekli satır kilitleri ve güçlü `If-Match` precondition ile çalışacaktır. Gerçek bir HTTP mutation `resource_version`ı bir kez; içerdiği kategoriye göre `probe_generation` ve `schedule_generation`ı en fazla birer kez artıracaktır. Config/state/job/audit/outbox/idempotency receipt tek transaction'da commit edilecektir.
+- **Alternatifler:** Last-write-wins; her tabloyu ayrı commit etmek; yalnız timestamp ile stale sonuç ayırmak; bütün değişikliklerde bütün generation'ları artırmak.
+- **Gerekçe:** İki istemcide veri kaybını ve yarım state'i önlemek; probe anlamı, cadence ve browser ETag'ini birbirinden bağımsız doğrulamak.
+- **Sonuçlar:** No-op komut güncel precondition'ı doğrular fakat sürüm/event üretmez. Combined PATCH tek resource version ile birden fazla redacted event çıkarabilir; consumer version'ı non-decreasing yorumlar.
+
+## D-051 — URL için API canonicalization ve execution-time SSRF doğrulaması birlikte zorunludur
+
+- **Tarih:** 2026-10-10 06:52 +06:00
+- **Durum:** Proposed — Aşama 6 tasarım incelemesinde
+- **Bağlam:** API içinde DNS çözmek hedef latency'sini kullanıcı mutation'ına bağlar ve DNS rebinding'i yine engellemez. Yalnız runtime kontrol ise bariz localhost/private literal hatalarını geç fark ettirir.
+- **Karar:** API mutlak HTTP(S) URL'yi canonicalize eder; credential, local isim ve private/reserved literal'ları reddeder, fragment'i saklamaz. Hostname A/AAAA ve her redirect hedefi Aşama 7'de bağlantı IP'si pinlenerek yeniden doğrulanır. API kabulü execution izni sayılmaz.
+- **Alternatifler:** Create sırasında tek DNS lookup; yalnız regex; private hedeflere izin vermek; yalnız API-time kontrol.
+- **Gerekçe:** Hızlı ve deterministik CRUD ile SSRF/DNS-rebinding güvenliğini birlikte sağlamak.
+- **Sonuçlar:** Public DNS'in private adrese çözülmesi API'yi bloke etmez fakat probe bağlantısı `BLOCKED_TARGET` olur. URL/query hiçbir log, audit veya event payload'ına girmez.
+
+## D-052 — Manuel çalışma doğrudan durable job veya tek coalesced intent üretir
+
+- **Tarih:** 2026-10-10 06:52 +06:00
+- **Durum:** Proposed — Aşama 6 tasarım incelemesinde
+- **Bağlam:** “Şimdi çalıştır” HTTP probe'unu request içinde bekletemez; aynı check çalışırken tekrar talepler paralel iş veya sınırsız backlog üretmemelidir.
+- **Karar:** Aktif job yoksa API transaction'ı snapshot'lı `PENDING + MANUAL` job yaratır. Aktif job varsa yeni job yerine check üzerinde en fazla tek `manual_requested_at` niyeti tutulur. ACTIVE check modu STATEFUL, PAUSED check modu DIAGNOSTIC'tir; cadence değişmez. Endpoint `If-Match`, kalıcı idempotency receipt ve owner/check rate limit ister.
+- **Alternatifler:** Senkron probe; her tıklamada job; yalnız volatile process queue; paused manual run'ı reddetmek.
+- **Gerekçe:** API latency'sini hedeften ayırmak, restart sonrası isteği kaybetmemek ve check başına paralellik invariant'ını korumak.
+- **Sonuçlar:** Response `202 ENQUEUED/COALESCED` olur. Job tamamlayan scheduler en fazla bir pending niyeti tüketir; partial unique index yarışın son bariyeridir.
+
+## D-053 — Kaynak sayısı sabit ürün limiti değil, yapılandırılabilir owner kotasıdır
+
+- **Tarih:** 2026-10-10 06:52 +06:00
+- **Durum:** Proposed — Aşama 6 tasarım incelemesinde
+- **Bağlam:** Görevdeki 50 kontrol performans örneğidir; sistem 20, 200 veya 500 check ile çalışabilmelidir. Limitsiz create ise tek owner'ın ortak veritabanı ve worker kapasitesini tüketmesine izin verir.
+- **Karar:** Check/group live count kotası deployment-configurable owner sınırıdır; kaynak kodunda gizli `50` yoktur. Create transaction owner+resource advisory lock altında count+insert yapar. Quota rate limit ve worker concurrency'den ayrı tutulur; aşım `409 quota_exceeded` olur.
+- **Alternatifler:** Hard-coded 50; hiç kota olmaması; yalnız UI kontrolü; ilk sürümde billing/plan tabloları.
+- **Gerekçe:** Değişken kapasite hedefini korurken çok kullanıcılı sistemde adil ve replica-safe operasyonel sınır sağlamak.
+- **Sonuçlar:** Limit config ile değişir ve 20/200/500 fixture'larıyla test edilir. Owner/plan override gerçek ürün ihtiyacı oluşursa ayrı operator-controlled model olarak eklenir.
+
+## D-054 — Grup silme atomik soft-delete ve version'lı ungroup işlemidir
+
+- **Tarih:** 2026-10-10 06:52 +06:00
+- **Durum:** Proposed — Aşama 6 tasarım incelemesinde
+- **Bağlam:** Grup silindiğinde check'ler korunmalıdır; eşzamanlı move/delete yarışı silinmiş gruba bağlı check veya sessiz istemci overwrite'ı bırakmamalıdır.
+- **Karar:** Group ve child check'ler deterministik sırayla kilitlenir. Group soft-delete edilir; bütün canlı child check'ler aynı transaction'da ungrouped olur ve her check'in `resource_version`ı artar. Probe/schedule generation değişmez; check başına redacted group-change event'i üretilir.
+- **Alternatifler:** Cascade check delete; group ID'yi check'lerde bırakmak; asenkron/batch ungroup; child ETag'lerini değiştirmemek.
+- **Gerekçe:** AC-029'u veri kaybetmeden ve yarışa dayanıklı biçimde sağlamak; bakım/bildirim/public kapsamını açıkça sonlandırmak.
+- **Sonuçlar:** Fan-out owner kotasıyla bounded'dır. Açık istemci eski check ETag'iyle update yaparsa `412` alır; notification history fiziksel silinmez.

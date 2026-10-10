@@ -1,7 +1,7 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 05:10 +06:00
-**Genel durum:** Aşama 5 kimlik doğrulama ve kullanıcı izolasyonu uygulandı; yerel kalite ve kabul kapıları geçti
+**Son güncelleme:** 2026-10-10 06:52 +06:00
+**Genel durum:** Aşama 5 doğrulandı; Aşama 6 kontrol/grup yönetimi nihai tasarımı kullanıcı incelemesinde, uygulama henüz başlamadı
 
 ## Tamamlanan
 
@@ -17,6 +17,7 @@
 - Kayıt, login, session, logout, doğrulama, parola reseti, `GET/PATCH /api/v1/me` ve güçlü `ETag`/`If-Match` profil akışları
 - React kayıt/giriş/parola sıfırlama/doğrulama ve authenticated temel ekranı
 - Organizasyon katmanı eklemeden gerçek kullanıcı bazlı sahiplik modeli; bir kullanıcı birden fazla bağımsız browser session açabilir
+- Aşama 6 için check/group CRUD, pause/resume/delete, manual job coalescing, URL doğrulama, quota, ETag/idempotency, transaction ve test mimarisi
 
 ## Doğrulama Kanıtları
 
@@ -49,7 +50,9 @@
 - Local restore provası production RPO/RTO/PITR garantisi değildir.
 - Soğuk Docker image build'i registry bağlantı hızına bağlı olarak birkaç dakika sürebilir; warm build ve normal `up` akışı daha hızlıdır. Build cache mount/prune optimizasyonu Aşama 17 operasyonel sertleştirme kapsamındadır.
 - Host `5432` ve `3000` başka projeler tarafından kullanıldığından PostgreSQL `15432`, API `13000`, web `15173` portundadır.
+- OpenAPI'deki group `description` alanı mevcut revision 11 veritabanında henüz yoktur; forward-only revision 12 Aşama 6 uygulamasında eklenecektir.
+- `expected_body_substring` mevcut tabloda karakter sayısıyla bounded'dır; kesin 2048 UTF-8 byte DB constraint'i revision 12 planıdır.
 
 ## Sıradaki İş
 
-Aşama 6 — Kontrol ve Grup Yönetimi için önce `docs/CHECKS_AND_GROUPS.md` tasarımını hazırlayıp kullanıcı incelemesine sunmak; onaydan sonra owner-scoped CRUD, validation, ETag/idempotency, quota ve negatif erişim testlerini dikey dilimler halinde uygulamak.
+`docs/CHECKS_AND_GROUPS.md` belgesini kullanıcıyla değerlendirmek; onaydan sonraki promptta Aşama 6 uygulamasına OpenAPI/contract düzeltmeleri ve saf domain doğrulama katmanıyla başlamak.
