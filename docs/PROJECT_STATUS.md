@@ -1,10 +1,11 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 10:56 +06:00
-**Genel durum:** Aşama 0–7 tamamlandı ve doğrulandı; sıradaki çalışma Aşama 8 sağlık/incident/grup durumu tasarımıdır
+**Son güncelleme:** 2026-10-10 11:02 +06:00
+**Genel durum:** Aşama 0–7 tamamlandı ve doğrulandı; Aşama 8 sağlık/incident/grup durumu tasarımı tamamlandı, uygulama kullanıcı incelemesini bekliyor
 
 ## Tamamlanan
 
+- Aşama 8 için saf state reducer sınırı, canonical observation acceptance precedence, sabit iki-failure threshold, provisional timeline, incident segment/duration, read-time freshness override, query-time group aggregate ve test mimarisi
 - Scheduler/DB'den bağımsız güvenli HTTP probe motoru; versioned snapshot doğrulama, frozen DNS candidate pinning, public IPv4/IPv6 policy, redirect, total deadline/cancellation, bounded streaming/decompression ve typed hata taksonomisi
 - DNS çağrısı yapmayan kısa ömürlü direct TCP/TLS connector; hostname/SNI sertifika doğrulaması, proxy bypass'ı, operator port allowlist'i ve production'da reddedilen exact-origin local simulator istisnası
 - Başarı/body/status, streaming, gecikme/hang, büyük/sıkıştırılmış body, redirect/loop, flaky ve erken bağlantı kapanması fixture'larıyla genişletilmiş hedef simülatörü
@@ -89,4 +90,4 @@
 
 ## Sıradaki İş
 
-Aşama 8 sağlık/incident/grup durumu mimarisini mevcut kabul kriterleri ve `STATE_MACHINES.md` ile tam olarak planlamak; belge kullanıcı tarafından incelendikten sonra domain geçişlerini kodlamak.
+Kullanıcı `docs/HEALTH_AND_INCIDENT_ENGINE.md` tasarımını inceledikten sonra Aşama 8'i küçük dilimlerle uygulamak; önce domain tipleri/invariant validator ve acceptance kararı, ardından observation reducer, incident/interval effect'leri, freshness/group projection helper'ları ve sequence/property testlerine geçmek.

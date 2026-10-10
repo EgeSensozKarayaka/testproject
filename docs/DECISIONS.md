@@ -560,3 +560,43 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Global keep-alive pool; `ALLOW_PRIVATE=true`; proxy env'lerini otomatik kullanmak; simulator için production policy'yi gevşetmek.
 - **Gerekçe:** Cross-job stale DNS/connection state'ini ve konfigürasyon kaynaklı SSRF bypass'ını azaltmak; local kanıtlanabilirliği dar bir istisnayla korumak.
 - **Sonuçlar:** Keep-alive performansından bilinçli taviz verilir ve 20/200/500 profili Aşama 9'da ölçülür. Gerekirse güvenli pool ayrı ADR ister. Production, development origin istisnasıyla fail-fast olur.
+
+## D-062 — Sağlık motoru saf reducer ve typed transaction planıdır
+
+- **Tarih:** 2026-10-10 11:02 +06:00
+- **Durum:** Accepted for implementation
+- **Bağlam:** Sağlık/incident kuralları scheduler, SQL ve worker lifecycle'ına gömülürse transition matrisi yalnız entegrasyon ortamında test edilebilir ve retry/replay davranışı belirsizleşir.
+- **Karar:** Aşama 8 motoru `packages/domain` içinde I/O, global clock ve UUID üretimi olmayan saf reducer olacaktır. Immutable snapshot alıp acceptance, current-state patch, interval/incident effect ve redacted event fact'lerinden oluşan typed transaction planı döndürecektir. SQL effect uygulama Aşama 9 adapter'ına aittir.
+- **Alternatifler:** State machine'i monitor-worker SQL koduna gömmek; event consumer ile eventual state üretmek; stored procedure içine bütün domain kararlarını taşımak.
+- **Gerekçe:** Deterministik sequence/property testleri, transport/persistence ayrımı ve aynı input için tekrarlanabilir karar sağlamak.
+- **Sonuçlar:** Aşama 8 tek başına uçtan uca incident üretmez. Aşama 9 adapter'ı planı aynı transaction'da uygulamalı; reducer invariant fault'u target FAIL'e çevrilmemelidir.
+
+## D-063 — V1 failure threshold sabit iki ve sayaç saturating'dir
+
+- **Tarih:** 2026-10-10 11:02 +06:00
+- **Durum:** Accepted for implementation
+- **Bağlam:** Görev kısa süreli tek hatanın downtime sayılmamasını ister fakat kullanıcıya göre değişken threshold zorunlu değildir. Runtime'da değişebilen gizli bir eşik geçmiş incident anlamını değiştirebilir.
+- **Karar:** V1'de threshold tam olarak iki ardışık accepted FAIL'dir. İlk FAIL SUSPECT/candidate, ikinci FAIL DOWN/incident üretir; sayaç iki değerinde saturate edilir. Gelecekte per-check eşik eklenirse version'lı probe config ve generation değişimidir.
+- **Alternatifler:** Deployment env ile sessizce değişen eşik; kullanıcı bazlı ayar; zaman pencereli oran; ilk hatada DOWN.
+- **Gerekçe:** Ürün beklentisine uygun en sade deterministik semantik ve uzun kesintide bounded state.
+- **Sonuçlar:** Tek FAIL hiçbir incident/e-posta üretmez. Threshold değişkenliği sonraki sürümde açık migration/contract kararı gerektirir.
+
+## D-064 — Freshness doğruluğu read-time override ile reconciler'dan bağımsızdır
+
+- **Tarih:** 2026-10-10 11:02 +06:00
+- **Durum:** Accepted for implementation
+- **Bağlam:** Kalıcı freshness reconciler birkaç saniye gecikebilir. Yalnız persisted `FRESH` alanını okumak süresi geçmiş check'i UP/DOWN gösterebilir ve açık incident süresine monitoring gap ekleyebilir.
+- **Karar:** Bütün snapshot/group sorguları `fresh_until <= statement_timestamp()` durumunu anında STALE/effective UNKNOWN sayacaktır. Açık incident'ın query-time observed süresi en fazla `fresh_until` noktasına kadar büyür ve effective observation mode UNOBSERVED olur. Reconciler sonradan aynı deadline'da interval/segmenti kalıcılaştırır.
+- **Alternatifler:** Yalnız background reconciler; her okumada state tablosuna write; küçük gecikmeyi kabul etmek; stale süreyi DOWN saymak.
+- **Gerekçe:** AC-044/046/062 doğruluğunu scheduler gecikmesinden ayırmak ve kullanıcıya yanlış availability göstermemek.
+- **Sonuçlar:** Read projection ile persisted projection kısa süre farklı olabilir fakat aynı semantic sonucu verir. Reconciliation lag ölçülür; duplicate reconciliation checkpoint ile no-op olur.
+
+## D-065 — Grup sağlığı child snapshot'larından query-time türetilir
+
+- **Tarih:** 2026-10-10 11:02 +06:00
+- **Durum:** Accepted for implementation
+- **Bağlam:** Grup sağlığı child check'lerin efektif durumudur. Ayrı mutable group state satırı dual-write, stale projection ve rebuild yükü getirir; owner kotası mevcut aggregate sorgusunu bounded tutar.
+- **Karar:** V1 group health `LIVE + ACTIVE` child'ların read-time effective health değerlerinden `DOWN > SUSPECT > UNKNOWN > UP` önceliğiyle tek set-based sorguda türetilir. PAUSED ayrı sayılır, DELETED dışlanır; 50 sabit ürün limiti yoktur.
+- **Alternatifler:** Her observation'da group state row update; child başına N+1 query; cache'i source of truth yapmak.
+- **Gerekçe:** Tek source of truth, daha az write contention ve 20/200/500 profillerine uygun bounded aggregate.
+- **Sonuçlar:** Child status event'i realtime/public consumer'da group query invalidation üretir. Ölçüm sorun gösterirse rebuild edilebilir projection ayrı ADR ile eklenir.

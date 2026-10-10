@@ -1,8 +1,9 @@
 # Site Availability Monitor — Durum Makineleri
 
 **Sürüm:** 1.0  
-**Durum:** Aşama 1 için nihai durum geçişleri  
+**Durum:** Nihai domain geçişleri; Aşama 8 acceptance semantiğiyle hizalı
 **Tarih:** 2026-10-09 22:53 +06:00
+**Son güncelleme:** 2026-10-10 11:02 +06:00
 
 ## 1. Genel Kurallar
 
@@ -89,15 +90,17 @@ Run aşağıdaki koşulların tamamını geçerse stateful accepted observation 
 
 Reddedilme nedenleri kararlı enum'dur:
 
-- `DIAGNOSTIC_RUN`
+- `DUPLICATE_RUN`
+- `ATTEMPT_NOT_CURRENT`
 - `CHECK_DELETED`
+- `DIAGNOSTIC_RUN`
+- `CHECK_PAUSED`
 - `PROBE_GENERATION_MISMATCH`
 - `SCHEDULE_GENERATION_MISMATCH`
 - `STALE_FENCING_TOKEN`
-- `DUPLICATE_RUN`
-- `INTERNAL_EXECUTION_ERROR`
 
 Reddedilmiş run immutable geçmişte bulunabilir ancak health, incident, availability veya normal notification üzerinde etkili değildir.
+Engine/programming hatası target observation değildir; `check_runs` içinde sahte FAIL üretmek yerine job/attempt altyapı hata politikasına gider.
 
 ## 6. Freshness State Machine
 
@@ -415,4 +418,3 @@ ACTIVE/DOWN
 - DOWN gönderilmemiş recipient'a RECOVERY gönderilemez.
 - Public projection allowlist dışında alan taşıyamaz.
 - Prediction ana health veya incident transition'ı üretemez.
-

@@ -257,10 +257,13 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 8 — Sağlık Durumu, Incident ve Grup Durumu
 
+**Durum:** Tasarım tamamlandı — 2026-10-10 11:02 +06:00; uygulama kullanıcı incelemesini bekliyor
+
 **Amaç:** Scheduler'dan bağımsız olarak sonuçlardan deterministik durum geçişleri üreten domain katmanını uygulamak.
 
 **Tasarım çıktısı:**
 
+- `docs/HEALTH_AND_INCIDENT_ENGINE.md`
 - Kabul edilmiş `STATE_MACHINES.md` belgesinin uygulanabilir geçiş tablosu
 
 **Uygulama kapsamı:**
@@ -614,4 +617,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 7 — Güvenli HTTP Kontrol Motoru ve Hedef Simülatörü** tamamlanmıştır. Resolve-once DNS/IP pinning, public-address policy, direct connector, tek total deadline, bounded streaming/decompression, redirect politikası, typed hata taksonomisi, genişletilmiş simulator ve gerçek socket entegrasyon testleri uygulanmıştır. Monitor worker motoru oluşturur; job claim, overlap/fairness ve sonuç kalıcılığı Aşama 9'a aittir.
 
-**Sıradaki çalışma Aşama 8 — Sağlık Durumu, Incident ve Grup Durumu tasarımı**dır. Kodlamadan önce probe sonuçlarından deterministik `UNKNOWN/UP/SUSPECT/DOWN` geçişleri, failure threshold, incident lifecycle, stale/fencing reddi ve grup status türetimi mevcut `STATE_MACHINES.md` dayanağıyla uygulama seviyesinde kesinleştirilecektir.
+**Aşama 8 — Sağlık Durumu, Incident ve Grup Durumu tasarımı** tamamlanmıştır. Saf reducer sınırı, canonical acceptance precedence, sabit iki-failure threshold, provisional timeline, incident segmentleri, read-time freshness/duration doğruluğu, query-time grup türetimi, event fact'leri ve Aşama 9 transaction portu `docs/HEALTH_AND_INCIDENT_ENGINE.md` içinde kesinleştirilmiştir.
+
+**Sıradaki çalışma**, kullanıcı tasarımı inceledikten sonra Aşama 8 uygulama dilimleridir. Önce domain tipleri/invariant validator ve acceptance kararı, ardından observation reducer, incident/interval effect'leri, freshness/group projection helper'ları ve sequence/property testleri uygulanacaktır. Kalıcı job/scheduler entegrasyonu Aşama 9'a aittir.
