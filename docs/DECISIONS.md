@@ -740,3 +740,33 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Aşama 10'da notification worker'ı kısmen uygulamak; event-time suppression flag'ini source of truth yapmak; maintenance kararını her consumer'da ayrı SQL ile tekrarlamak; incident uygunluğunu maintenance helper'ına gömmek.
 - **Gerekçe:** Aşama sınırını korurken bakımın kritik kararını üretim kodu ve deterministik testle kanıtlamak; stale olay bilgisi yerine durable source of truth kullanmak ve Aşama 11'in recipient başına kurallarını bağımsız geliştirebilmek.
 - **Sonuçlar:** Aşama 11 adapter'ı `PROCEED/DEFER/CANCEL` sonucunu kalıcı intent state'lerine eşleyecektir. Recovery eligibility'si recipient delivery lineage'ına göre ayrıca hesaplanır; geçersiz veya süresi geçmiş maintenance timestamp'i gate tarafından reddedilir.
+
+## D-080 — Recovery recipient seti başarılı DOWN lineage'ından türetilir
+
+- **Tarih:** 2026-10-10 16:27 +06:00
+- **Durum:** Accepted — Aşama 11 nihai mimarisi
+- **Bağlam:** Recovery anındaki güncel policy listesini kullanmak, DOWN almamış yeni recipient'a anlamsız recovery gönderebilir; policy'yi tamamen event anında dondurmak ise explicit recipient opt-out'unu yok sayar.
+- **Karar:** DOWN delivery, materialization anındaki `notify_recovery` kararını snapshot eder. RECOVERY yalnız aynı incident için DOWN durumu `SENT`, snapshot'ı açık ve recipient'ı hâlâ VERIFIED olan lineage'a materialize edilir; recovery delivery exact DOWN delivery self-FK'sini taşır.
+- **Alternatifler:** Recovery anındaki current policy recipient seti; incident seviyesinde tek boolean; DOWN `DELIVERY_UNKNOWN` sonucunu SENT varsaymak.
+- **Gerekçe:** Her recovery mesajını kanıtlanmış bir DOWN teslimine bağlamak, policy değişikliğiyle yanlış recipient eklememek ve açık opt-out'u korumak.
+- **Sonuçlar:** Başarısız, iptal veya unknown DOWN otomatik recovery üretmez. Policy değişimi gönderilmiş DOWN'ın eşleşmesini bozmaz; recipient disable recovery'yi engeller.
+
+## D-081 — SMTP ambiguous sonucu terminaldir ve exactly-once iddiası yapılmaz
+
+- **Tarih:** 2026-10-10 16:27 +06:00
+- **Durum:** Accepted — Aşama 11 nihai mimarisi
+- **Bağlam:** SMTP provider mesajı kabul ettikten sonra bağlantı koparsa uygulama sonucu bilemez. Kör retry duplicate e-posta, gönderilmiş varsaymak ise yanlış recovery üretebilir.
+- **Karar:** Kanıtlanamayan sonuç `DELIVERY_UNKNOWN` terminal durumudur; otomatik retry veya recovery yapılmaz. Kesin geçici hata retry, kalıcı hata FAILED, açık `2xx` kabul SENT olur. Deterministik Message-ID duplicate azaltır fakat garanti sayılmaz.
+- **Alternatifler:** Bütün network hatalarını retry; bütün timeout'ları başarısız saymak; SMTP yerine zorunlu provider-specific idempotency API.
+- **Gerekçe:** Standart SMTP'nin garanti etmediği exactly-once davranışını iddia etmeden duplicate riskini sınırlamak.
+- **Sonuçlar:** Unknown durum metric/audit ve operatör incelemesi gerektirir. API ve monitoring bundan etkilenmez.
+
+## D-082 — Notification cutover tarihsel outbox replay yerine aktivasyon ve source reconciliation kullanır
+
+- **Tarih:** 2026-10-10 16:27 +06:00
+- **Durum:** Accepted — Aşama 11 nihai mimarisi
+- **Bağlam:** `NOTIFICATION` destination önceki aşamalarda pasiftir. Bütün tarihsel incident event'lerini replay etmek kapanmış kesintiler için gecikmiş e-posta üretir; yalnız aktivasyon sonrası event'lere bakmak mevcut açık incident'ları kaçırır.
+- **Karar:** Worker/preflight deploy edildikten sonra destination forward-only cutover ile aktive edilir. Ardından yalnız source-of-truth'ta hâlâ açık incident'lar için NOTIFICATION-only sentetik `incident.opened` event'leri oluşturulur. Unique incident/event-kind intent kısıtı yarışları tekilleştirir.
+- **Alternatifler:** Tüm tarihsel outbox replay; açık incident'ları yok saymak; process memory backfill listesi; destination'ı worker kodundan önce aktive etmek.
+- **Gerekçe:** Geçmiş spam üretmeden aktivasyon anındaki gerçek durumu kapsamak ve restart güvenli kalmak.
+- **Sonuçlar:** Aktivasyon sonrası consumer kesintisi normal durable backlog oluşturur. Backfill ile canlı event yarışı ikinci DOWN üretemez.

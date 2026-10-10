@@ -1,11 +1,12 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 16:19 +06:00
+**Son güncelleme:** 2026-10-10 16:27 +06:00
 
-**Genel durum:** Aşama 0–10 tamamlandı ve doğrulandı; sıradaki çalışma Aşama 11 bildirim mimarisi
+**Genel durum:** Aşama 0–10 tamamlandı ve doğrulandı; Aşama 11 nihai mimarisi hazır, uygulama sırada
 
 ## Tamamlanan
 
+- Aşama 11 için recipient doğrulama, default/group policy, idempotent incident intent'i, recipient delivery lineage'ı, maintenance send-time recheck, SMTP retry/unknown politikası, cutover ve acceptance kapsamını kesinleştiren `docs/NOTIFICATIONS.md`
 - Revision 15 ile maintenance `name → note varchar(1000) NULL` sözleşme düzeltmesi, owner-list indeksi, fiziksel delete/hedef update yasağı ve API/monitor/notifier'ın paylaştığı security-invoker etkin bakım projection fonksiyonu
 - Saf maintenance domain politikası: exact `[start,end)` sınırları, note normalizasyonu, create/edit range doğrulaması, aktif/bitmiş/cancelled mutation kuralları ve direct+current-group overlap union projection'ı
 - Revision 15 için sıfırdan migration, RLS cross-owner gizleme, least-privilege ve projection testi dahil gerçek PostgreSQL paketi **15/15**; ortak projection'ı kullanan check API/monitor observation paketleri **20/20** geçti
@@ -163,4 +164,4 @@
 
 ## Sıradaki İş
 
-Aşama 11 için transactional e-posta ve bildirim sisteminin nihai mimarisi hazırlanacaktır; mimari onayından sonra consumer, intent/delivery state machine'i ve SMTP adapter'ı uygulanacaktır.
+Aşama 11'in ilk uygulama diliminde forward-only revision 16, saf notification domain kuralları ve owner-scoped recipient/policy API'si uygulanacaktır.

@@ -1,21 +1,18 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 16:19 +06:00
+**Son güncelleme:** 2026-10-10 16:27 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–10 tamamlandı ve doğrulandı
+**Mevcut kilometre taşı:** Aşama 0–10 tamamlandı; Aşama 11 nihai mimarisi uygulamaya hazır
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
-## 1. Sıradaki Çalışma — Aşama 11 Mimarisi
+## 1. Sıradaki Çalışma — Aşama 11 Uygulaması
 
-Kodlamadan önce `docs/NOTIFICATIONS.md` içinde nihai bildirim mimarisini oluştur:
+`docs/NOTIFICATIONS.md` tasarımını inceleme/onay sonrasında üç kısa dilimde uygula:
 
-- Varsayılan ve group override alıcı/policy çözümleme kuralları
-- `incident.opened` / `incident.closed` outbox consumer ve idempotent intent oluşturma
-- Açık incident/nonterminal intent cutover reconciliation'ı ve `NOTIFICATION` destination aktivasyon sırası
-- Maintenance gate'in `PENDING_EVALUATION` / `DEFERRED_MAINTENANCE` / terminal intent state'lerine kalıcı eşlenmesi
-- Recipient başına DOWN/RECOVERY lineage'ı; DOWN `SENT` olmadan RECOVERY üretmeme
-- SMTP claim/lease, retry/backoff, `DELIVERY_UNKNOWN`, Mailpit ve redacted template sınırları
+- Revision 16 schema/backfill/trigger, saf policy-lineage kuralları ve recipient/policy API'si
+- Outbox/intent/delivery worker runtime'ı, SMTP adapter/templates ve güvenli destination cutover
+- İki-replica/restart/maintenance/SMTP failure/Mailpit kabul paketi ve tam CI
 
 ## 2. Aşama 10 Kapanış Kanıtları
 
