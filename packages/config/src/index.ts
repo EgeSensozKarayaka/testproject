@@ -154,10 +154,22 @@ export function loadAuthRuntimeConfig(
 }
 
 export interface TransactionalEmailConfig {
+  databasePoolSize: number;
   fromAddress: string;
+  leaseSeconds: number;
+  maxDispatchAttempts: number;
+  messageIdDomain: string;
   pollIntervalMs: number;
+  retryBaseSeconds: number;
+  retryCapSeconds: number;
+  shutdownGraceMs: number;
+  smtpConcurrency: number;
+  smtpConnectionTimeoutMs: number;
+  smtpGreetingTimeoutMs: number;
   smtpHost: string;
   smtpPort: number;
+  smtpSocketTimeoutMs: number;
+  smtpTlsMode: 'none' | 'starttls' | 'tls';
 }
 
 export function loadTransactionalEmailConfig(
@@ -169,17 +181,61 @@ export function loadTransactionalEmailConfig(
         .string()
         .min(3)
         .includes('@')
+        .refine((value) => !/[\r\n]/u.test(value), 'AUTH_EMAIL_FROM cannot contain line breaks')
         .default('Site Monitor <no-reply@site-monitor.local>'),
       AUTH_EMAIL_POLL_INTERVAL_MS: z.coerce.number().int().min(100).max(60_000).default(1_000),
+      NOTIFICATION_DB_POOL_SIZE: z.coerce.number().int().min(2).max(32).default(6),
+      NOTIFICATION_LEASE_SECONDS: z.coerce.number().int().min(15).max(900).default(60),
+      NOTIFICATION_MAX_DISPATCH_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
+      NOTIFICATION_MESSAGE_ID_DOMAIN: z
+        .string()
+        .regex(
+          /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/iu,
+        )
+        .default('site-monitor.local'),
+      NOTIFICATION_RETRY_BASE_SECONDS: z.coerce.number().int().min(1).max(3600).default(30),
+      NOTIFICATION_RETRY_CAP_SECONDS: z.coerce.number().int().min(1).max(3600).default(1800),
+      NOTIFICATION_SHUTDOWN_GRACE_MS: z.coerce
+        .number()
+        .int()
+        .min(1000)
+        .max(120_000)
+        .default(15_000),
+      NOTIFICATION_SMTP_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(4),
+      SMTP_CONNECTION_TIMEOUT_MS: z.coerce.number().int().min(100).max(120_000).default(10_000),
+      SMTP_GREETING_TIMEOUT_MS: z.coerce.number().int().min(100).max(120_000).default(10_000),
       SMTP_HOST: z.string().min(1).default('127.0.0.1'),
       SMTP_PORT: z.coerce.number().int().min(1).max(65_535).default(1025),
+      SMTP_SOCKET_TIMEOUT_MS: z.coerce.number().int().min(100).max(300_000).default(30_000),
+      SMTP_TLS_MODE: z.enum(['none', 'starttls', 'tls']).default('none'),
     })
     .parse(environment);
+  if (parsed.NOTIFICATION_RETRY_CAP_SECONDS < parsed.NOTIFICATION_RETRY_BASE_SECONDS) {
+    throw new Error('NOTIFICATION_RETRY_CAP_SECONDS cannot be lower than the retry base');
+  }
+  const nodeEnvironment = runtimeEnvironmentSchema
+    .default('development')
+    .parse(environment.NODE_ENV);
+  if (nodeEnvironment === 'production' && parsed.SMTP_TLS_MODE === 'none') {
+    throw new Error('SMTP_TLS_MODE must enable TLS in production');
+  }
   return {
+    databasePoolSize: parsed.NOTIFICATION_DB_POOL_SIZE,
     fromAddress: parsed.AUTH_EMAIL_FROM,
+    leaseSeconds: parsed.NOTIFICATION_LEASE_SECONDS,
+    maxDispatchAttempts: parsed.NOTIFICATION_MAX_DISPATCH_ATTEMPTS,
+    messageIdDomain: parsed.NOTIFICATION_MESSAGE_ID_DOMAIN,
     pollIntervalMs: parsed.AUTH_EMAIL_POLL_INTERVAL_MS,
+    retryBaseSeconds: parsed.NOTIFICATION_RETRY_BASE_SECONDS,
+    retryCapSeconds: parsed.NOTIFICATION_RETRY_CAP_SECONDS,
+    shutdownGraceMs: parsed.NOTIFICATION_SHUTDOWN_GRACE_MS,
+    smtpConcurrency: parsed.NOTIFICATION_SMTP_CONCURRENCY,
+    smtpConnectionTimeoutMs: parsed.SMTP_CONNECTION_TIMEOUT_MS,
+    smtpGreetingTimeoutMs: parsed.SMTP_GREETING_TIMEOUT_MS,
     smtpHost: parsed.SMTP_HOST,
     smtpPort: parsed.SMTP_PORT,
+    smtpSocketTimeoutMs: parsed.SMTP_SOCKET_TIMEOUT_MS,
+    smtpTlsMode: parsed.SMTP_TLS_MODE,
   };
 }
 

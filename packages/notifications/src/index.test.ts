@@ -4,7 +4,10 @@ import { DomainValidationError } from '@site-monitor/domain';
 
 import {
   decideMaintenanceNotificationGate,
+  classifySmtpFailure,
+  notificationRetryDelaySeconds,
   normalizeNotificationPolicy,
+  renderIncidentEmail,
   resolveNotificationPolicy,
 } from './index.js';
 
@@ -111,6 +114,43 @@ describe('notification policy', () => {
         { allowInherit: false },
       ),
     ).toThrow(DomainValidationError);
+  });
+});
+
+describe('notification delivery rules', () => {
+  it('classifies SMTP failures without persisting provider text', () => {
+    expect(classifySmtpFailure({ responseCode: 421 })).toEqual({
+      code: 'smtp_421',
+      result: 'RETRY',
+    });
+    expect(classifySmtpFailure({ responseCode: 550 })).toEqual({
+      code: 'smtp_550',
+      result: 'FAILED',
+    });
+    expect(classifySmtpFailure({ code: 'ETIMEDOUT', message: 'private provider detail' })).toEqual({
+      code: 'etimedout',
+      result: 'DELIVERY_UNKNOWN',
+    });
+  });
+
+  it('uses deterministic bounded retry jitter', () => {
+    const first = notificationRetryDelaySeconds('delivery-a', 3, 30, 1800);
+    expect(notificationRetryDelaySeconds('delivery-a', 3, 30, 1800)).toBe(first);
+    expect(first).toBeGreaterThanOrEqual(1);
+    expect(first).toBeLessThanOrEqual(120);
+  });
+
+  it('renders escaped incident snapshots without URLs or response data', () => {
+    const content = renderIncidentEmail('INCIDENT_DOWN', 1, {
+      check_name: '<Critical API>',
+      confirmed_at: '2026-10-10T10:00:30.000Z',
+      failure_category: 'TIMEOUT',
+      started_at: '2026-10-10T10:00:00.000Z',
+    });
+    expect(content.subject).toContain('<Critical API>');
+    expect(content.html).toContain('&lt;Critical API&gt;');
+    expect(content.html).not.toContain('<Critical API>');
+    expect(content.text).not.toContain('http');
   });
 });
 

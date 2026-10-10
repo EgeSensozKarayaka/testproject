@@ -147,3 +147,132 @@ export function decideMaintenanceNotificationGate(
   }
   return { kind: 'PROCEED' };
 }
+
+export type SmtpFailureResult = 'DELIVERY_UNKNOWN' | 'FAILED' | 'RETRY';
+
+export interface SmtpFailureClassification {
+  code: string;
+  result: SmtpFailureResult;
+}
+
+function errorProperty(error: unknown, key: string): unknown {
+  return typeof error === 'object' && error !== null && Reflect.has(error, key)
+    ? Reflect.get(error, key)
+    : undefined;
+}
+
+/** Maps provider failures to a bounded, persistence-safe result. */
+export function classifySmtpFailure(error: unknown): SmtpFailureClassification {
+  const responseCode = Number(errorProperty(error, 'responseCode'));
+  const providerCode = errorProperty(error, 'code');
+  const rawCode = (typeof providerCode === 'string' ? providerCode : 'smtp_error').toUpperCase();
+  const code = /^[A-Z0-9_]{1,40}$/u.test(rawCode) ? rawCode.toLowerCase() : 'smtp_error';
+  if (responseCode >= 500 && responseCode <= 599)
+    return { code: `smtp_${responseCode}`, result: 'FAILED' };
+  if (responseCode >= 400 && responseCode <= 499)
+    return { code: `smtp_${responseCode}`, result: 'RETRY' };
+  if (['EAUTH', 'EENVELOPE', 'EMESSAGE'].includes(rawCode)) return { code, result: 'FAILED' };
+  if (['ECONNREFUSED', 'EAI_AGAIN', 'ENOTFOUND'].includes(rawCode))
+    return { code, result: 'RETRY' };
+  if (['ECONNRESET', 'ETIMEDOUT', 'ESOCKET'].includes(rawCode)) {
+    return { code, result: 'DELIVERY_UNKNOWN' };
+  }
+  return { code, result: 'DELIVERY_UNKNOWN' };
+}
+
+/** Stable jitter keeps retries spread without requiring mutable random state. */
+export function notificationRetryDelaySeconds(
+  deliveryId: string,
+  attempt: number,
+  baseSeconds: number,
+  capSeconds: number,
+): number {
+  if (!Number.isInteger(attempt) || attempt < 1 || baseSeconds < 1 || capSeconds < baseSeconds) {
+    throw new RangeError('Invalid notification retry parameters.');
+  }
+  let hash = 2_166_136_261;
+  for (const character of `${deliveryId}:${attempt}`) {
+    hash ^= character.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 16_777_619) >>> 0;
+  }
+  const ceiling = Math.min(capSeconds, baseSeconds * 2 ** Math.min(attempt - 1, 20));
+  return Math.max(1, Math.floor((hash / 0xffff_ffff) * ceiling));
+}
+
+export type IncidentTemplateKey = 'INCIDENT_DOWN' | 'INCIDENT_RECOVERED' | 'MONITORING_ENDED';
+
+export interface IncidentEmailContent {
+  html: string;
+  subject: string;
+  text: string;
+}
+
+function requiredText(payload: Record<string, unknown>, field: string, maxLength = 500): string {
+  const value = payload[field];
+  if (typeof value !== 'string' || value.length === 0 || value.length > maxLength) {
+    throw new TypeError(`Invalid incident notification field: ${field}`);
+  }
+  return value;
+}
+
+function htmlEscape(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function durationText(milliseconds: string): string {
+  const value = Number(milliseconds);
+  if (!Number.isSafeInteger(value) || value < 0) throw new TypeError('Invalid incident duration.');
+  const seconds = Math.floor(value / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ${minutes % 60}m`;
+}
+
+/** Renders only the allowlisted snapshot; URLs and response bodies are impossible inputs. */
+export function renderIncidentEmail(
+  templateKey: IncidentTemplateKey,
+  templateVersion: number,
+  payload: Record<string, unknown>,
+): IncidentEmailContent {
+  if (templateVersion !== 1)
+    throw new TypeError('Unsupported incident notification template version.');
+  const checkName = requiredText(payload, 'check_name', 160);
+  let subject: string;
+  let lines: string[];
+  if (templateKey === 'INCIDENT_DOWN') {
+    subject = `DOWN: ${checkName}`;
+    lines = [
+      `${checkName} is unavailable.`,
+      `Incident started: ${requiredText(payload, 'started_at', 40)}`,
+      `Confirmed: ${requiredText(payload, 'confirmed_at', 40)}`,
+      `Failure category: ${requiredText(payload, 'failure_category', 80)}`,
+    ];
+  } else if (templateKey === 'INCIDENT_RECOVERED') {
+    subject = `RECOVERED: ${checkName}`;
+    lines = [
+      `${checkName} is available again.`,
+      `Incident started: ${requiredText(payload, 'started_at', 40)}`,
+      `Recovered: ${requiredText(payload, 'ended_at', 40)}`,
+      `Observed downtime: ${durationText(requiredText(payload, 'observed_duration_ms', 24))}`,
+    ];
+  } else {
+    subject = `MONITORING ENDED: ${checkName}`;
+    lines = [
+      `Monitoring for ${checkName} changed while an incident was open.`,
+      `Closed: ${requiredText(payload, 'ended_at', 40)}`,
+      `Reason: ${requiredText(payload, 'closure_reason', 40)}`,
+    ];
+  }
+  return {
+    html: `<p>${lines.map(htmlEscape).join('</p><p>')}</p>`,
+    subject,
+    text: lines.join('\n'),
+  };
+}

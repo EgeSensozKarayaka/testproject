@@ -14,11 +14,14 @@
     "@site-monitor/config": "workspace:*",
     "@site-monitor/contracts": "workspace:*",
     "@site-monitor/database": "workspace:*",
+    "@site-monitor/notifications": "workspace:*",
     "@site-monitor/observability": "workspace:*",
     "fastify": "5.12.5",
-    "nodemailer": "10.0.16"
+    "nodemailer": "10.0.16",
+    "pg": "8.23.1"
   },
   "devDependencies": {
-    "@types/nodemailer": "8.0.2"
+    "@types/nodemailer": "8.0.2",
+    "@types/pg": "8.23.1"
   }
 }

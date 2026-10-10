@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 import { decryptJson } from '@site-monitor/auth';
 import {
@@ -9,6 +9,11 @@ import {
 } from '@site-monitor/config';
 import type { ServiceHealth } from '@site-monitor/contracts';
 import { createDatabasePool, isDatabaseReady } from '@site-monitor/database';
+import {
+  classifySmtpFailure,
+  notificationRetryDelaySeconds,
+  renderIncidentEmail,
+} from '@site-monitor/notifications';
 import { createLogger } from '@site-monitor/observability';
 import Fastify from 'fastify';
 import nodemailer from 'nodemailer';
@@ -18,8 +23,13 @@ import {
   type SecretEmailPayload,
   type TransactionalEmailPurpose,
 } from './email-content.js';
+import {
+  IncidentNotificationStore,
+  type ClaimedIncidentDelivery,
+} from './incident-notification-store.js';
 
 const config = loadRuntimeConfig({ defaultPort: 3012, serviceName: 'notification-worker' });
+const emailConfig = loadTransactionalEmailConfig();
 const logger = createLogger({
   environment: config.nodeEnv,
   service: config.serviceName,
@@ -29,17 +39,26 @@ const database = createDatabasePool({
   applicationName: config.serviceName,
   connectionString: loadDatabaseUrl(),
   databaseRole: 'site_monitor_notifier',
-  maxConnections: 2,
+  maxConnections: emailConfig.databasePoolSize,
 });
 const app = Fastify({ loggerInstance: logger });
 const authConfig = loadAuthRuntimeConfig();
-const emailConfig = loadTransactionalEmailConfig();
 const workerId = `${config.serviceName}:${randomUUID()}`;
 const transport = nodemailer.createTransport({
+  connectionTimeout: emailConfig.smtpConnectionTimeoutMs,
+  greetingTimeout: emailConfig.smtpGreetingTimeoutMs,
   host: emailConfig.smtpHost,
   port: emailConfig.smtpPort,
-  secure: false,
+  requireTLS: emailConfig.smtpTlsMode === 'starttls',
+  secure: emailConfig.smtpTlsMode === 'tls',
+  socketTimeout: emailConfig.smtpSocketTimeoutMs,
 });
+const incidentStore = new IncidentNotificationStore(
+  database,
+  workerId,
+  emailConfig.leaseSeconds,
+  emailConfig.maxDispatchAttempts,
+);
 
 interface ClaimedEmail {
   attempt_count: number;
@@ -54,9 +73,22 @@ interface ClaimedEmail {
   recipient_address: string;
 }
 
+function retrySeconds(deliveryId: string, attempt: number): number {
+  return notificationRetryDelaySeconds(
+    deliveryId,
+    attempt,
+    emailConfig.retryBaseSeconds,
+    emailConfig.retryCapSeconds,
+  );
+}
+
+function providerReference(value: string | undefined): string | null {
+  return value ? createHash('sha256').update(value).digest('hex') : null;
+}
+
 async function completeEmail(
   claim: ClaimedEmail,
-  result: 'DELIVERY_UNKNOWN' | 'RETRY' | 'SENT',
+  result: 'DELIVERY_UNKNOWN' | 'FAILED' | 'RETRY' | 'SENT',
   resultCode: string,
   providerMessageId: string | null,
 ): Promise<void> {
@@ -67,20 +99,20 @@ async function completeEmail(
     result,
     resultCode,
     providerMessageId,
-    30,
+    retrySeconds(claim.delivery_id, claim.attempt_count),
   ]);
 }
 
-async function deliverOne(): Promise<boolean> {
+async function deliverTransactionalOne(): Promise<boolean> {
   const result = await database.query<ClaimedEmail>(
     'SELECT * FROM security_api.claim_transactional_email($1,$2)',
-    [workerId, 60],
+    [workerId, emailConfig.leaseSeconds],
   );
   const claim = result.rows[0];
   if (!claim) return false;
 
   try {
-    const payload = decryptJson<SecretEmailPayload>(
+    const secretPayload = decryptJson<SecretEmailPayload>(
       {
         ciphertext: claim.encrypted_payload,
         initializationVector: claim.encryption_iv,
@@ -89,47 +121,139 @@ async function deliverOne(): Promise<boolean> {
       },
       [{ key: authConfig.emailEncryptionKey, version: authConfig.emailEncryptionKeyVersion }],
     );
-    const content = transactionalEmailContent(claim.purpose, payload, authConfig.publicWebUrl);
+    const content = transactionalEmailContent(
+      claim.purpose,
+      secretPayload,
+      authConfig.publicWebUrl,
+    );
     const sent = await transport.sendMail({
       from: emailConfig.fromAddress,
+      html: content.html,
+      messageId: `<transactional.${claim.delivery_id}@${emailConfig.messageIdDomain}>`,
       subject: content.subject,
       text: content.text,
       to: claim.recipient_address,
     });
-    await completeEmail(claim, 'SENT', 'smtp_accepted', sent.messageId);
+    await completeEmail(claim, 'SENT', 'smtp_accepted', providerReference(sent.messageId));
     logger.info(
       { delivery_id: claim.delivery_id, purpose: claim.purpose },
       'transactional email delivered',
     );
   } catch (error) {
-    const code =
-      error instanceof Error && Reflect.has(error, 'code')
-        ? String(Reflect.get(error, 'code'))
-        : 'smtp_error';
-    const ambiguous = ['ECONNRESET', 'ETIMEDOUT'].includes(code);
-    await completeEmail(claim, ambiguous ? 'DELIVERY_UNKNOWN' : 'RETRY', code, null);
+    const classified = classifySmtpFailure(error);
+    await completeEmail(claim, classified.result, classified.code, null);
     logger.warn(
-      { delivery_id: claim.delivery_id, error_code: code, purpose: claim.purpose },
+      {
+        delivery_id: claim.delivery_id,
+        purpose: claim.purpose,
+        result: classified.result,
+        result_code: classified.code,
+      },
       'transactional email delivery failed',
     );
   }
   return true;
 }
 
-const deliveryState: { timer?: NodeJS.Timeout } = {};
-let deliveryRunning = false;
-async function pollDeliveries(): Promise<void> {
-  if (deliveryRunning || stopping) return;
-  deliveryRunning = true;
+async function deliverIncidentOne(): Promise<boolean> {
+  const claim: ClaimedIncidentDelivery | undefined = await incidentStore.claimDelivery();
+  if (!claim) return false;
   try {
-    while (!stopping && (await deliverOne())) {
-      // Drain available jobs without delaying unrelated HTTP health checks.
-    }
+    const content = renderIncidentEmail(
+      claim.template_key,
+      claim.template_version,
+      claim.template_payload,
+    );
+    const sent = await transport.sendMail({
+      from: emailConfig.fromAddress,
+      html: content.html,
+      messageId: `<incident.${claim.delivery_id}@${emailConfig.messageIdDomain}>`,
+      subject: content.subject,
+      text: content.text,
+      to: claim.recipient_address,
+    });
+    await incidentStore.completeDelivery(
+      claim,
+      'SENT',
+      'smtp_accepted',
+      providerReference(sent.messageId),
+      retrySeconds(claim.delivery_id, claim.attempt_count),
+    );
+    logger.info(
+      { delivery_id: claim.delivery_id, event_kind: claim.event_kind },
+      'incident notification delivered',
+    );
   } catch (error) {
-    logger.error({ err: error }, 'transactional email poll failed');
-  } finally {
-    deliveryRunning = false;
+    const classified = classifySmtpFailure(error);
+    await incidentStore.completeDelivery(
+      claim,
+      classified.result,
+      classified.code,
+      null,
+      retrySeconds(claim.delivery_id, claim.attempt_count),
+    );
+    logger.warn(
+      {
+        delivery_id: claim.delivery_id,
+        event_kind: claim.event_kind,
+        result: classified.result,
+        result_code: classified.code,
+      },
+      'incident notification delivery failed',
+    );
   }
+  return true;
+}
+
+const successfulLoops = new Set<string>();
+let lastLoopError: string | null = null;
+let preferTransactional = true;
+let stopping = false;
+let pollPromise: Promise<void> | undefined;
+const deliveryState: { timer?: NodeJS.Timeout } = {};
+
+async function runSmtpSlot(startWithTransactional: boolean): Promise<void> {
+  let transactionalFirst = startWithTransactional;
+  while (!stopping) {
+    const primary = transactionalFirst ? deliverTransactionalOne : deliverIncidentOne;
+    const secondary = transactionalFirst ? deliverIncidentOne : deliverTransactionalOne;
+    let worked = await primary();
+    if (!worked) worked = await secondary();
+    successfulLoops.add('transactional-delivery');
+    successfulLoops.add('incident-delivery');
+    if (!worked) return;
+    transactionalFirst = !transactionalFirst;
+  }
+}
+
+async function pollWork(): Promise<void> {
+  if (pollPromise || stopping) return;
+  pollPromise = (async () => {
+    try {
+      for (let index = 0; index < 100 && !stopping; index += 1) {
+        if (!(await incidentStore.consumeDispatch())) break;
+      }
+      successfulLoops.add('outbox');
+      for (let index = 0; index < 100 && !stopping; index += 1) {
+        if (!(await incidentStore.evaluateIntent())) break;
+      }
+      successfulLoops.add('intent');
+      const slotStart = preferTransactional;
+      preferTransactional = !preferTransactional;
+      await Promise.all(
+        Array.from({ length: emailConfig.smtpConcurrency }, (_, index) =>
+          runSmtpSlot(index % 2 === 0 ? slotStart : !slotStart),
+        ),
+      );
+      lastLoopError = null;
+    } catch (error) {
+      lastLoopError = error instanceof Error ? error.name : 'unknown_error';
+      logger.error({ err: error }, 'notification worker poll failed');
+    }
+  })().finally(() => {
+    pollPromise = undefined;
+  });
+  await pollPromise;
 }
 
 function payload(status: ServiceHealth['status']): ServiceHealth {
@@ -143,18 +267,26 @@ function payload(status: ServiceHealth['status']): ServiceHealth {
 
 app.get('/health/live', () => payload('ok'));
 app.get('/health/ready', async (_request, reply) => {
-  const ready = await isDatabaseReady(database);
+  const databaseReady = await isDatabaseReady(database);
+  const loopsReady = successfulLoops.size === 4 && lastLoopError === null;
+  const ready = databaseReady && loopsReady;
   if (!ready) reply.code(503);
   return payload(ready ? 'ok' : 'unavailable');
 });
 
-let stopping = false;
 async function stop(signal: string): Promise<void> {
   if (stopping) return;
   stopping = true;
   if (deliveryState.timer) clearInterval(deliveryState.timer);
   logger.info({ signal }, 'shutting down');
   await app.close();
+  if (pollPromise) {
+    await Promise.race([
+      pollPromise,
+      new Promise<void>((resolve) => setTimeout(resolve, emailConfig.shutdownGraceMs)),
+    ]);
+  }
+  transport.close();
   await database.end();
 }
 
@@ -165,6 +297,6 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 }
 
 await app.listen({ host: config.host, port: config.port });
-deliveryState.timer = setInterval(() => void pollDeliveries(), emailConfig.pollIntervalMs);
+deliveryState.timer = setInterval(() => void pollWork(), emailConfig.pollIntervalMs);
 deliveryState.timer.unref();
-void pollDeliveries();
+void pollWork();
