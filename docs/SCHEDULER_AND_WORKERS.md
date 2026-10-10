@@ -2,7 +2,7 @@
 
 **Aşama:** 9 — Kalıcı Scheduler ve Monitor Worker
 
-**Durum:** Uygulama devam ediyor — ilk dokuz dilim ve 20/200/500 kapasite profili doğrulandı; process-kill ve API-isolation kanıtları sırada
+**Durum:** Uygulama devam ediyor — production runtime, 20/200/500 kapasite profili ve process-kill/fencing kanıtı doğrulandı; API-isolation ve iki-worker kapanış kanıtı sırada
 
 **Tarih:** 2026-10-10 15:00 +06:00
 
@@ -761,6 +761,8 @@ Rapor; CPU, memory, DB connections, queue lag, claim/persistence p95 ve tamamlan
 
 2026-10-10 yerel baseline'ı ve tekrar komutu [`MONITOR_CAPACITY_REPORT.md`](./MONITOR_CAPACITY_REPORT.md) içindedir. Production scheduler→queue→dispatcher→observation yolunun 20/200/500 profili gerçek PostgreSQL ile geçmiştir; dış ağ katmanı deterministik probe portuyla izole edilmiş, gerçek socket concurrency kanıtı Aşama 7 testinde ayrı tutulmuştur.
 
+Gerçek production worker child process'inin hanging HTTP probe sırasında force-kill edilmesi, lease'in elle değiştirilmeden doğal dolması, replacement attempt'ın daha yüksek fence ile tamamlanması ve eski claim'in gecikmiş FAIL sonucunun state/incident'ı değiştirmeden reddedilmesi [`MONITOR_FAILURE_RECOVERY_REPORT.md`](./MONITOR_FAILURE_RECOVERY_REPORT.md) içinde kayıtlıdır.
+
 ## 24. Transaction retry politikası
 
 Kısa ve tamamen idempotent DB transaction'ları yalnız allowlist transient SQLSTATE için bounded retry edilir:
@@ -786,7 +788,7 @@ Retry attempt ve backoff loglanır fakat SQL metni/parametreleri veya hassas sna
 10. 20/200/500 kapasite, process-kill/restart ve API-isolation kanıtları
 11. Compose smoke, tam CI, karar/geliştirme/proje durumu güncellemeleri
 
-İlk dokuz dilim ve onuncu dilimin 20/200/500 kapasite bölümü uygulanmış ve doğrulanmıştır. Dört loop production entrypoint'inde aktiftir; startup mevcut ve sonraki UTC ay için run/interval partition'larını doğrular, readiness bütün loop'ların ilk başarılarını ve güncel hata durumunu izler, shutdown poll sleep'lerini kesip yeni claim'i durdurur ve aktif probe'ları bounded grace sonunda abort eder. Her dilim küçük ve anlamlı commit olur. Migration revision uygulandıktan sonra değiştirilmez; bulunan sorun yeni forward migration ile düzeltilir.
+İlk dokuz dilim ile onuncu dilimin 20/200/500 kapasite ve process-kill/fencing bölümleri uygulanmış ve doğrulanmıştır; API-isolation/iki-worker kapanış profili kalmıştır. Dört loop production entrypoint'inde aktiftir; startup mevcut ve sonraki UTC ay için run/interval partition'larını doğrular, readiness bütün loop'ların ilk başarılarını ve güncel hata durumunu izler, shutdown poll sleep'lerini kesip yeni claim'i durdurur ve aktif probe'ları bounded grace sonunda abort eder. Her dilim küçük ve anlamlı commit olur. Migration revision uygulandıktan sonra değiştirilmez; bulunan sorun yeni forward migration ile düzeltilir.
 
 ## 26. Tamamlanma kapısı
 

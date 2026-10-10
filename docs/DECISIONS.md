@@ -700,3 +700,13 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Yalnız saf unit benchmark; 500 gerçek internet hedefi; sadece tek 50-check profili; host sonucunu doğrudan production SLO kabul etmek; performans testini CI dışında elle çalıştırmak.
 - **Gerekçe:** Dış değişkenliği azaltırken gerçek DB koordinasyon maliyetini ve ürünün sayıdan bağımsız yolunu ölçmek; sonucu tekrarlanabilir, dürüst ve CI tarafından korunur kılmak.
 - **Sonuçlar:** `pnpm test:capacity` ayrı çalıştırılabilir ve normal integration/CI paketine dahildir. Rapor belirtilen donanım için baseline'dır; gerçek DNS/TLS, timeout ağırlıklı hedefler, process kill ve API eşzamanlı yükü ayrı kanıtlar olarak kalır.
+
+## D-076 — Crash recovery kanıtı gerçek process ölümü ile deterministik zombie delivery'yi ayırır
+
+- **Tarih:** 2026-10-10 15:23 +06:00
+- **Durum:** Accepted — gerçek process-kill ve PostgreSQL entegrasyon testiyle doğrulandı
+- **Bağlam:** Yalnız lease timestamp'ini test içinde geçmişe çekmek process kaybını kanıtlamaz. Öte yandan gerçekten `SIGKILL` ile öldürülen aynı proses sonradan sonuç yazamaz; zombie-result riski process ölümü değil, lease partition'ı veya gecikmiş callback/delivery durumudur.
+- **Karar:** Tek kabul testi iki sınırı ardışık ve açık biçimde kanıtlar. Production worker ayrı process'te gerçek hanging HTTP probe'u başlattıktan sonra force-kill edilir ve lease DB saatine göre doğal biçimde dolar. Replacement attempt daha yüksek fence ile tamamlandıktan sonra eski immutable claim, production observation adapter'ına gecikmiş FAIL olarak yeniden verilir.
+- **Alternatifler:** Lease'i SQL ile elle expire etmek; yalnız queue unit testi; öldürülen prosesin geç sonuç yazdığını varsaymak; platforma özel process suspend/resume kullanmak; gerçek internet hedefiyle nondeterministik test.
+- **Gerekçe:** Crash recovery ile stale-result safety farklı failure mode'lardır. İkisini sahte bir anlatıyla birleştirmeden aynı kalıcı lineage üzerinde doğrulamak, platformlar arası tekrarlanabilirliği ve testin neyi kanıtladığının dürüstlüğünü korur.
+- **Sonuçlar:** Test `SIGKILL → doğal expiry → LEASE_LOST → retry → daha yüksek fence → accepted PASS → rejected stale FAIL` zincirini korur. External HTTP exactly-once garanti edilmez; current state ve incident yalnız current attempt sonucundan etkilenir. Ayrıntılı kanıt `MONITOR_FAILURE_RECOVERY_REPORT.md` içindedir.

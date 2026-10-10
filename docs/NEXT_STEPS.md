@@ -1,17 +1,16 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 15:11 +06:00
+**Son güncelleme:** 2026-10-10 15:23 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–8 tamamlandı; Aşama 9 production runtime ve 20/200/500 kapasite profili doğrulandı
+**Mevcut kilometre taşı:** Aşama 0–8 tamamlandı; Aşama 9 production runtime, kapasite ve process-failure recovery kanıtları doğrulandı
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
 ## 1. Sıradaki Çalışma — Aşama 9
 
-[`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) mimarisinin revision 14, typed config, durable cancellation/manual intent, result pointer, activation-aware outbox, owner-fair materialization/claim, global-owner-host bounded probe dispatcher, cancellation acknowledgement, infrastructure retry/DEAD, expired-lease recovery, atomik observation persistence, deadline freshness reconciliation, production runtime koordinasyonu, loop-aware readiness, bounded graceful drain ve [20/200/500 kapasite profili](./MONITOR_CAPACITY_REPORT.md) tamamlandı. Kalan uygulama dilimleri:
+[`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) mimarisinin revision 14, typed config, durable cancellation/manual intent, result pointer, activation-aware outbox, owner-fair materialization/claim, global-owner-host bounded probe dispatcher, cancellation acknowledgement, infrastructure retry/DEAD, expired-lease recovery, atomik observation persistence, deadline freshness reconciliation, production runtime koordinasyonu, loop-aware readiness, bounded graceful drain, [20/200/500 kapasite profili](./MONITOR_CAPACITY_REPORT.md) ve [process-kill/fencing kanıtı](./MONITOR_FAILURE_RECOVERY_REPORT.md) tamamlandı. Kalan son uygulama dilimi:
 
-1. Process-kill, lease expiry/reclaim ve stale/zombie sonuç fencing kanıtı
-2. Worker yükü altında API izolasyonu, iki-worker davranışı ve Aşama 9 kapanış raporu
+1. Worker yükü altında API izolasyonu, iki-worker davranışı ve Aşama 9 kapanış raporu
 
 ## 2. Aşama 9 Sonrasında
 

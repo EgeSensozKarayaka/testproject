@@ -1,4 +1,8 @@
+import { spawn, type ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { createServer, type Server } from 'node:http';
+import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import type { ProbeResult } from '@site-monitor/check-engine';
 import { createDatabasePool, runMigrations, type Pool } from '@site-monitor/database';
@@ -21,6 +25,50 @@ function databaseUrl(adminUrl: string, databaseName: string): string {
   const url = new URL(adminUrl);
   url.pathname = `/${databaseName}`;
   return url.toString();
+}
+
+async function listenOnEphemeralPort(server: Server): Promise<number> {
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      server.off('error', reject);
+      resolve();
+    });
+  });
+  const address = server.address();
+  if (address === null || typeof address === 'string') {
+    throw new Error('Test server did not receive an IP port.');
+  }
+  return address.port;
+}
+
+async function reserveEphemeralPort(): Promise<number> {
+  const server = createServer();
+  const port = await listenOnEphemeralPort(server);
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
+  return port;
+}
+
+async function waitForValue<T>(
+  operation: () => Promise<T | null> | T | null,
+  timeoutMs: number,
+): Promise<T> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const value = await operation();
+    if (value !== null) return value;
+    await delay(25);
+  }
+  throw new Error(`Condition did not become true within ${timeoutMs} ms.`);
+}
+
+function waitForExit(child: ChildProcess): Promise<{ code: number | null; signal: string | null }> {
+  return new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('exit', (code, signal) => resolve({ code, signal }));
+  });
 }
 
 const passingResult: ProbeResult = {
@@ -49,6 +97,7 @@ databaseSuite('monitor PostgreSQL observation store', () => {
   let adminPool: Pool;
   let monitorPool: Pool;
   let schemaPool: Pool;
+  let testConnectionString: string;
 
   beforeAll(async () => {
     adminPool = createDatabasePool({
@@ -58,6 +107,7 @@ databaseSuite('monitor PostgreSQL observation store', () => {
     });
     await adminPool.query(`CREATE DATABASE ${quotedIdentifier(databaseName)}`);
     const connectionString = databaseUrl(adminConnectionString!, databaseName);
+    testConnectionString = connectionString;
     schemaPool = createDatabasePool({
       applicationName: 'observation-schema-test',
       connectionString,
@@ -661,6 +711,289 @@ databaseSuite('monitor PostgreSQL observation store', () => {
       state_version: '4',
     });
   });
+
+  it('recovers a real process-killed probe and fences its zombie result', async () => {
+    const checkId = '00000000-0000-4000-8000-000000010009';
+    const jobId = '00000000-0000-7000-8000-000000010091';
+    let targetRequests = 0;
+    const targetServer = createServer(() => {
+      targetRequests += 1;
+    });
+    const targetPort = await listenOnEphemeralPort(targetServer);
+    const workerPort = await reserveEphemeralPort();
+    const targetOrigin = `http://127.0.0.1:${targetPort}`;
+    await insertCheck({ id: checkId });
+    await schemaPool.query(
+      `UPDATE app.checks
+       SET url = $3, timeout_ms = 3000,
+           next_run_at = statement_timestamp() + interval '1 hour'
+       WHERE owner_id = $1 AND id = $2`,
+      [ownerId, checkId, `${targetOrigin}/hang`],
+    );
+    await insertJob({ checkId, id: jobId });
+
+    const child = spawn(
+      process.execPath,
+      ['--import', 'tsx', path.resolve('apps/monitor-worker/src/index.ts')],
+      {
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          DATABASE_URL: testConnectionString,
+          HOST: '127.0.0.1',
+          MONITOR_CANDIDATE_BATCH_SIZE: '1',
+          MONITOR_DB_POOL_SIZE: '2',
+          MONITOR_DISPATCH_POLL_MS: '25',
+          MONITOR_FRESHNESS_POLL_MS: '60000',
+          MONITOR_GLOBAL_CONCURRENCY: '1',
+          MONITOR_HEARTBEAT_MS: '300',
+          MONITOR_LEASE_GRACE_MS: '1000',
+          MONITOR_PER_HOST_CONCURRENCY: '1',
+          MONITOR_PER_OWNER_CONCURRENCY: '1',
+          MONITOR_RECOVERY_POLL_MS: '60000',
+          MONITOR_SCHEDULE_BATCH_SIZE: '1',
+          MONITOR_SCHEDULER_GRACE_MS: '0',
+          MONITOR_SCHEDULER_POLL_MS: '60000',
+          MONITOR_SHUTDOWN_GRACE_MS: '1000',
+          NODE_ENV: 'test',
+          PORT: String(workerPort),
+          PROBE_ALLOWED_PORTS: String(targetPort),
+          PROBE_CONNECT_TIMEOUT_MS: '1000',
+          PROBE_DEV_ALLOWED_ORIGINS: targetOrigin,
+          SERVICE_NAME: 'monitor-crash-test',
+          SERVICE_VERSION: 'process-recovery-test',
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
+    const childExit = waitForExit(child);
+    let childOutput = '';
+    const rememberOutput = (chunk: Buffer): void => {
+      childOutput = `${childOutput}${chunk.toString('utf8')}`.slice(-4_000);
+    };
+    child.stdout?.on('data', rememberOutput);
+    child.stderr?.on('data', rememberOutput);
+
+    interface ActiveClaimRow {
+      attempt_id: string;
+      attempt_number: number;
+      config_snapshot: unknown;
+      fencing_token: string;
+      lease_duration_ms: number;
+      lease_expires_at: Date;
+      manual_mode: 'DIAGNOSTIC' | 'STATEFUL' | null;
+      probe_generation: string;
+      resource_version: string;
+      schedule_generation: string;
+      scheduled_for: Date;
+      trigger_kind: 'MANUAL' | 'SCHEDULED';
+      worker_id: string;
+    }
+
+    try {
+      const active = await waitForValue<ActiveClaimRow>(async () => {
+        if (child.exitCode !== null || child.signalCode !== null) {
+          throw new Error(`Monitor process exited before claiming the job. ${childOutput}`);
+        }
+        const result = await schemaPool.query<ActiveClaimRow>(
+          `SELECT attempt.id::text AS attempt_id, attempt.attempt_number,
+                  job.config_snapshot, job.fencing_token::text,
+                  checks.timeout_ms + 1000 AS lease_duration_ms,
+                  job.lease_expires_at, job.manual_mode,
+                  job.probe_generation::text, job.resource_version::text,
+                  job.schedule_generation::text, job.scheduled_for,
+                  job.trigger_kind, attempt.worker_id
+           FROM monitoring.check_jobs AS job
+           JOIN app.checks AS checks
+             ON checks.owner_id = job.owner_id AND checks.id = job.check_id
+           JOIN monitoring.check_job_attempts AS attempt
+             ON attempt.owner_id = job.owner_id AND attempt.check_id = job.check_id
+            AND attempt.job_id = job.id AND attempt.ended_at IS NULL
+           WHERE job.owner_id = $1 AND job.check_id = $2 AND job.id = $3
+             AND job.state = 'RUNNING'`,
+          [ownerId, checkId, jobId],
+        );
+        return result.rows[0] ?? null;
+      }, 10_000);
+      await waitForValue(() => (targetRequests > 0 ? true : null), 2_000);
+
+      const crashedClaim: ClaimedJob = {
+        attemptId: active.attempt_id,
+        attemptNumber: active.attempt_number,
+        checkId,
+        configSnapshot: active.config_snapshot,
+        fencingToken: active.fencing_token,
+        jobId,
+        leaseDurationMs: active.lease_duration_ms,
+        leaseExpiresAt: active.lease_expires_at.toISOString(),
+        manualMode: active.manual_mode,
+        ownerId,
+        probeGeneration: active.probe_generation,
+        resourceVersion: active.resource_version,
+        scheduleGeneration: active.schedule_generation,
+        scheduledFor: active.scheduled_for.toISOString(),
+        triggerKind: active.trigger_kind,
+      };
+
+      expect(child.kill('SIGKILL')).toBe(true);
+      const exit = await Promise.race([
+        childExit,
+        delay(5_000).then(() => {
+          throw new Error('Killed monitor process did not exit within 5000 ms.');
+        }),
+      ]);
+      expect(exit.code === null || exit.code !== 0).toBe(true);
+
+      const abandoned = await schemaPool.query<{
+        lease_owner: string;
+        state: string;
+        terminal_reason: string | null;
+      }>(
+        `SELECT state, lease_owner, terminal_reason
+         FROM monitoring.check_jobs
+         WHERE owner_id = $1 AND check_id = $2 AND id = $3`,
+        [ownerId, checkId, jobId],
+      );
+      expect(abandoned.rows[0]).toEqual({
+        lease_owner: active.worker_id,
+        state: 'RUNNING',
+        terminal_reason: null,
+      });
+
+      const reclaimer = new PostgresJobQueue(monitorPool, 'monitor-worker:reclaimer', 1_000);
+      const expired = await waitForValue(async () => {
+        const candidates = await reclaimer.listExpiredLeaseCandidates(10);
+        return candidates.find((candidate) => candidate.jobId === jobId) ?? null;
+      }, 6_000);
+      const recovery = await reclaimer.recoverExpiredLease(expired);
+      expect(recovery).toMatchObject({ outcome: 'RETRY_SCHEDULED' });
+
+      const replacementQueue = new PostgresJobQueue(
+        monitorPool,
+        'monitor-worker:replacement',
+        1_000,
+      );
+      const retryCandidate = await waitForValue(async () => {
+        const candidates = await replacementQueue.listClaimCandidates(10);
+        return candidates.find((candidate) => candidate.jobId === jobId) ?? null;
+      }, 4_000);
+      const replacementClaimResult = await replacementQueue.claimCandidate(retryCandidate);
+      if (replacementClaimResult.outcome !== 'CLAIMED') {
+        throw new Error('Recovered job could not be claimed by the replacement worker.');
+      }
+      const replacementClaim = replacementClaimResult.job;
+      expect(BigInt(replacementClaim.fencingToken)).toBeGreaterThan(
+        BigInt(crashedClaim.fencingToken),
+      );
+      await expect(replacementQueue.startClaim(replacementClaim)).resolves.toMatchObject({
+        outcome: 'ACTIVE',
+      });
+      const replacementStore = new PostgresObservationStore(
+        monitorPool,
+        'monitor-worker:replacement',
+        5_000,
+        replacementQueue,
+      );
+      await expect(
+        replacementStore.persistResult(replacementClaim, passingResult),
+      ).resolves.toMatchObject({ accepted: true, jobOutcome: 'COMPLETED' });
+
+      const stateBeforeZombie = await schemaPool.query<{
+        health_state: string;
+        last_accepted_fencing_token: string;
+        last_response_time_ms: number;
+        state_version: string;
+      }>(
+        `SELECT health_state, last_accepted_fencing_token::text,
+                last_response_time_ms, state_version::text
+         FROM monitoring.check_current_states
+         WHERE owner_id = $1 AND check_id = $2`,
+        [ownerId, checkId],
+      );
+      const crashedQueue = new PostgresJobQueue(monitorPool, active.worker_id, 1_000);
+      const crashedStore = new PostgresObservationStore(
+        monitorPool,
+        active.worker_id,
+        5_000,
+        crashedQueue,
+      );
+      await expect(crashedStore.persistResult(crashedClaim, failingResult)).resolves.toMatchObject({
+        accepted: false,
+        jobOutcome: 'UNCHANGED',
+        rejectionReason: 'ATTEMPT_NOT_CURRENT',
+      });
+      const stateAfterZombie = await schemaPool.query<{
+        health_state: string;
+        last_accepted_fencing_token: string;
+        last_response_time_ms: number;
+        state_version: string;
+      }>(
+        `SELECT health_state, last_accepted_fencing_token::text,
+                last_response_time_ms, state_version::text
+         FROM monitoring.check_current_states
+         WHERE owner_id = $1 AND check_id = $2`,
+        [ownerId, checkId],
+      );
+      expect(stateAfterZombie.rows[0]).toEqual(stateBeforeZombie.rows[0]);
+      expect(stateAfterZombie.rows[0]).toMatchObject({
+        health_state: 'UP',
+        last_accepted_fencing_token: replacementClaim.fencingToken,
+        last_response_time_ms: passingResult.timings.totalMs,
+      });
+
+      const evidence = await schemaPool.query<{
+        accepted_for_state: boolean;
+        attempt_number: number;
+        job_state: string;
+        outcome: string;
+        rejection_reason: string | null;
+        terminal_reason: string;
+      }>(
+        `SELECT attempt.attempt_number, attempt.terminal_reason,
+                run.accepted_for_state, run.outcome, run.rejection_reason,
+                job.state AS job_state
+         FROM monitoring.check_job_attempts AS attempt
+         JOIN monitoring.check_jobs AS job
+           ON job.owner_id = attempt.owner_id AND job.check_id = attempt.check_id
+          AND job.id = attempt.job_id
+         JOIN monitoring.check_runs AS run
+           ON run.owner_id = attempt.owner_id AND run.check_id = attempt.check_id
+          AND run.attempt_id = attempt.id
+         WHERE attempt.owner_id = $1 AND attempt.check_id = $2 AND attempt.job_id = $3
+         ORDER BY attempt.attempt_number`,
+        [ownerId, checkId, jobId],
+      );
+      expect(evidence.rows).toEqual([
+        {
+          accepted_for_state: false,
+          attempt_number: 1,
+          job_state: 'COMPLETED',
+          outcome: 'FAIL',
+          rejection_reason: 'ATTEMPT_NOT_CURRENT',
+          terminal_reason: 'LEASE_LOST',
+        },
+        {
+          accepted_for_state: true,
+          attempt_number: 2,
+          job_state: 'COMPLETED',
+          outcome: 'PASS',
+          rejection_reason: null,
+          terminal_reason: 'RESULT_RECORDED',
+        },
+      ]);
+      const incidents = await schemaPool.query<{ count: string }>(
+        `SELECT count(*)::text AS count
+         FROM monitoring.incidents
+         WHERE owner_id = $1 AND check_id = $2`,
+        [ownerId, checkId],
+      );
+      expect(incidents.rows[0]?.count).toBe('0');
+    } finally {
+      if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+      targetServer.closeAllConnections();
+      await new Promise<void>((resolve) => targetServer.close(() => resolve()));
+    }
+  }, 30_000);
 
   it('selects overdue candidates fairly across owners before applying the batch limit', async () => {
     const secondOwnerId = '00000000-0000-4000-8000-000000000202';
