@@ -200,7 +200,7 @@ function operationContract(pathTemplate, method, pathItem, operation) {
       csrfRequired: headerNames.has('x-csrf-token'),
       idempotencyRequired: headerNames.has('idempotency-key'),
       method: method.toUpperCase(),
-      path: pathTemplate,
+      path: pathTemplate.replaceAll(/\{([^}]+)\}/g, ':$1'),
       preconditionRequired: headerNames.has('if-match'),
       routeSchema,
     },

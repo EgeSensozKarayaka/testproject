@@ -2813,7 +2813,7 @@ export const openApiOperations = {
     csrfRequired: false,
     idempotencyRequired: false,
     method: 'GET',
-    path: '/api/v1/checks/{check_id}',
+    path: '/api/v1/checks/:check_id',
     preconditionRequired: false,
     routeSchema: {
       params: {
@@ -2985,7 +2985,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: false,
     method: 'PATCH',
-    path: '/api/v1/checks/{check_id}',
+    path: '/api/v1/checks/:check_id',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -3507,7 +3507,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: false,
     method: 'DELETE',
-    path: '/api/v1/checks/{check_id}',
+    path: '/api/v1/checks/:check_id',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -3821,7 +3821,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: false,
     method: 'POST',
-    path: '/api/v1/checks/{check_id}/pause',
+    path: '/api/v1/checks/:check_id/pause',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -4284,7 +4284,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: false,
     method: 'POST',
-    path: '/api/v1/checks/{check_id}/resume',
+    path: '/api/v1/checks/:check_id/resume',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -4747,7 +4747,7 @@ export const openApiOperations = {
     csrfRequired: false,
     idempotencyRequired: false,
     method: 'GET',
-    path: '/api/v1/checks/{check_id}/runs',
+    path: '/api/v1/checks/:check_id/runs',
     preconditionRequired: false,
     routeSchema: {
       params: {
@@ -4937,7 +4937,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: true,
     method: 'POST',
-    path: '/api/v1/checks/{check_id}/runs',
+    path: '/api/v1/checks/:check_id/runs',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -5353,7 +5353,7 @@ export const openApiOperations = {
     csrfRequired: false,
     idempotencyRequired: false,
     method: 'GET',
-    path: '/api/v1/checks/{check_id}/history',
+    path: '/api/v1/checks/:check_id/history',
     preconditionRequired: false,
     routeSchema: {
       params: {
@@ -5565,7 +5565,7 @@ export const openApiOperations = {
     csrfRequired: false,
     idempotencyRequired: false,
     method: 'GET',
-    path: '/api/v1/checks/{check_id}/prediction',
+    path: '/api/v1/checks/:check_id/prediction',
     preconditionRequired: false,
     routeSchema: {
       params: {
@@ -6150,7 +6150,7 @@ export const openApiOperations = {
     csrfRequired: false,
     idempotencyRequired: false,
     method: 'GET',
-    path: '/api/v1/groups/{group_id}',
+    path: '/api/v1/groups/:group_id',
     preconditionRequired: false,
     routeSchema: {
       params: {
@@ -6271,7 +6271,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: false,
     method: 'PATCH',
-    path: '/api/v1/groups/{group_id}',
+    path: '/api/v1/groups/:group_id',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -6630,7 +6630,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: false,
     method: 'DELETE',
-    path: '/api/v1/groups/{group_id}',
+    path: '/api/v1/groups/:group_id',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -7086,7 +7086,7 @@ export const openApiOperations = {
     csrfRequired: false,
     idempotencyRequired: false,
     method: 'GET',
-    path: '/api/v1/incidents/{incident_id}',
+    path: '/api/v1/incidents/:incident_id',
     preconditionRequired: false,
     routeSchema: {
       params: {
@@ -7589,7 +7589,7 @@ export const openApiOperations = {
     csrfRequired: false,
     idempotencyRequired: false,
     method: 'GET',
-    path: '/api/v1/maintenance-windows/{window_id}',
+    path: '/api/v1/maintenance-windows/:window_id',
     preconditionRequired: false,
     routeSchema: {
       params: {
@@ -7738,7 +7738,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: false,
     method: 'PATCH',
-    path: '/api/v1/maintenance-windows/{window_id}',
+    path: '/api/v1/maintenance-windows/:window_id',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -7991,7 +7991,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: false,
     method: 'DELETE',
-    path: '/api/v1/maintenance-windows/{window_id}',
+    path: '/api/v1/maintenance-windows/:window_id',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -8382,7 +8382,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: false,
     method: 'DELETE',
-    path: '/api/v1/notification-recipients/{recipient_id}',
+    path: '/api/v1/notification-recipients/:recipient_id',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -8558,7 +8558,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: true,
     method: 'POST',
-    path: '/api/v1/notification-recipients/{recipient_id}/verification',
+    path: '/api/v1/notification-recipients/:recipient_id/verification',
     preconditionRequired: false,
     routeSchema: {
       params: {
@@ -9136,7 +9136,7 @@ export const openApiOperations = {
     csrfRequired: false,
     idempotencyRequired: false,
     method: 'GET',
-    path: '/api/v1/groups/{group_id}/notification-policy',
+    path: '/api/v1/groups/:group_id/notification-policy',
     preconditionRequired: false,
     routeSchema: {
       params: {
@@ -9223,7 +9223,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: false,
     method: 'PUT',
-    path: '/api/v1/groups/{group_id}/notification-policy',
+    path: '/api/v1/groups/:group_id/notification-policy',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -9821,7 +9821,7 @@ export const openApiOperations = {
     csrfRequired: false,
     idempotencyRequired: false,
     method: 'GET',
-    path: '/api/v1/public-pages/{page_id}',
+    path: '/api/v1/public-pages/:page_id',
     preconditionRequired: false,
     routeSchema: {
       params: {
@@ -10014,7 +10014,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: false,
     method: 'PATCH',
-    path: '/api/v1/public-pages/{page_id}',
+    path: '/api/v1/public-pages/:page_id',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -10307,7 +10307,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: false,
     method: 'DELETE',
-    path: '/api/v1/public-pages/{page_id}',
+    path: '/api/v1/public-pages/:page_id',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -10483,7 +10483,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: false,
     method: 'PUT',
-    path: '/api/v1/public-pages/{page_id}/components',
+    path: '/api/v1/public-pages/:page_id/components',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -10811,7 +10811,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: true,
     method: 'POST',
-    path: '/api/v1/public-pages/{page_id}/publish',
+    path: '/api/v1/public-pages/:page_id/publish',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -11106,7 +11106,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: false,
     method: 'POST',
-    path: '/api/v1/public-pages/{page_id}/disable',
+    path: '/api/v1/public-pages/:page_id/disable',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -11383,7 +11383,7 @@ export const openApiOperations = {
     csrfRequired: true,
     idempotencyRequired: true,
     method: 'POST',
-    path: '/api/v1/public-pages/{page_id}/rotate-link',
+    path: '/api/v1/public-pages/:page_id/rotate-link',
     preconditionRequired: true,
     routeSchema: {
       params: {
@@ -11837,7 +11837,7 @@ export const openApiOperations = {
     csrfRequired: false,
     idempotencyRequired: false,
     method: 'GET',
-    path: '/api/public/v1/status-pages/{public_token}',
+    path: '/api/public/v1/status-pages/:public_token',
     preconditionRequired: false,
     routeSchema: {
       params: {
@@ -12127,7 +12127,7 @@ export const openApiOperations = {
     csrfRequired: false,
     idempotencyRequired: false,
     method: 'GET',
-    path: '/api/public/v1/status-pages/{public_token}/events',
+    path: '/api/public/v1/status-pages/:public_token/events',
     preconditionRequired: false,
     routeSchema: {
       params: {
