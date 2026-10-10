@@ -85,10 +85,10 @@ afterEach(() => {
 
 describe('MonitoringDashboard', () => {
   it('formats current incident durations without negative values', () => {
-    expect(formatDuration(-1)).toBe('0 sn');
-    expect(formatDuration(125_000)).toBe('2 dk 5 sn');
-    expect(formatDuration(7_380_000)).toBe('2 sa 3 dk');
-    expect(formatDuration(93_600_000)).toBe('1 gün 2 sa');
+    expect(formatDuration(-1)).toBe('0s');
+    expect(formatDuration(125_000)).toBe('2m 5s');
+    expect(formatDuration(7_380_000)).toBe('2h 3m');
+    expect(formatDuration(93_600_000)).toBe('1d 2h');
   });
 
   it('summarizes live health and filters the status dashboard', async () => {
@@ -131,14 +131,16 @@ describe('MonitoringDashboard', () => {
     );
 
     render(<MonitoringDashboard onLogout={() => undefined} session={session} />);
-    const overview = await screen.findByRole('region', { name: 'Sistem durumu' });
+    const overview = await screen.findByRole('region', { name: 'System status' });
     expect(within(overview).getByText('Healthy service')).toBeDefined();
     expect(within(overview).getByText('Down service')).toBeDefined();
-    expect(within(overview).getByText(/2 dk/u)).toBeDefined();
-    expect(within(overview).getByText('Aktif olay').parentElement).toHaveTextContent('1');
-    expect(within(overview).getByText('Operasyonel').parentElement).toHaveTextContent('1');
+    expect(within(overview).getByText(/2m/u)).toBeDefined();
+    expect(within(overview).getAllByText('Active incidents')[0]?.parentElement).toHaveTextContent(
+      '1',
+    );
+    expect(within(overview).getAllByText('Operational')[0]?.parentElement).toHaveTextContent('1');
 
-    fireEvent.click(within(overview).getByRole('button', { name: 'Aktif olaylar' }));
+    fireEvent.click(within(overview).getByRole('button', { name: 'Active incidents' }));
     expect(within(overview).queryByText('Healthy service')).toBeNull();
     expect(within(overview).getByText('Down service')).toBeDefined();
   });
@@ -181,14 +183,14 @@ describe('MonitoringDashboard', () => {
     );
 
     render(<MonitoringDashboard onLogout={() => undefined} session={session} />);
-    expect(await screen.findByText('Henüz grup yok')).toBeDefined();
+    expect(await screen.findByText('No groups yet')).toBeDefined();
 
-    fireEvent.click(screen.getByText('Yeni grup oluştur'));
-    fireEvent.change(screen.getByLabelText('Grup adı'), { target: { value: 'Operations' } });
-    fireEvent.change(screen.getByLabelText(/Açıklama/), {
+    fireEvent.click(screen.getByText('Create new group'));
+    fireEvent.change(screen.getByLabelText('Group name'), { target: { value: 'Operations' } });
+    fireEvent.change(screen.getByLabelText(/Description/), {
       target: { value: 'Critical services' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Grup oluştur' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create group' }));
 
     expect(await screen.findByRole('heading', { name: 'Operations' })).toBeDefined();
     expect(createHeaders?.get('X-CSRF-Token')).toBe(session.csrf_token);
@@ -227,10 +229,12 @@ describe('MonitoringDashboard', () => {
     render(<MonitoringDashboard onLogout={() => undefined} session={session} />);
     expect(await screen.findByRole('heading', { name: 'Primary site' })).toBeDefined();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Şimdi çalıştır' }));
-    expect(await screen.findByText('Manuel kontrol kuyruğa alındı.')).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: 'Duraklat' }));
-    expect(await screen.findByRole('button', { name: 'Devam ettir' })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Run now' }));
+    expect(await screen.findByText('Manual run enqueued.')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    expect(await screen.findByRole('button', { name: 'Resume' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Diagnostic run' })).toBeDefined();
+    expect(screen.getByText(/manual runs while paused are diagnostic only/iu)).toBeDefined();
 
     expect(commandHeaders[0]?.get('If-Match')).toBe('"rv-1"');
     expect(commandHeaders[0]?.get('Idempotency-Key')).toBeTruthy();
@@ -262,11 +266,11 @@ describe('MonitoringDashboard', () => {
 
     render(<MonitoringDashboard onLogout={() => undefined} session={session} />);
     expect(await screen.findByRole('heading', { name: 'Primary site' })).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: 'Düzenle' }));
-    fireEvent.change(screen.getByLabelText('Kontrol adı'), { target: { value: 'My edit' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Kontrolü güncelle' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    fireEvent.change(screen.getByLabelText('Check name'), { target: { value: 'My edit' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Update check' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('başka bir oturumda değiştirildi');
+    expect(await screen.findByRole('alert')).toHaveTextContent('modified in another session');
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Updated in another tab' })).toBeDefined();
     });
@@ -299,10 +303,10 @@ describe('MonitoringDashboard', () => {
     expect(await screen.findByRole('heading', { name: 'Capacity 100' })).toBeDefined();
     expect(screen.queryByRole('heading', { name: 'Capacity 101' })).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Daha fazla kontrol yükle' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Load more checks' }));
     expect(await screen.findByRole('heading', { name: 'Capacity 200' })).toBeDefined();
     expect(screen.queryByRole('heading', { name: 'Capacity 201' })).toBeNull();
-    expect(screen.getByText('200 kontrol')).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Daha fazla kontrol yükle' })).toBeDefined();
+    expect(screen.getByText('200 checks loaded')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Load more checks' })).toBeDefined();
   }, 15_000);
 });

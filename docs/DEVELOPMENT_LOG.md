@@ -617,3 +617,9 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Seed dokümantasyonundaki eski “auth henüz yok” ifadesi güncel kayıt/Mailpit akışına göre düzeltildi. Predictor kapsam dışı olduğu için placeholder model metadata'sı seed'den çıkarıldı.
 - Seed'in parola/session üretmediği açıkça belirtildi; tarayıcı kabulü normal kullanıcı kaydıyla yapılır. Güncel idempotent fixture çalışan Revision 33 veritabanına başarıyla uygulandı.
 - Compose image rebuild'i sırasında npm registry bağlantısı çok sayıda `ECONNRESET/error 23` yeniden denemesine girdiği için dış ağ bekleyişi sonlandırıldı. Kaynak production bundle'ı host bağımlılıklarıyla başarıyla build edildi ve yalnız yerel E2E için mevcut sağlıklı web container'ına kopyalandı; bu nedenle bu dilim temiz Docker image rebuild kanıtı iddia etmez. Dockerfile değişmedi, CI production build'i geçti.
+
+### 21:34 — Aktif oturum yenileme düzeltmesi
+
+- Teslim demosunda check güncelleme ve ardından check/group listeleme çağrılarının `500` döndüğü tarayıcı ve API loglarıyla yeniden üretildi. Kök neden, `security_api.touch_or_rotate_session` fonksiyonunun TABLE output değişkeni ile aynı adlı niteliksiz `absolute_expires_at` sütununu PostgreSQL 18'de belirsiz yorumlamasıydı.
+- Uygulanmış migration değiştirilmeden Revision 34 eklendi; non-rotation session touch sorgusu tablo alias'ıyla açıkça nitelendi ve mevcut least-privilege auth yaşam döngüsü testi gerçek fonksiyon çağrısıyla genişletildi.
+- Revision 34 çalışan veritabanına veri kaybı olmadan uygulandı. Bütün strict typecheck'ler, **249/249 unit** ve **92/92 gerçek PostgreSQL integration** testi geçti; API, web, PostgreSQL ve monitor worker healthy kaldı.

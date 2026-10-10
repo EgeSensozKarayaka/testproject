@@ -1,17 +1,18 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 21:15 +06:00
+**Son güncelleme:** 2026-10-10 21:34 +06:00
 
 **Genel durum:** Aşama 0–14 teslim kapsamı tamamlandı; sistem full-stack doğrulama ve teslim provası aşamasında
 
 ## Tamamlanan
 
+- Forward-only Revision 34, aktif session touch yolundaki PostgreSQL output-variable/sütun adı belirsizliğini giderir. Check güncellemesini de etkileyen `500` hatası canlı veritabanında kapatıldı; least-privilege session regresyonu **92/92** gerçek PostgreSQL entegrasyon paketi içinde geçiyor. Yerel schema head **34**
 - Aşama 14 operasyon alanı: günlük/haftalık/aylık response-time grafiği, availability/coverage özeti, incident günlüğü, check/group bakım penceresi oluşturma/iptal, e-posta alıcı doğrulama-test-silme ve default notification policy yönetimi
 - Public durum sayfası yönetimi: sayfa oluşturma, kontrolleri explicit allowlist olarak yayınlama, URL bilgisini ayrı flag ile gizleme, publish/disable/link-rotate yaşam döngüsü ve token'ın yalnız publish/rotate cevabında bir kez gösterilmesi
 - Anonim `/status/:token` sayfası ayrı `site_monitor_public` read-only rolü ve `SECURITY DEFINER` allowlist projection'ı üzerinden çalışır; sayfa yenilenmeden 10 saniyede bir yakınsar. Public token URL loglarında maskelenir
-- Forward-only Revision 29–33 public canlı projection, gerekli-null sözleşmesi, deterministik genel sağlık önceliği ve fiziksel/sözleşme kolon eşlemelerini uygular. Yerel schema head **33**
+- Forward-only Revision 29–33 public canlı projection, gerekli-null sözleşmesi, deterministik genel sağlık önceliği ve fiziksel/sözleşme kolon eşlemelerini uygular.
 - Güncel teslim kapısı: format, 58-operation contract drift, lint, bütün strict typecheck'ler, **249/249 unit**, **92/92 gerçek PostgreSQL/socket/process integration**, bütün production build'leri ve public sayfa + iki-client dahil Playwright **4/4** geçti
-- Yerel full-stack teslim provasında zorunlu `app` servislerinin tamamı healthy, migration head 33/idempotent ve container stack üstündeki Playwright tekrar **4/4** geçti. Predictor kapalıdır
+- Yerel full-stack teslim provasında zorunlu `app` servislerinin tamamı healthy; teslim Playwright paketi **4/4** geçti. Son session düzeltmesinden sonra migration head 34'tür. Predictor kapalıdır
 
 - Aşama 14 Dilim 1: realtime snapshot ile beslenen responsive canlı durum dashboard'u; aktif/operasyonel/incident/bakım/dikkat özetleri, erişilebilir durum filtreleri, freshness ve bakım işaretleri, son yanıt/son kontrol bilgisi ve saniyede güncellenen aktif kesinti süresi
 - Durum ekranı yüksek öncelikli sorunları önce sıralar, yönetim kartına klavye ile izlenebilir bağlantı verir ve dar ekranlarda bilgi hiyerarşisini korur. Süre biçimleme ve dashboard filtre/özet davranışları bileşen testleriyle, temel görünürlük ise Playwright kabul akışıyla korunur

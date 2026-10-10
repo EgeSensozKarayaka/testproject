@@ -67,7 +67,7 @@ export class ApiError extends Error {
   readonly issues: Problem['errors'];
 
   constructor(problem: Partial<Problem>, status: number) {
-    super(problem.detail ?? 'İstek tamamlanamadı.');
+    super(problem.detail ?? 'Request failed.');
     this.name = 'ApiError';
     this.code = problem.code ?? 'request_failed';
     this.status = status;

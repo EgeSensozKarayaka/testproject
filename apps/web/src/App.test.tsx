@@ -23,10 +23,10 @@ describe('App authentication shell', () => {
     );
     render(<App />);
 
-    expect(await screen.findByRole('heading', { name: 'Hesabınıza giriş yapın' })).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: 'Yeni hesap' }));
-    expect(screen.getByRole('heading', { name: 'İzlemeye başlayın' })).toBeDefined();
-    expect(screen.getByLabelText('Görünen ad')).toBeDefined();
+    expect(await screen.findByRole('heading', { name: 'Log in to your account' })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    expect(screen.getByRole('heading', { name: 'Start monitoring' })).toBeDefined();
+    expect(screen.getByLabelText('Display name')).toBeDefined();
   });
 
   it('renders the authenticated workspace returned by the session endpoint', async () => {
@@ -62,7 +62,7 @@ describe('App authentication shell', () => {
     );
     render(<App />);
 
-    expect(await screen.findByRole('heading', { name: 'Hoş geldiniz, Alice' })).toBeDefined();
+    expect(await screen.findByRole('heading', { name: 'Welcome, Alice' })).toBeDefined();
     expect(screen.getByText('alice@example.test', { exact: false })).toBeDefined();
   });
 });

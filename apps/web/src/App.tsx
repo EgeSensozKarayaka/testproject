@@ -46,17 +46,17 @@ function AuthCard({ onLogin }: { onLogin: (session: SessionView) => void }) {
           headers: { 'Idempotency-Key': crypto.randomUUID() },
           method: 'POST',
         });
-        setNotice('Uygunsa doğrulama bağlantısı e-posta adresinize gönderildi.');
+        setNotice('If eligible, a verification link has been sent to your email address.');
       } else {
         await apiRequest('/api/v1/auth/password-resets', {
           body: JSON.stringify({ email }),
           headers: { 'Idempotency-Key': crypto.randomUUID() },
           method: 'POST',
         });
-        setNotice('Uygunsa parola sıfırlama bağlantısı e-posta adresinize gönderildi.');
+        setNotice('If eligible, a password reset link has been sent to your email address.');
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'İstek tamamlanamadı.');
+      setError(cause instanceof Error ? cause.message : 'Request could not be completed.');
     } finally {
       setBusy(false);
     }
@@ -69,31 +69,31 @@ function AuthCard({ onLogin }: { onLogin: (session: SessionView) => void }) {
       </div>
       <p className="eyebrow">Site Availability Monitor</p>
       <h1 id="auth-title">
-        {mode === 'login' && 'Hesabınıza giriş yapın'}
-        {mode === 'register' && 'İzlemeye başlayın'}
-        {mode === 'forgot' && 'Parolanızı sıfırlayın'}
+        {mode === 'login' && 'Log in to your account'}
+        {mode === 'register' && 'Start monitoring'}
+        {mode === 'forgot' && 'Reset your password'}
       </h1>
       <p className="lede">
-        {mode === 'login' && 'Kontrollerinizi, olayları ve servis sağlığını tek yerden yönetin.'}
+        {mode === 'login' && 'Manage your checks, incidents, and service health from one place.'}
         {mode === 'register' &&
-          'Hesabınızı oluşturun; doğrulamadan sonra çalışma alanınız hazır olacak.'}
-        {mode === 'forgot' && 'Adresinizi girin. Hesap uygunsa güvenli bir bağlantı göndereceğiz.'}
+          'Create your account; your workspace will be ready after verification.'}
+        {mode === 'forgot' && 'Enter your email address. If an account matches, we will send a secure link.'}
       </p>
 
       <form onSubmit={(event) => void submit(event)}>
         {mode === 'register' && (
           <label>
-            Görünen ad
+            Display name
             <input name="display_name" autoComplete="name" maxLength={120} required />
           </label>
         )}
         <label>
-          E-posta
+          Email
           <input name="email" type="email" autoComplete="email" maxLength={254} required />
         </label>
         {mode !== 'forgot' && (
           <label>
-            Parola
+            Password
             <input
               name="password"
               type="password"
@@ -103,7 +103,7 @@ function AuthCard({ onLogin }: { onLogin: (session: SessionView) => void }) {
               required
             />
             {mode === 'register' && (
-              <span className="hint">En az 15 karakter ve tahmin edilmesi güç bir ifade.</span>
+              <span className="hint">At least 15 characters and hard to guess.</span>
             )}
           </label>
         )}
@@ -119,12 +119,12 @@ function AuthCard({ onLogin }: { onLogin: (session: SessionView) => void }) {
         )}
         <button className="primary" disabled={busy} type="submit">
           {busy
-            ? 'Gönderiliyor…'
+            ? 'Submitting…'
             : mode === 'login'
-              ? 'Giriş yap'
+              ? 'Log in'
               : mode === 'register'
-                ? 'Hesap oluştur'
-                : 'Bağlantı gönder'}
+                ? 'Create account'
+                : 'Send link'}
         </button>
       </form>
 
@@ -132,15 +132,15 @@ function AuthCard({ onLogin }: { onLogin: (session: SessionView) => void }) {
         {mode === 'login' ? (
           <>
             <button className="link-button" onClick={() => setMode('forgot')} type="button">
-              Parolamı unuttum
+              Forgot password
             </button>
             <button className="link-button" onClick={() => setMode('register')} type="button">
-              Yeni hesap
+              Create account
             </button>
           </>
         ) : (
           <button className="link-button" onClick={() => setMode('login')} type="button">
-            Giriş ekranına dön
+            Back to log in
           </button>
         )}
       </div>
@@ -154,7 +154,7 @@ function TokenAction({ kind }: { kind: 'reset' | 'verify' }) {
     kind === 'verify' ? (token ? 'busy' : 'error') : 'ready',
   );
   const [message, setMessage] = useState(() =>
-    kind === 'verify' && !token ? 'Doğrulama bağlantısında token bulunamadı.' : '',
+    kind === 'verify' && !token ? 'No token found in verification link.' : '',
   );
 
   useEffect(() => {
@@ -166,11 +166,11 @@ function TokenAction({ kind }: { kind: 'reset' | 'verify' }) {
     })
       .then(() => {
         setState('success');
-        setMessage('E-posta adresiniz doğrulandı. Artık giriş yapabilirsiniz.');
+        setMessage('Your email address has been verified. You can now log in.');
       })
       .catch((cause: unknown) => {
         setState('error');
-        setMessage(cause instanceof Error ? cause.message : 'Bağlantı doğrulanamadı.');
+        setMessage(cause instanceof Error ? cause.message : 'Could not verify link.');
       });
   }, [kind, token]);
 
@@ -178,7 +178,7 @@ function TokenAction({ kind }: { kind: 'reset' | 'verify' }) {
     event.preventDefault();
     if (!token) {
       setState('error');
-      setMessage('Sıfırlama bağlantısında token bulunamadı.');
+      setMessage('No token found in reset link.');
       return;
     }
     setState('busy');
@@ -189,10 +189,10 @@ function TokenAction({ kind }: { kind: 'reset' | 'verify' }) {
         method: 'POST',
       });
       setState('success');
-      setMessage('Parolanız değiştirildi. Tüm eski oturumlar kapatıldı.');
+      setMessage('Your password has been changed. All previous sessions have been signed out.');
     } catch (cause) {
       setState('error');
-      setMessage(cause instanceof Error ? cause.message : 'Parola değiştirilemedi.');
+      setMessage(cause instanceof Error ? cause.message : 'Could not change password.');
     }
   }
 
@@ -201,11 +201,11 @@ function TokenAction({ kind }: { kind: 'reset' | 'verify' }) {
       <div className="brand-mark" aria-hidden="true">
         SM
       </div>
-      <h1 id="token-title">{kind === 'verify' ? 'E-posta doğrulama' : 'Yeni parola'}</h1>
+      <h1 id="token-title">{kind === 'verify' ? 'Email verification' : 'New password'}</h1>
       {kind === 'reset' && state !== 'success' && (
         <form onSubmit={(event) => void resetPassword(event)}>
           <label>
-            Yeni parola
+            New password
             <input
               name="password"
               type="password"
@@ -216,18 +216,18 @@ function TokenAction({ kind }: { kind: 'reset' | 'verify' }) {
             />
           </label>
           <button className="primary" disabled={state === 'busy'} type="submit">
-            Parolayı değiştir
+            Change password
           </button>
         </form>
       )}
-      {state === 'busy' && <p role="status">Bağlantı doğrulanıyor…</p>}
+      {state === 'busy' && <p role="status">Verifying link…</p>}
       {message && (
         <p className={`message ${state}`} role={state === 'error' ? 'alert' : 'status'}>
           {message}
         </p>
       )}
       <a className="back-link" href="/">
-        Giriş ekranına dön
+        Back to log in
       </a>
     </section>
   );
@@ -263,7 +263,7 @@ export function App() {
       {publicToken && <PublicStatusPage token={publicToken} />}
       {path === '/verify-email' && <TokenAction kind="verify" />}
       {path === '/reset-password' && <TokenAction kind="reset" />}
-      {path === '/' && checking && <p role="status">Oturum kontrol ediliyor…</p>}
+      {path === '/' && checking && <p role="status">Checking session…</p>}
       {path === '/' && !checking && session && (
         <MonitoringDashboard
           onLogout={() => void logout()}

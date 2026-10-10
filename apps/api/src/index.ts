@@ -3,6 +3,7 @@ import {
   loadAuthRuntimeConfig,
   loadDatabaseUrl,
   loadHistoryRuntimeConfig,
+  loadProbeRuntimeConfig,
   loadResourceRuntimeConfig,
   loadRuntimeConfig,
 } from '@site-monitor/config';
@@ -43,9 +44,11 @@ const authService = await AuthService.create(database, {
   rateLimitKey: authConfig.rateLimitKey,
 });
 const resourceConfig = loadResourceRuntimeConfig();
+const probeConfig = loadProbeRuntimeConfig();
 const historyConfig = loadHistoryRuntimeConfig();
 const checkService = new CheckService(database, {
   checkLimit: resourceConfig.checksPerOwnerLimit,
+  developmentAllowedOrigins: probeConfig.developmentAllowedOrigins,
   securityKey: authConfig.rateLimitKey,
 });
 const groupService = new GroupService(database, {

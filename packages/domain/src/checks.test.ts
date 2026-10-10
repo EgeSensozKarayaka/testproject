@@ -51,6 +51,19 @@ describe('check configuration policy', () => {
     );
   });
 
+  it('allows only an exact operator-configured development origin', () => {
+    const policy = { developmentAllowedOrigins: ['http://target-simulator:4010'] };
+    expect(canonicalizeCheckUrl('http://target-simulator:4010/ok', policy)).toBe(
+      'http://target-simulator:4010/ok',
+    );
+    expect(() => canonicalizeCheckUrl('http://target-simulator:4011/ok', policy)).toThrow(
+      DomainValidationError,
+    );
+    expect(() => canonicalizeCheckUrl('http://other-service:4010/ok', policy)).toThrow(
+      DomainValidationError,
+    );
+  });
+
   it('enforces UTF-8 bytes rather than JavaScript character count for expected text', () => {
     expect(normalizeExpectedBodySubstring('ü'.repeat(1024))).toHaveLength(1024);
     expect(() => normalizeExpectedBodySubstring('ü'.repeat(1025))).toThrow(/2048 UTF-8 bytes/u);

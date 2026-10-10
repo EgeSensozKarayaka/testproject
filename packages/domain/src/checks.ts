@@ -63,6 +63,10 @@ export interface CheckChangeSet {
   scheduleChanged: boolean;
 }
 
+export interface CheckUrlPolicy {
+  developmentAllowedOrigins?: readonly string[];
+}
+
 function fail(field: string, code: string, message: string): never {
   throw new DomainValidationError(field, code, message);
 }
@@ -161,9 +165,10 @@ function isBlockedIpv6(address: string): boolean {
   );
 }
 
-function assertPublicConfigurationHost(rawHostname: string): string {
+function assertPublicConfigurationHost(rawHostname: string, developmentException: boolean): string {
   const unwrapped = rawHostname.startsWith('[') ? rawHostname.slice(1, -1) : rawHostname;
   const hostname = unwrapped.toLowerCase().replace(/\.$/u, '');
+  if (developmentException) return hostname;
   const ipVersion = isIP(hostname);
   if (
     (ipVersion === 4 && isBlockedIpv4(hostname)) ||
@@ -184,7 +189,7 @@ function assertPublicConfigurationHost(rawHostname: string): string {
   return hostname;
 }
 
-export function canonicalizeCheckUrl(value: string): string {
+export function canonicalizeCheckUrl(value: string, policy: CheckUrlPolicy = {}): string {
   const trimmed = trimAsciiWhitespace(value);
   if (codePointLength(trimmed) < 1 || codePointLength(trimmed) > MAX_INPUT_URL_CODE_POINTS) {
     fail('url', 'invalid_length', 'url must contain from 1 through 2048 characters.');
@@ -211,7 +216,8 @@ export function canonicalizeCheckUrl(value: string): string {
     fail('url', 'credentials_forbidden', 'url must not contain credentials.');
   }
 
-  const hostname = assertPublicConfigurationHost(parsed.hostname);
+  const developmentException = (policy.developmentAllowedOrigins ?? []).includes(parsed.origin);
+  const hostname = assertPublicConfigurationHost(parsed.hostname, developmentException);
   if (isIP(hostname) === 0) parsed.hostname = hostname;
   parsed.hash = '';
   const canonical = parsed.toString();
@@ -234,7 +240,10 @@ export function normalizeExpectedBodySubstring(value: string | null): string | n
   return value;
 }
 
-export function normalizeCheckConfiguration(input: CheckConfigurationInput): CheckConfiguration {
+export function normalizeCheckConfiguration(
+  input: CheckConfigurationInput,
+  urlPolicy: CheckUrlPolicy = {},
+): CheckConfiguration {
   return {
     expectedBodySubstring: normalizeExpectedBodySubstring(input.expectedBodySubstring ?? null),
     expectedStatusCode: assertIntegerInRange(
@@ -247,18 +256,19 @@ export function normalizeCheckConfiguration(input: CheckConfigurationInput): Che
     intervalSeconds: assertIntegerInRange(input.intervalSeconds, 30, 3600, 'interval_seconds'),
     name: normalizeResourceName(input.name),
     timeoutMs: assertIntegerInRange(input.timeoutMs, 100, 60_000, 'timeout_ms'),
-    url: canonicalizeCheckUrl(input.url),
+    url: canonicalizeCheckUrl(input.url, urlPolicy),
   };
 }
 
 export function classifyCheckChanges(
   current: CheckConfiguration,
   patch: CheckConfigurationPatch,
+  urlPolicy: CheckUrlPolicy = {},
 ): CheckChangeSet {
   const next: CheckConfiguration = {
     ...current,
     ...(Object.hasOwn(patch, 'name') ? { name: normalizeResourceName(patch.name!) } : {}),
-    ...(Object.hasOwn(patch, 'url') ? { url: canonicalizeCheckUrl(patch.url!) } : {}),
+    ...(Object.hasOwn(patch, 'url') ? { url: canonicalizeCheckUrl(patch.url!, urlPolicy) } : {}),
     ...(Object.hasOwn(patch, 'groupId') ? { groupId: patch.groupId ?? null } : {}),
     ...(Object.hasOwn(patch, 'intervalSeconds')
       ? {

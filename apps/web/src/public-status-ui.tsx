@@ -5,17 +5,17 @@ import { apiRequest, type PublicStatusSnapshot } from './api-client.js';
 function label(state: string): string {
   return (
     {
-      DOWN: 'Kesinti',
-      SUSPECT: 'Doğrulanıyor',
-      UNKNOWN: 'Bilinmiyor',
-      UP: 'Operasyonel',
+      DOWN: 'Outage',
+      SUSPECT: 'Verifying',
+      UNKNOWN: 'Unknown',
+      UP: 'Operational',
     }[state] ?? state
   );
 }
 
 function instant(value: string | null): string {
-  if (!value) return 'Henüz ölçülmedi';
-  return new Intl.DateTimeFormat('tr-TR', {
+  if (!value) return 'Not measured yet';
+  return new Intl.DateTimeFormat('en-US', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -37,7 +37,7 @@ export function PublicStatusPage({ token }: { token: string }) {
           setError('');
         }
       } catch (cause) {
-        if (active) setError(cause instanceof Error ? cause.message : 'Durum sayfası yüklenemedi.');
+        if (active) setError(cause instanceof Error ? cause.message : 'Failed to load status page.');
       }
     }
     void load();
@@ -51,12 +51,12 @@ export function PublicStatusPage({ token }: { token: string }) {
   if (error && !snapshot) {
     return (
       <section className="public-status public-error">
-        <h1>Durum sayfası bulunamadı</h1>
+        <h1>Status page not found</h1>
         <p>{error}</p>
       </section>
     );
   }
-  if (!snapshot) return <p role="status">Public durum yükleniyor…</p>;
+  if (!snapshot) return <p role="status">Loading public status…</p>;
 
   return (
     <article className="public-status">
@@ -65,7 +65,7 @@ export function PublicStatusPage({ token }: { token: string }) {
           SM
         </div>
         <div>
-          <p className="eyebrow">Public servis durumu</p>
+          <p className="eyebrow">Public service status</p>
           <h1>{snapshot.title}</h1>
           <p>{snapshot.description}</p>
         </div>
@@ -75,11 +75,11 @@ export function PublicStatusPage({ token }: { token: string }) {
       </header>
       {error && (
         <p className="message error" role="alert">
-          Güncelleme gecikti: {error}
+          Update delayed: {error}
         </p>
       )}
       <p className="public-updated" aria-live="polite">
-        Son güncelleme: {instant(snapshot.generated_at)} · Otomatik yenilenir
+        Last updated: {instant(snapshot.generated_at)} · Automatically refreshes
       </p>
       <ul className="public-components">
         {snapshot.components.map((component) => (
@@ -103,12 +103,12 @@ export function PublicStatusPage({ token }: { token: string }) {
             )}
             <dl>
               <div>
-                <dt>Son kontrol</dt>
+                <dt>Last check</dt>
                 <dd>{instant(component.last_checked_at)}</dd>
               </div>
               {'last_response_time_ms' in component && (
                 <div>
-                  <dt>Yanıt süresi</dt>
+                  <dt>Response time</dt>
                   <dd>
                     {component.last_response_time_ms === null
                       ? '—'
@@ -117,21 +117,21 @@ export function PublicStatusPage({ token }: { token: string }) {
                 </div>
               )}
               <div>
-                <dt>Planlı bakım</dt>
-                <dd>{component.maintenance_active ? 'Aktif' : 'Yok'}</dd>
+                <dt>Scheduled maintenance</dt>
+                <dd>{component.maintenance_active ? 'Active' : 'None'}</dd>
               </div>
             </dl>
             {component.incident_history && component.incident_history.length > 0 && (
               <details>
-                <summary>Son olaylar ({component.incident_history.length})</summary>
+                <summary>Recent incidents ({component.incident_history.length})</summary>
                 <ul>
                   {component.incident_history.map((incident) => (
                     <li key={`${incident.started_at}-${incident.ended_at}`}>
                       <span>{instant(incident.started_at)}</span>
                       <span>
                         {incident.ended_at
-                          ? `Kapandı: ${instant(incident.ended_at)}`
-                          : 'Devam ediyor'}
+                          ? `Resolved: ${instant(incident.ended_at)}`
+                          : 'Ongoing'}
                       </span>
                     </li>
                   ))}
@@ -142,10 +142,10 @@ export function PublicStatusPage({ token }: { token: string }) {
         ))}
       </ul>
       {snapshot.components.length === 0 && (
-        <p className="empty-state">Bu sayfada yayınlanan bileşen yok.</p>
+        <p className="empty-state">No components published on this page.</p>
       )}
       <footer>
-        Site Availability Monitor · Yalnız sayfa sahibinin yayınladığı bilgiler gösterilir.
+        Site Availability Monitor · Only information published by the page owner is shown.
       </footer>
     </article>
   );

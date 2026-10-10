@@ -20,8 +20,8 @@ function formText(form: FormData, name: string): string {
 }
 
 function formatInstant(value: string | null): string {
-  if (!value) return 'Henüz çalışmadı';
-  return new Intl.DateTimeFormat('tr-TR', {
+  if (!value) return 'Not run yet';
+  return new Intl.DateTimeFormat('en-US', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -33,21 +33,21 @@ export function formatDuration(milliseconds: number): string {
   const hours = Math.floor((totalSeconds % 86_400) / 3_600);
   const minutes = Math.floor((totalSeconds % 3_600) / 60);
   const seconds = totalSeconds % 60;
-  if (days > 0) return `${days} gün ${hours} sa`;
-  if (hours > 0) return `${hours} sa ${minutes} dk`;
-  if (minutes > 0) return `${minutes} dk ${seconds} sn`;
-  return `${seconds} sn`;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
 }
 
 const stateLabels: Record<string, string> = {
-  ACTIVE: 'Aktif',
-  DOWN: 'Erişilemiyor',
-  FRESH: 'Güncel',
-  PAUSED: 'Duraklatıldı',
-  STALE: 'Gecikmiş veri',
-  SUSPECT: 'Doğrulanıyor',
-  UNKNOWN: 'Bilinmiyor',
-  UP: 'Çalışıyor',
+  ACTIVE: 'Active',
+  DOWN: 'Down',
+  FRESH: 'Fresh',
+  PAUSED: 'Paused',
+  STALE: 'Stale',
+  SUSPECT: 'Suspect',
+  UNKNOWN: 'Unknown',
+  UP: 'Operational',
 };
 
 function needsAttention({ check, status }: CheckListItem): boolean {
@@ -85,20 +85,20 @@ function GroupForm({
   return (
     <form className="resource-form" onSubmit={(event) => void submit(event)}>
       <label>
-        Grup adı
+        Group name
         <input defaultValue={initial?.name} maxLength={120} name="name" required />
       </label>
       <label>
-        Açıklama <span className="optional">(isteğe bağlı)</span>
+        Description <span className="optional">(optional)</span>
         <textarea defaultValue={initial?.description ?? ''} maxLength={500} name="description" />
       </label>
       <div className="form-actions">
         <button className="primary compact" disabled={busy} type="submit">
-          {busy ? 'Kaydediliyor…' : initial ? 'Grubu güncelle' : 'Grup oluştur'}
+          {busy ? 'Saving…' : initial ? 'Update group' : 'Create group'}
         </button>
         {onCancel && (
           <button className="ghost" disabled={busy} onClick={onCancel} type="button">
-            Vazgeç
+            Cancel
           </button>
         )}
       </div>
@@ -140,7 +140,7 @@ function CheckForm({
   return (
     <form className="resource-form check-form" onSubmit={(event) => void submit(event)}>
       <label>
-        Kontrol adı
+        Check name
         <input defaultValue={initial?.name} maxLength={160} name="name" required />
       </label>
       <label className="wide-field">
@@ -156,7 +156,7 @@ function CheckForm({
         />
       </label>
       <label>
-        Kontrol aralığı (saniye)
+        Check interval (seconds)
         <input
           defaultValue={initial?.interval_seconds ?? 30}
           max={3600}
@@ -167,7 +167,7 @@ function CheckForm({
         />
       </label>
       <label>
-        Zaman aşımı (ms)
+        Timeout (ms)
         <input
           defaultValue={initial?.timeout_ms ?? 5000}
           max={60000}
@@ -178,7 +178,7 @@ function CheckForm({
         />
       </label>
       <label>
-        Beklenen HTTP kodu
+        Expected HTTP status
         <input
           defaultValue={initial?.expected_status_code ?? 200}
           max={599}
@@ -189,9 +189,9 @@ function CheckForm({
         />
       </label>
       <label>
-        Grup
+        Group
         <select defaultValue={initial?.group_id ?? ''} name="group_id">
-          <option value="">Grupsuz</option>
+          <option value="">Ungrouped</option>
           {groups.map(({ group }) => (
             <option key={group.id} value={group.id}>
               {group.name}
@@ -200,7 +200,7 @@ function CheckForm({
         </select>
       </label>
       <label className="wide-field">
-        Beklenen metin <span className="optional">(isteğe bağlı, büyük/küçük harfe duyarlı)</span>
+        Expected body substring <span className="optional">(optional, case-sensitive)</span>
         <input
           defaultValue={initial?.expected_body_substring ?? ''}
           maxLength={2048}
@@ -209,11 +209,11 @@ function CheckForm({
       </label>
       <div className="form-actions wide-field">
         <button className="primary compact" disabled={busy} type="submit">
-          {busy ? 'Kaydediliyor…' : initial ? 'Kontrolü güncelle' : 'Kontrol ekle'}
+          {busy ? 'Saving…' : initial ? 'Update check' : 'Add check'}
         </button>
         {onCancel && (
           <button className="ghost" disabled={busy} onClick={onCancel} type="button">
-            Vazgeç
+            Cancel
           </button>
         )}
       </div>
@@ -284,7 +284,7 @@ export function MonitoringDashboard({
                 : item.check.execution_state === 'PAUSED'
                   ? 3
                   : 4;
-        return score(left) - score(right) || left.check.name.localeCompare(right.check.name, 'tr');
+        return score(left) - score(right) || left.check.name.localeCompare(right.check.name, 'en');
       });
     return { active: active.length, attention, incidents, maintenance, operational, visible };
   }, [checks, dashboardFilter]);
@@ -302,7 +302,7 @@ export function MonitoringDashboard({
       setCheckCursor(checkPage.page.next_cursor);
       setError('');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Kaynaklar yüklenemedi.');
+      setError(cause instanceof Error ? cause.message : 'Failed to load resources.');
       if (propagateError) throw cause;
     } finally {
       if (showLoading) setLoading(false);
@@ -357,10 +357,10 @@ export function MonitoringDashboard({
         setEditingCheck(null);
         setEditingGroup(null);
         setError(
-          'Bu kaynak başka bir oturumda değiştirildi. Güncel veriler yüklendi; değişikliği yeniden gözden geçirin.',
+          'This resource was modified in another session. Fresh data loaded; please review changes.',
         );
       } else {
-        setError(cause instanceof Error ? cause.message : 'İşlem tamamlanamadı.');
+        setError(cause instanceof Error ? cause.message : 'Operation could not be completed.');
       }
       return false;
     } finally {
@@ -376,7 +376,7 @@ export function MonitoringDashboard({
       setGroups((current) => [...current, ...page.data]);
       setGroupCursor(page.page.next_cursor);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Gruplar yüklenemedi.');
+      setError(cause instanceof Error ? cause.message : 'Failed to load groups.');
     } finally {
       setLoadingMore(null);
     }
@@ -390,7 +390,7 @@ export function MonitoringDashboard({
       setChecks((current) => [...current, ...page.data]);
       setCheckCursor(page.page.next_cursor);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Kontroller yüklenemedi.');
+      setError(cause instanceof Error ? cause.message : 'Failed to load checks.');
     } finally {
       setLoadingMore(null);
     }
@@ -401,22 +401,22 @@ export function MonitoringDashboard({
       <header className="workspace-header">
         <div>
           <p className="eyebrow">Site Availability Monitor</p>
-          <h1>Hoş geldiniz, {session.user.display_name}</h1>
+          <h1>Welcome, {session.user.display_name}</h1>
           <p className="workspace-subtitle">{session.user.email}</p>
         </div>
         <div className="header-controls">
           <span
-            aria-label="Canlı veri durumu"
+            aria-label="Realtime connection state"
             className={`realtime-state realtime-${realtimeState}`}
           >
             <span aria-hidden="true" className="realtime-dot" />
-            {realtimeState === 'live' && 'Canlı güncellemeler etkin'}
-            {realtimeState === 'connecting' && 'Canlı bağlantı kuruluyor'}
-            {realtimeState === 'reconnecting' && 'Canlı bağlantı yeniden kuruluyor'}
-            {realtimeState === 'polling' && 'Periyodik yenileme etkin'}
+            {realtimeState === 'live' && 'Live updates enabled'}
+            {realtimeState === 'connecting' && 'Connecting live stream'}
+            {realtimeState === 'reconnecting' && 'Reconnecting live stream'}
+            {realtimeState === 'polling' && 'Periodic polling active'}
           </span>
           <button className="secondary header-action" onClick={onLogout} type="button">
-            Çıkış yap
+            Log out
           </button>
         </div>
       </header>
@@ -425,7 +425,7 @@ export function MonitoringDashboard({
         <div className="message error workspace-message" role="alert">
           <span>{error}</span>
           <button className="link-button" onClick={() => void reload()} type="button">
-            Yeniden dene
+            Retry
           </button>
         </div>
       )}
@@ -437,51 +437,51 @@ export function MonitoringDashboard({
 
       {loading ? (
         <section className="panel loading-panel" aria-busy="true">
-          <p role="status">Kontroller ve gruplar yükleniyor…</p>
+          <p role="status">Loading checks and groups…</p>
         </section>
       ) : (
         <>
           <section className="panel overview-panel" aria-labelledby="overview-title">
             <div className="section-heading overview-heading">
               <div>
-                <p className="eyebrow">Canlı görünüm</p>
-                <h2 id="overview-title">Sistem durumu</h2>
-                <p>Yüklenen kontrollerin güncel sağlık, olay ve bakım özeti.</p>
+                <p className="eyebrow">Live overview</p>
+                <h2 id="overview-title">System status</h2>
+                <p>Current health, incident, and maintenance summary of loaded checks.</p>
               </div>
-              <span className="count-pill">{checks.length} kontrol yüklendi</span>
+              <span className="count-pill">{checks.length} {checks.length === 1 ? 'check' : 'checks'} loaded</span>
             </div>
 
-            <dl className="overview-grid" aria-label="Sistem durum özeti">
+            <dl className="overview-grid" aria-label="System status summary">
               <div className="metric-card metric-neutral">
-                <dt>Aktif izleme</dt>
+                <dt>Active monitoring</dt>
                 <dd>{dashboard.active}</dd>
               </div>
               <div className="metric-card metric-up">
-                <dt>Operasyonel</dt>
+                <dt>Operational</dt>
                 <dd>{dashboard.operational}</dd>
               </div>
               <div className="metric-card metric-down">
-                <dt>Aktif olay</dt>
+                <dt>Active incidents</dt>
                 <dd>{dashboard.incidents}</dd>
               </div>
               <div className="metric-card metric-maintenance">
-                <dt>Bakımda</dt>
+                <dt>In maintenance</dt>
                 <dd>{dashboard.maintenance}</dd>
               </div>
               <div className="metric-card metric-warning">
-                <dt>Dikkat gerekli</dt>
+                <dt>Needs attention</dt>
                 <dd>{dashboard.attention}</dd>
               </div>
             </dl>
 
-            <div className="dashboard-filters" aria-label="Durum görünümü filtresi" role="group">
+            <div className="dashboard-filters" aria-label="Status view filter" role="group">
               {(
                 [
-                  ['all', 'Tümü'],
-                  ['attention', 'Dikkat gerekli'],
-                  ['incident', 'Aktif olaylar'],
-                  ['maintenance', 'Bakımda'],
-                  ['paused', 'Duraklatılmış'],
+                  ['all', 'All'],
+                  ['attention', 'Needs attention'],
+                  ['incident', 'Active incidents'],
+                  ['maintenance', 'In maintenance'],
+                  ['paused', 'Paused'],
                 ] as const
               ).map(([value, label]) => (
                 <button
@@ -498,8 +498,8 @@ export function MonitoringDashboard({
 
             {dashboard.visible.length === 0 ? (
               <div className="empty-state compact-empty">
-                <h3>Bu görünümde kontrol yok</h3>
-                <p>Başka bir durum filtresi seçebilir veya yeni bir kontrol ekleyebilirsiniz.</p>
+                <h3>No checks in this view</h3>
+                <p>You can select another filter or add a new check.</p>
               </div>
             ) : (
               <ul className="status-list">
@@ -524,12 +524,12 @@ export function MonitoringDashboard({
                       <StatusBadge state={status.health_state} />
                       {status.freshness_state === 'STALE' && <StatusBadge state="STALE" />}
                       {status.maintenance.active && (
-                        <span className="maintenance-badge">Bakımda</span>
+                        <span className="maintenance-badge">In maintenance</span>
                       )}
                     </div>
                     <dl className="status-facts">
                       <div>
-                        <dt>Yanıt</dt>
+                        <dt>Response</dt>
                         <dd>
                           {status.last_response_time_ms === null
                             ? '—'
@@ -537,20 +537,20 @@ export function MonitoringDashboard({
                         </dd>
                       </div>
                       <div>
-                        <dt>Son kontrol</dt>
+                        <dt>Last check</dt>
                         <dd>{formatInstant(status.last_checked_at)}</dd>
                       </div>
                       <div>
-                        <dt>Mevcut kesinti</dt>
+                        <dt>Current outage</dt>
                         <dd className={status.current_incident ? 'incident-duration' : undefined}>
                           {status.current_incident
                             ? formatDuration(now - Date.parse(status.current_incident.started_at))
-                            : 'Yok'}
+                            : 'None'}
                         </dd>
                       </div>
                     </dl>
                     <a className="detail-link" href={`#check-${check.id}`}>
-                      Ayrıntı ve yönetim
+                      Details & management
                     </a>
                   </li>
                 ))}
@@ -561,22 +561,22 @@ export function MonitoringDashboard({
           <section className="panel" aria-labelledby="groups-title">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">Düzen</p>
-                <h2 id="groups-title">Gruplar</h2>
-                <p>Kontrolleri servis veya ürün sınırlarına göre düzenleyin.</p>
+                <p className="eyebrow">Organization</p>
+                <h2 id="groups-title">Groups</h2>
+                <p>Organize checks by service or product boundaries.</p>
               </div>
-              <span className="count-pill">{groups.length} grup</span>
+              <span className="count-pill">{groups.length} {groups.length === 1 ? 'group' : 'groups'}</span>
             </div>
 
             <details className="create-box">
-              <summary>Yeni grup oluştur</summary>
+              <summary>Create new group</summary>
               <GroupForm
                 busy={busyKey === 'group:create'}
                 onSubmit={(input) =>
                   perform(
                     'group:create',
                     () => monitoringApi.createGroup(session, input),
-                    'Grup oluşturuldu.',
+                    'Group created.',
                   )
                 }
               />
@@ -584,9 +584,9 @@ export function MonitoringDashboard({
 
             {groups.length === 0 ? (
               <div className="empty-state">
-                <h3>Henüz grup yok</h3>
+                <h3>No groups yet</h3>
                 <p>
-                  Gruplar zorunlu değildir. Kontrolleri daha sonra da bir gruba taşıyabilirsiniz.
+                  Groups are optional. You can assign checks to a group later.
                 </p>
               </div>
             ) : (
@@ -602,7 +602,7 @@ export function MonitoringDashboard({
                           perform(
                             `group:update:${group.id}`,
                             () => monitoringApi.updateGroup(session, group, input),
-                            'Grup güncellendi.',
+                            'Group updated.',
                           )
                         }
                       />
@@ -611,25 +611,25 @@ export function MonitoringDashboard({
                         <div className="card-heading">
                           <div>
                             <h3>{group.name}</h3>
-                            <p>{group.description ?? 'Açıklama eklenmemiş.'}</p>
+                            <p>{group.description ?? 'No description added.'}</p>
                           </div>
                           <StatusBadge state={status.health_state} />
                         </div>
                         <dl className="compact-stats">
                           <div>
-                            <dt>Yukarıda</dt>
+                            <dt>Up</dt>
                             <dd>{status.up}</dd>
                           </div>
                           <div>
-                            <dt>Aşağıda</dt>
+                            <dt>Down</dt>
                             <dd>{status.down}</dd>
                           </div>
                           <div>
-                            <dt>Bilinmiyor</dt>
+                            <dt>Unknown</dt>
                             <dd>{status.unknown}</dd>
                           </div>
                           <div>
-                            <dt>Duraklatılmış</dt>
+                            <dt>Paused</dt>
                             <dd>{status.paused}</dd>
                           </div>
                         </dl>
@@ -639,7 +639,7 @@ export function MonitoringDashboard({
                             onClick={() => setEditingGroup(group.id)}
                             type="button"
                           >
-                            Düzenle
+                            Edit
                           </button>
                           {confirmDelete === `group:${group.id}` ? (
                             <>
@@ -647,22 +647,22 @@ export function MonitoringDashboard({
                                 className="danger"
                                 disabled={busyKey === `group:delete:${group.id}`}
                                 onClick={() =>
-                                  void perform(
-                                    `group:delete:${group.id}`,
-                                    () => monitoringApi.deleteGroup(session, group),
-                                    'Grup silindi; bağlı kontroller grupsuz bırakıldı.',
-                                  )
+                                   void perform(
+                                     `group:delete:${group.id}`,
+                                     () => monitoringApi.deleteGroup(session, group),
+                                     'Group deleted; associated checks are now ungrouped.',
+                                   )
                                 }
                                 type="button"
                               >
-                                Silmeyi onayla
+                                Confirm delete
                               </button>
                               <button
                                 className="ghost"
                                 onClick={() => setConfirmDelete(null)}
                                 type="button"
                               >
-                                Vazgeç
+                                Cancel
                               </button>
                             </>
                           ) : (
@@ -671,7 +671,7 @@ export function MonitoringDashboard({
                               onClick={() => setConfirmDelete(`group:${group.id}`)}
                               type="button"
                             >
-                              Sil
+                              Delete
                             </button>
                           )}
                         </div>
@@ -688,7 +688,7 @@ export function MonitoringDashboard({
                 onClick={() => void loadMoreGroups()}
                 type="button"
               >
-                {loadingMore === 'groups' ? 'Yükleniyor…' : 'Daha fazla grup yükle'}
+                {loadingMore === 'groups' ? 'Loading…' : 'Load more groups'}
               </button>
             )}
           </section>
@@ -696,25 +696,25 @@ export function MonitoringDashboard({
           <section className="panel" aria-labelledby="checks-title">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">İzleme</p>
-                <h2 id="checks-title">Kontroller</h2>
-                <p>Hedefleri yönetin ve gerektiğinde manuel bir çalışma talep edin.</p>
+                <p className="eyebrow">Monitoring</p>
+                <h2 id="checks-title">Checks</h2>
+                <p>Manage targets and request manual runs when needed.</p>
               </div>
               <div className="heading-actions">
-                <span className="count-pill">{checks.length} kontrol</span>
+                <span className="count-pill">{checks.length} {checks.length === 1 ? 'check' : 'checks'}</span>
                 <button
                   className="primary compact"
                   onClick={() => setShowCheckForm((value) => !value)}
                   type="button"
                 >
-                  {showCheckForm ? 'Formu kapat' : 'Kontrol ekle'}
+                  {showCheckForm ? 'Close form' : 'Add check'}
                 </button>
               </div>
             </div>
 
             {showCheckForm && (
               <div className="create-box expanded">
-                <h3>Yeni kontrol</h3>
+                <h3>New check</h3>
                 <CheckForm
                   busy={busyKey === 'check:create'}
                   groups={groups}
@@ -723,7 +723,7 @@ export function MonitoringDashboard({
                     const saved = await perform(
                       'check:create',
                       () => monitoringApi.createCheck(session, input),
-                      'Kontrol oluşturuldu.',
+                      'Check created.',
                     );
                     if (saved) setShowCheckForm(false);
                     return saved;
@@ -734,8 +734,8 @@ export function MonitoringDashboard({
 
             {checks.length === 0 ? (
               <div className="empty-state">
-                <h3>Henüz kontrol yok</h3>
-                <p>İlk URL'nizi ekleyerek kullanılabilirlik yapılandırmasını başlatın.</p>
+                <h3>No checks yet</h3>
+                <p>Add your first URL to start availability monitoring.</p>
               </div>
             ) : (
               <ul className="resource-grid check-grid">
@@ -751,7 +751,7 @@ export function MonitoringDashboard({
                           perform(
                             `check:update:${check.id}`,
                             () => monitoringApi.updateCheck(session, check, input),
-                            'Kontrol güncellendi.',
+                            'Check updated.',
                           )
                         }
                       />
@@ -774,17 +774,17 @@ export function MonitoringDashboard({
                             <StatusBadge state={status.freshness_state} />
                             <StatusBadge state={check.execution_state} />
                             {status.maintenance.active && (
-                              <span className="maintenance-badge">Bakımda</span>
+                              <span className="maintenance-badge">In maintenance</span>
                             )}
                           </div>
                         </div>
                         <dl className="check-details">
                           <div>
-                            <dt>Son kontrol</dt>
+                            <dt>Last check</dt>
                             <dd>{formatInstant(status.last_checked_at)}</dd>
                           </div>
                           <div>
-                            <dt>Yanıt süresi</dt>
+                            <dt>Response time</dt>
                             <dd>
                               {status.last_response_time_ms === null
                                 ? '—'
@@ -792,17 +792,17 @@ export function MonitoringDashboard({
                             </dd>
                           </div>
                           <div>
-                            <dt>Aralık / timeout</dt>
+                            <dt>Interval / timeout</dt>
                             <dd>
-                              {check.interval_seconds} sn / {check.timeout_ms} ms
+                              {check.interval_seconds}s / {check.timeout_ms} ms
                             </dd>
                           </div>
                           <div>
-                            <dt>Beklenen kod</dt>
+                            <dt>Expected status</dt>
                             <dd>{check.expected_status_code}</dd>
                           </div>
                           <div>
-                            <dt>Mevcut kesinti</dt>
+                            <dt>Current outage</dt>
                             <dd
                               className={status.current_incident ? 'incident-duration' : undefined}
                             >
@@ -810,18 +810,23 @@ export function MonitoringDashboard({
                                 ? formatDuration(
                                     now - Date.parse(status.current_incident.started_at),
                                   )
-                                : 'Yok'}
+                                : 'None'}
                             </dd>
                           </div>
                           <div>
-                            <dt>Bakım bitişi</dt>
+                            <dt>Maintenance ends</dt>
                             <dd>
                               {status.maintenance.active
                                 ? formatInstant(status.maintenance.until)
-                                : 'Bakımda değil'}
+                                : 'Not in maintenance'}
                             </dd>
                           </div>
                         </dl>
+                        {check.execution_state === 'PAUSED' && (
+                          <p className="hint diagnostic-note">
+                            Manual runs while paused are diagnostic only; they do not alter card health or incident streams.
+                          </p>
+                        )}
                         <div className="card-actions check-actions">
                           <button
                             className="primary compact"
@@ -835,9 +840,13 @@ export function MonitoringDashboard({
                                     check,
                                   );
                                   setNotice(
-                                    receipt.disposition === 'ENQUEUED'
-                                      ? 'Manuel kontrol kuyruğa alındı.'
-                                      : 'Manuel kontrol mevcut çalışmanın arkasına birleştirildi.',
+                                    receipt.mode === 'DIAGNOSTIC'
+                                      ? receipt.disposition === 'ENQUEUED'
+                                        ? 'Diagnostic run enqueued; paused card health remains unchanged.'
+                                        : 'Diagnostic run coalesced with existing run; paused card health remains unchanged.'
+                                      : receipt.disposition === 'ENQUEUED'
+                                        ? 'Manual run enqueued.'
+                                        : 'Manual run coalesced with existing run.',
                                   );
                                 },
                                 '',
@@ -845,7 +854,9 @@ export function MonitoringDashboard({
                             }
                             type="button"
                           >
-                            Şimdi çalıştır
+                            {check.execution_state === 'PAUSED'
+                              ? 'Diagnostic run'
+                              : 'Run now'}
                           </button>
                           <button
                             className="ghost"
@@ -858,20 +869,20 @@ export function MonitoringDashboard({
                                     ? monitoringApi.pauseCheck(session, check)
                                     : monitoringApi.resumeCheck(session, check),
                                 check.execution_state === 'ACTIVE'
-                                  ? 'Kontrol duraklatıldı.'
-                                  : 'Kontrol devam ettirildi.',
+                                  ? 'Check paused.'
+                                  : 'Check resumed.',
                               )
                             }
                             type="button"
                           >
-                            {check.execution_state === 'ACTIVE' ? 'Duraklat' : 'Devam ettir'}
+                            {check.execution_state === 'ACTIVE' ? 'Pause' : 'Resume'}
                           </button>
                           <button
                             className="ghost"
                             onClick={() => setEditingCheck(check.id)}
                             type="button"
                           >
-                            Düzenle
+                            Edit
                           </button>
                           {confirmDelete === `check:${check.id}` ? (
                             <>
@@ -882,19 +893,19 @@ export function MonitoringDashboard({
                                   void perform(
                                     `check:delete:${check.id}`,
                                     () => monitoringApi.deleteCheck(session, check),
-                                    'Kontrol silindi.',
+                                    'Check deleted.',
                                   )
                                 }
                                 type="button"
                               >
-                                Silmeyi onayla
+                                Confirm delete
                               </button>
                               <button
                                 className="ghost"
                                 onClick={() => setConfirmDelete(null)}
                                 type="button"
                               >
-                                Vazgeç
+                                Cancel
                               </button>
                             </>
                           ) : (
@@ -903,7 +914,7 @@ export function MonitoringDashboard({
                               onClick={() => setConfirmDelete(`check:${check.id}`)}
                               type="button"
                             >
-                              Sil
+                              Delete
                             </button>
                           )}
                         </div>
@@ -920,7 +931,7 @@ export function MonitoringDashboard({
                 onClick={() => void loadMoreChecks()}
                 type="button"
               >
-                {loadingMore === 'checks' ? 'Yükleniyor…' : 'Daha fazla kontrol yükle'}
+                {loadingMore === 'checks' ? 'Loading…' : 'Load more checks'}
               </button>
             )}
           </section>

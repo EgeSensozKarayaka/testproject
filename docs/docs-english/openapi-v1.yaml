@@ -1,0 +1,2818 @@
+openapi: 3.1.0
+info:
+  title: Site Availability Monitor API
+  version: 1.0.0-design
+  summary: Private management and public status APIs
+  description: >-
+    Canonical Phase 4 design contract. This file describes the intended v1 API;
+    it does not claim that the routes are implemented yet. Error semantics are
+    defined in API_ERRORS.md and realtime semantics in REALTIME_CONTRACT.md.
+servers:
+  - url: http://localhost:13000
+    description: Local development
+tags:
+  - name: Health
+  - name: Auth
+  - name: Account
+  - name: Dashboard
+  - name: Checks
+  - name: Groups
+  - name: Incidents
+  - name: Maintenance
+  - name: Notifications
+  - name: Public pages
+  - name: Public
+  - name: Realtime
+security:
+  - cookieAuth: []
+paths:
+  /health/live:
+    get:
+      tags: [Health]
+      operationId: getLiveness
+      security: []
+      responses:
+        '200':
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+  /health/ready:
+    get:
+      tags: [Health]
+      operationId: getReadiness
+      security: []
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+        '503':
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceHealth'
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      operationId: register
+      description: >-
+        Creates a pending account and queues a verification email. The same 202 response is
+        returned when the address is already registered. Requires an exact trusted Origin (or
+        same-origin Referer fallback), Fetch Metadata validation, and application/json.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '422':
+          $ref: '#/components/responses/ValidationProblem'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      description: >-
+        Creates an opaque server-side session. Unknown accounts, invalid passwords, pending
+        verification, and disabled accounts all return the same invalid_credentials response.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated; session cookie is set
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionView'
+        '401':
+          $ref: '#/components/responses/AuthenticationProblem'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      description: >-
+        Idempotently clears the browser cookie. A valid presented session is revoked after CSRF
+        validation; an absent or invalid session still returns 204.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '204':
+          description: Session revoked or already absent
+        '403':
+          $ref: '#/components/responses/CsrfProblem'
+  /api/v1/auth/session:
+    get:
+      tags: [Auth]
+      operationId: getSession
+      responses:
+        '200':
+          description: Current session and user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionView'
+        '401':
+          $ref: '#/components/responses/AuthenticationProblem'
+  /api/v1/auth/email-verifications:
+    post:
+      tags: [Auth]
+      operationId: requestEmailVerification
+      description: >-
+        Queues a verification email when eligible and always returns the same accepted response.
+        The endpoint applies anonymous origin, media-type, idempotency, and rate-limit controls.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/v1/auth/email-verifications/confirm:
+    post:
+      tags: [Auth]
+      operationId: confirmEmailVerification
+      description: >-
+        Consumes a single-use verification token. Invalid, expired, or already-consumed tokens
+        return invalid_or_expired_token without revealing token state.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      responses:
+        '204':
+          description: Verification consumed or already confirmed
+        '422':
+          $ref: '#/components/responses/ValidationProblem'
+  /api/v1/auth/password-resets:
+    post:
+      tags: [Auth]
+      operationId: requestPasswordReset
+      description: >-
+        Queues a reset email when eligible and always returns the same accepted response. The
+        endpoint applies anonymous origin, media-type, idempotency, and rate-limit controls.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/v1/auth/password-resets/confirm:
+    post:
+      tags: [Auth]
+      operationId: confirmPasswordReset
+      description: >-
+        Consumes a single-use reset token, changes the password, and revokes every session. An
+        invalid, expired, or consumed token returns invalid_or_expired_token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+      responses:
+        '204':
+          description: Password changed and previous sessions revoked
+        '422':
+          $ref: '#/components/responses/ValidationProblem'
+  /api/v1/me:
+    get:
+      tags: [Account]
+      operationId: getMe
+      responses:
+        '200':
+          description: User profile
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/AuthenticationProblem'
+    patch:
+      tags: [Account]
+      operationId: updateMe
+      description: Requires a valid session, matching session-bound CSRF token, and current strong ETag.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPatch'
+      responses:
+        '200':
+          description: Updated profile
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '401':
+          $ref: '#/components/responses/AuthenticationProblem'
+        '403':
+          $ref: '#/components/responses/CsrfProblem'
+        '422':
+          $ref: '#/components/responses/ValidationProblem'
+  /api/v1/dashboard:
+    get:
+      tags: [Dashboard]
+      operationId: getDashboard
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Owner-scoped current-state snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardPage'
+        '400':
+          $ref: '#/components/responses/BadRequestProblem'
+  /api/v1/checks:
+    get:
+      tags: [Checks]
+      operationId: listChecks
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - in: query
+          name: group_id
+          schema:
+            $ref: '#/components/schemas/Uuid'
+        - in: query
+          name: health
+          schema:
+            $ref: '#/components/schemas/HealthState'
+        - in: query
+          name: execution_state
+          schema:
+            $ref: '#/components/schemas/ExecutionState'
+        - in: query
+          name: freshness
+          schema:
+            $ref: '#/components/schemas/FreshnessState'
+      responses:
+        '200':
+          description: Check page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckPage'
+        '400':
+          $ref: '#/components/responses/BadRequestProblem'
+    post:
+      tags: [Checks]
+      operationId: createCheck
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckCreate'
+      responses:
+        '201':
+          description: Check created
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Check'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
+        '422':
+          $ref: '#/components/responses/ValidationProblem'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/v1/checks/{check_id}:
+    parameters:
+      - $ref: '#/components/parameters/CheckId'
+    get:
+      tags: [Checks]
+      operationId: getCheck
+      responses:
+        '200':
+          description: Check configuration; current status is a separate projection
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Check'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+    patch:
+      tags: [Checks]
+      operationId: updateCheck
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckPatch'
+      responses:
+        '200':
+          description: Check updated
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Check'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '422':
+          $ref: '#/components/responses/ValidationProblem'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+    delete:
+      tags: [Checks]
+      operationId: deleteCheck
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: Check soft-deleted
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/v1/checks/{check_id}/pause:
+    post:
+      tags: [Checks]
+      operationId: pauseCheck
+      parameters:
+        - $ref: '#/components/parameters/CheckId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          $ref: '#/components/responses/CheckCommandResult'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/v1/checks/{check_id}/resume:
+    post:
+      tags: [Checks]
+      operationId: resumeCheck
+      parameters:
+        - $ref: '#/components/parameters/CheckId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          $ref: '#/components/responses/CheckCommandResult'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/v1/checks/{check_id}/runs:
+    parameters:
+      - $ref: '#/components/parameters/CheckId'
+    get:
+      tags: [Checks]
+      operationId: listCheckRuns
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Diagnostic run page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckRunPage'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+    post:
+      tags: [Checks]
+      operationId: requestManualRun
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: Durable manual run request accepted or coalesced
+          headers:
+            Cache-Control:
+              description: Manual command receipts are private and must not be cached
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualRunReceipt'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/v1/checks/{check_id}/history:
+    get:
+      tags: [Checks]
+      operationId: getCheckHistory
+      parameters:
+        - $ref: '#/components/parameters/CheckId'
+        - in: query
+          name: period
+          required: true
+          schema:
+            type: string
+            enum: [day, week, month]
+      responses:
+        '200':
+          description: Bounded history aggregate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/v1/checks/{check_id}/prediction:
+    get:
+      tags: [Checks]
+      operationId: getCheckPrediction
+      parameters:
+        - $ref: '#/components/parameters/CheckId'
+      responses:
+        '200':
+          description: Optional prediction state; unavailable is not an HTTP error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+  /api/v1/groups:
+    get:
+      tags: [Groups]
+      operationId: listGroups
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Group page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupPage'
+    post:
+      tags: [Groups]
+      operationId: createGroup
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupWrite'
+      responses:
+        '201':
+          description: Group created
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
+        '422':
+          $ref: '#/components/responses/ValidationProblem'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/v1/groups/{group_id}:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    get:
+      tags: [Groups]
+      operationId: getGroup
+      responses:
+        '200':
+          description: Group
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+    patch:
+      tags: [Groups]
+      operationId: updateGroup
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupPatch'
+      responses:
+        '200':
+          description: Group updated
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+    delete:
+      tags: [Groups]
+      operationId: deleteGroup
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: Group deleted; checks become ungrouped
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/v1/incidents:
+    get:
+      tags: [Incidents]
+      operationId: listIncidents
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - in: query
+          name: check_id
+          schema:
+            $ref: '#/components/schemas/Uuid'
+        - in: query
+          name: group_id
+          schema:
+            $ref: '#/components/schemas/Uuid'
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/IncidentState'
+        - in: query
+          name: started_before
+          description: Return incidents that start before this exclusive UTC boundary.
+          schema:
+            $ref: '#/components/schemas/Instant'
+        - in: query
+          name: ended_after
+          description: Return incidents whose wall-clock span ends after this exclusive UTC boundary.
+          schema:
+            $ref: '#/components/schemas/Instant'
+      responses:
+        '200':
+          description: Incident page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentPage'
+  /api/v1/incidents/{incident_id}:
+    get:
+      tags: [Incidents]
+      operationId: getIncident
+      parameters:
+        - in: path
+          name: incident_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '200':
+          description: Incident with observation segments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentDetail'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+  /api/v1/maintenance-windows:
+    get:
+      tags: [Maintenance]
+      operationId: listMaintenanceWindows
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - in: query
+          name: state
+          schema:
+            $ref: '#/components/schemas/MaintenanceState'
+        - in: query
+          name: check_id
+          schema:
+            $ref: '#/components/schemas/Uuid'
+        - in: query
+          name: group_id
+          schema:
+            $ref: '#/components/schemas/Uuid'
+        - in: query
+          name: starts_before
+          description: Return windows that start before this exclusive UTC boundary.
+          schema:
+            $ref: '#/components/schemas/Instant'
+        - in: query
+          name: ends_after
+          description: Return windows that end after this exclusive UTC boundary.
+          schema:
+            $ref: '#/components/schemas/Instant'
+      responses:
+        '200':
+          description: Maintenance window page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceWindowPage'
+    post:
+      tags: [Maintenance]
+      operationId: createMaintenanceWindow
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaintenanceWindowWrite'
+      responses:
+        '201':
+          description: Maintenance window created
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceWindow'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
+        '422':
+          $ref: '#/components/responses/ValidationProblem'
+  /api/v1/maintenance-windows/{window_id}:
+    parameters:
+      - in: path
+        name: window_id
+        required: true
+        schema:
+          $ref: '#/components/schemas/Uuid'
+    get:
+      tags: [Maintenance]
+      operationId: getMaintenanceWindow
+      responses:
+        '200':
+          description: Maintenance window
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceWindow'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+    patch:
+      tags: [Maintenance]
+      operationId: updateMaintenanceWindow
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaintenanceWindowPatch'
+      responses:
+        '200':
+          description: Maintenance window updated
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintenanceWindow'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
+        '422':
+          $ref: '#/components/responses/ValidationProblem'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+    delete:
+      tags: [Maintenance]
+      operationId: cancelMaintenanceWindow
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: Maintenance window cancelled
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /api/v1/notification-recipients:
+    get:
+      tags: [Notifications]
+      operationId: listNotificationRecipients
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Notification recipients
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationRecipientPage'
+    post:
+      tags: [Notifications]
+      operationId: createNotificationRecipient
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailRequest'
+      responses:
+        '201':
+          description: Recipient created; verification scheduled
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationRecipient'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
+        '422':
+          $ref: '#/components/responses/ValidationProblem'
+  /api/v1/notification-recipients/{recipient_id}:
+    delete:
+      tags: [Notifications]
+      operationId: deleteNotificationRecipient
+      parameters:
+        - in: path
+          name: recipient_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: Recipient disabled
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /api/v1/notification-recipients/{recipient_id}/verification:
+    post:
+      tags: [Notifications]
+      operationId: resendNotificationRecipientVerification
+      parameters:
+        - in: path
+          name: recipient_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/v1/notification-recipients/{recipient_id}/test-email:
+    post:
+      tags: [Notifications]
+      operationId: sendNotificationRecipientTestEmail
+      parameters:
+        - in: path
+          name: recipient_id
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '409':
+          $ref: '#/components/responses/ConflictProblem'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/v1/notification-recipient-verifications/confirm:
+    post:
+      tags: [Notifications]
+      operationId: confirmNotificationRecipientVerification
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      responses:
+        '204':
+          description: Recipient verified
+        '422':
+          $ref: '#/components/responses/ValidationProblem'
+  /api/v1/notification-policies/default:
+    get:
+      tags: [Notifications]
+      operationId: getDefaultNotificationPolicy
+      responses:
+        '200':
+          description: Default notification policy
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPolicy'
+    put:
+      tags: [Notifications]
+      operationId: replaceDefaultNotificationPolicy
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DefaultNotificationPolicyWrite'
+      responses:
+        '200':
+          description: Policy replaced
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPolicy'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '422':
+          $ref: '#/components/responses/ValidationProblem'
+  /api/v1/groups/{group_id}/notification-policy:
+    parameters:
+      - $ref: '#/components/parameters/GroupId'
+    get:
+      tags: [Notifications]
+      operationId: getGroupNotificationPolicy
+      responses:
+        '200':
+          description: Effective group notification policy
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPolicy'
+    put:
+      tags: [Notifications]
+      operationId: replaceGroupNotificationPolicy
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPolicyWrite'
+      responses:
+        '200':
+          description: Group policy replaced
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPolicy'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+        '422':
+          $ref: '#/components/responses/ValidationProblem'
+  /api/v1/public-pages:
+    get:
+      tags: [Public pages]
+      operationId: listPublicPages
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Owner public-page configurations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicPagePage'
+    post:
+      tags: [Public pages]
+      operationId: createPublicPage
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicPageWrite'
+      responses:
+        '201':
+          description: Draft page created
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicPage'
+  /api/v1/public-pages/{page_id}:
+    parameters:
+      - $ref: '#/components/parameters/PageId'
+    get:
+      tags: [Public pages]
+      operationId: getPublicPage
+      responses:
+        '200':
+          description: Private page configuration
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicPage'
+        '404':
+          $ref: '#/components/responses/NotFoundProblem'
+    patch:
+      tags: [Public pages]
+      operationId: updatePublicPage
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicPagePatch'
+      responses:
+        '200':
+          $ref: '#/components/responses/PublicPageCommandResult'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+    delete:
+      tags: [Public pages]
+      operationId: deletePublicPage
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: Page deleted and public access closed
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /api/v1/public-pages/{page_id}/components:
+    put:
+      tags: [Public pages]
+      operationId: replacePublicPageComponents
+      parameters:
+        - $ref: '#/components/parameters/PageId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  maxItems: 500
+                  items:
+                    $ref: '#/components/schemas/PublicComponentWrite'
+      responses:
+        '200':
+          $ref: '#/components/responses/PublicPageCommandResult'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /api/v1/public-pages/{page_id}/publish:
+    post:
+      tags: [Public pages]
+      operationId: publishPublicPage
+      parameters:
+        - $ref: '#/components/parameters/PageId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Page published; raw link token is shown once
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicLinkResult'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /api/v1/public-pages/{page_id}/disable:
+    post:
+      tags: [Public pages]
+      operationId: disablePublicPage
+      parameters:
+        - $ref: '#/components/parameters/PageId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '200':
+          $ref: '#/components/responses/PublicPageCommandResult'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /api/v1/public-pages/{page_id}/rotate-link:
+    post:
+      tags: [Public pages]
+      operationId: rotatePublicPageLink
+      parameters:
+        - $ref: '#/components/parameters/PageId'
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Link rotated atomically; raw token is shown once
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicLinkResult'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+  /api/v1/events:
+    get:
+      tags: [Realtime]
+      operationId: streamPrivateEvents
+      parameters:
+        - $ref: '#/components/parameters/LastEventId'
+      responses:
+        '200':
+          description: Owner-scoped, non-durable SSE invalidation stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Frames defined in REALTIME_CONTRACT.md
+        '401':
+          $ref: '#/components/responses/AuthenticationProblem'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/public/v1/status-pages/{public_token}:
+    get:
+      tags: [Public]
+      operationId: getPublicStatusPage
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PublicToken'
+        - in: header
+          name: If-None-Match
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Allowlisted public projection
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicStatusSnapshot'
+        '304':
+          description: Projection has not changed
+        '404':
+          $ref: '#/components/responses/PublicNotFoundProblem'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+  /api/public/v1/status-pages/{public_token}/events:
+    get:
+      tags: [Public, Realtime]
+      operationId: streamPublicStatusPageEvents
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PublicToken'
+        - $ref: '#/components/parameters/LastEventId'
+      responses:
+        '200':
+          description: Page-scoped, non-durable SSE invalidation stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Frames defined in REALTIME_CONTRACT.md
+        '404':
+          $ref: '#/components/responses/PublicNotFoundProblem'
+        '429':
+          $ref: '#/components/responses/RateLimitProblem'
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: site_monitor_session
+  parameters:
+    CsrfToken:
+      in: header
+      name: X-CSRF-Token
+      required: true
+      schema:
+        type: string
+        minLength: 20
+        maxLength: 512
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+        pattern: '^[\x21-\x7E]+$'
+    IfMatch:
+      in: header
+      name: If-Match
+      required: true
+      schema:
+        type: string
+        pattern: '^"rv-[0-9]+"$'
+    LastEventId:
+      in: header
+      name: Last-Event-ID
+      required: false
+      schema:
+        type: string
+        format: uuid
+    Cursor:
+      in: query
+      name: cursor
+      required: false
+      schema:
+        type: string
+        maxLength: 1024
+    Limit:
+      in: query
+      name: limit
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    CheckId:
+      in: path
+      name: check_id
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    GroupId:
+      in: path
+      name: group_id
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    PageId:
+      in: path
+      name: page_id
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    PublicToken:
+      in: path
+      name: public_token
+      required: true
+      description: Opaque secret; must be redacted from logs and telemetry
+      schema:
+        type: string
+        minLength: 32
+        maxLength: 128
+  headers:
+    ETag:
+      description: Strong resource or projection version tag
+      schema:
+        type: string
+    Location:
+      description: Canonical resource URI
+      schema:
+        type: string
+        format: uri-reference
+    RequestId:
+      description: Request correlation identifier
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Accepted:
+      description: Accepted without revealing account existence
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AcceptedResponse'
+    CheckCommandResult:
+      description: Current check after idempotent command
+      headers:
+        ETag:
+          $ref: '#/components/headers/ETag'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Check'
+    PublicPageCommandResult:
+      description: Current private public-page configuration
+      headers:
+        ETag:
+          $ref: '#/components/headers/ETag'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PublicPage'
+    BadRequestProblem:
+      description: Invalid request or cursor
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    AuthenticationProblem:
+      description: Authentication required or credentials invalid
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    CsrfProblem:
+      description: CSRF or origin verification failed
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFoundProblem:
+      description: Resource absent, deleted, or owned by another user
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    PublicNotFoundProblem:
+      description: Public page absent, disabled, or token invalid
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ConflictProblem:
+      description: Domain, idempotency, or resource conflict
+      headers:
+        Retry-After:
+          description: Present for idempotency_in_progress
+          schema:
+            type: integer
+            minimum: 0
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    PreconditionFailed:
+      description: If-Match does not match current resource version
+      headers:
+        ETag:
+          $ref: '#/components/headers/ETag'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ValidationProblem:
+      description: Request validation or configuration failed
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    PreconditionRequired:
+      description: If-Match header is required
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    RateLimitProblem:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 0
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ServiceUnavailable:
+      description: Required dependency or schema is unavailable
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 0
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Uuid:
+      type: string
+      format: uuid
+    Instant:
+      type: string
+      format: date-time
+    ResourceVersion:
+      type: string
+      pattern: '^[0-9]+$'
+    NonNegativeIntegerString:
+      type: string
+      pattern: '^[0-9]+$'
+    ServiceHealth:
+      type: object
+      additionalProperties: false
+      required: [service, status, timestamp, version]
+      properties:
+        service:
+          type: string
+        status:
+          type: string
+          enum: [ok, unavailable]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          minLength: 1
+    AcceptedResponse:
+      type: object
+      additionalProperties: false
+      required: [accepted]
+      properties:
+        accepted:
+          type: boolean
+          const: true
+    ValidationIssue:
+      type: object
+      additionalProperties: false
+      required: [pointer, code, message]
+      properties:
+        pointer:
+          type: string
+        code:
+          type: string
+          pattern: '^[a-z][a-z0-9_]*$'
+        message:
+          type: string
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status, detail, instance, code, request_id, retryable]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          pattern: '^[a-z][a-z0-9_]*$'
+        request_id:
+          type: string
+          format: uuid
+        retryable:
+          type: boolean
+        retry_after_seconds:
+          type: integer
+          minimum: 0
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationIssue'
+    PageMeta:
+      type: object
+      additionalProperties: false
+      required: [next_cursor, has_more]
+      properties:
+        next_cursor:
+          type: [string, 'null']
+        has_more:
+          type: boolean
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, display_name]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+        password:
+          type: string
+          minLength: 15
+          maxLength: 128
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 120
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+    EmailRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+    TokenRequest:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 20
+          maxLength: 512
+    PasswordResetConfirmRequest:
+      type: object
+      additionalProperties: false
+      required: [token, password]
+      properties:
+        token:
+          type: string
+          minLength: 20
+          maxLength: 512
+        password:
+          type: string
+          minLength: 15
+          maxLength: 128
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, email, display_name, email_verified, resource_version, created_at]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        email_verified:
+          type: boolean
+        resource_version:
+          $ref: '#/components/schemas/ResourceVersion'
+        created_at:
+          $ref: '#/components/schemas/Instant'
+    UserPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 120
+    SessionView:
+      type: object
+      additionalProperties: false
+      required: [user, expires_at, csrf_token]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        expires_at:
+          $ref: '#/components/schemas/Instant'
+        csrf_token:
+          type: string
+          description: Session-bound bootstrap value; never logged or persisted by the client
+    ExecutionState:
+      type: string
+      enum: [ACTIVE, PAUSED]
+    HealthState:
+      type: string
+      enum: [UNKNOWN, UP, SUSPECT, DOWN]
+    FreshnessState:
+      type: string
+      enum: [FRESH, STALE]
+    CurrentIncidentSummary:
+      type: object
+      additionalProperties: false
+      required: [id, started_at, confirmed_at, observation_mode, observed_duration_ms]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        started_at:
+          $ref: '#/components/schemas/Instant'
+        confirmed_at:
+          $ref: '#/components/schemas/Instant'
+        observation_mode:
+          type: string
+          enum: [OBSERVED, UNOBSERVED]
+        observed_duration_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+    CurrentStatus:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          check_id,
+          health_state,
+          execution_state,
+          freshness_state,
+          maintenance,
+          last_response_time_ms,
+          last_checked_at,
+          current_incident,
+          state_version,
+        ]
+      properties:
+        check_id:
+          $ref: '#/components/schemas/Uuid'
+        health_state:
+          $ref: '#/components/schemas/HealthState'
+        execution_state:
+          $ref: '#/components/schemas/ExecutionState'
+        freshness_state:
+          $ref: '#/components/schemas/FreshnessState'
+        maintenance:
+          type: object
+          additionalProperties: false
+          required: [active, until]
+          properties:
+            active:
+              type: boolean
+            until:
+              oneOf:
+                - $ref: '#/components/schemas/Instant'
+                - type: 'null'
+        last_response_time_ms:
+          type: [integer, 'null']
+          minimum: 0
+        last_checked_at:
+          oneOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        current_incident:
+          oneOf:
+            - $ref: '#/components/schemas/CurrentIncidentSummary'
+            - type: 'null'
+        state_version:
+          $ref: '#/components/schemas/ResourceVersion'
+    CheckWriteFields:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        url:
+          type: string
+          format: uri
+          maxLength: 2048
+          description: >-
+            Absolute HTTP(S) URL. Credentials are forbidden. The fragment is removed during
+            canonicalization and the canonical UTF-8 serialization must not exceed 4096 bytes.
+        interval_seconds:
+          type: integer
+          minimum: 30
+          maximum: 3600
+        timeout_ms:
+          type: integer
+          minimum: 100
+          maximum: 60000
+        expected_status_code:
+          type: integer
+          minimum: 100
+          maximum: 599
+        expected_body_substring:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 2048
+          description: >-
+            Case-sensitive literal substring. In addition to this character bound, the API
+            enforces a 2048-byte UTF-8 limit. Null disables body matching.
+        group_id:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+    CheckCreate:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/CheckWriteFields'
+        - type: object
+          required: [name, url, interval_seconds, timeout_ms, expected_status_code]
+    CheckPatch:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/CheckWriteFields'
+        - type: object
+          minProperties: 1
+    Check:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - url
+        - interval_seconds
+        - timeout_ms
+        - expected_status_code
+        - expected_body_substring
+        - group_id
+        - execution_state
+        - resource_version
+        - probe_generation
+        - schedule_generation
+        - created_at
+        - updated_at
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+        url:
+          type: string
+          format: uri
+        interval_seconds:
+          type: integer
+        timeout_ms:
+          type: integer
+        expected_status_code:
+          type: integer
+        expected_body_substring:
+          type: [string, 'null']
+        group_id:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+        execution_state:
+          $ref: '#/components/schemas/ExecutionState'
+        resource_version:
+          $ref: '#/components/schemas/ResourceVersion'
+        probe_generation:
+          $ref: '#/components/schemas/ResourceVersion'
+        schedule_generation:
+          $ref: '#/components/schemas/ResourceVersion'
+        created_at:
+          $ref: '#/components/schemas/Instant'
+        updated_at:
+          $ref: '#/components/schemas/Instant'
+    CheckListItem:
+      type: object
+      additionalProperties: false
+      required: [check, status]
+      properties:
+        check:
+          $ref: '#/components/schemas/Check'
+        status:
+          $ref: '#/components/schemas/CurrentStatus'
+    CheckPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckListItem'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+    GroupStatus:
+      type: object
+      additionalProperties: false
+      required: [health_state, up, suspect, down, unknown, paused]
+      properties:
+        health_state:
+          $ref: '#/components/schemas/HealthState'
+        up: { type: integer, minimum: 0 }
+        suspect: { type: integer, minimum: 0 }
+        down: { type: integer, minimum: 0 }
+        unknown: { type: integer, minimum: 0 }
+        paused: { type: integer, minimum: 0 }
+    GroupWrite:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type: [string, 'null']
+          maxLength: 1000
+    GroupPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type: [string, 'null']
+          maxLength: 1000
+    Group:
+      type: object
+      additionalProperties: false
+      required: [id, name, description, resource_version, created_at, updated_at]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        resource_version:
+          $ref: '#/components/schemas/ResourceVersion'
+        created_at:
+          $ref: '#/components/schemas/Instant'
+        updated_at:
+          $ref: '#/components/schemas/Instant'
+    GroupListItem:
+      type: object
+      additionalProperties: false
+      required: [group, status]
+      properties:
+        group:
+          $ref: '#/components/schemas/Group'
+        status:
+          $ref: '#/components/schemas/GroupStatus'
+    GroupPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupListItem'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+    DashboardPage:
+      type: object
+      additionalProperties: false
+      required: [generated_at, checks, groups, page]
+      properties:
+        generated_at:
+          $ref: '#/components/schemas/Instant'
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckListItem'
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupListItem'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+    ManualRunReceipt:
+      type: object
+      additionalProperties: false
+      required: [request_id, check_id, disposition, mode, requested_at]
+      properties:
+        request_id:
+          $ref: '#/components/schemas/Uuid'
+        check_id:
+          $ref: '#/components/schemas/Uuid'
+        disposition:
+          type: string
+          enum: [ENQUEUED, COALESCED]
+        mode:
+          type: string
+          enum: [STATEFUL, DIAGNOSTIC]
+        requested_at:
+          $ref: '#/components/schemas/Instant'
+    CheckRun:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          trigger_kind,
+          manual_mode,
+          started_at,
+          finished_at,
+          outcome,
+          accepted,
+          rejection_reason,
+          response_time_ms,
+          status_code,
+          failure_category,
+        ]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        trigger_kind:
+          type: string
+          enum: [SCHEDULED, MANUAL]
+        manual_mode:
+          type: [string, 'null']
+          enum: [STATEFUL, DIAGNOSTIC, null]
+        started_at:
+          $ref: '#/components/schemas/Instant'
+        finished_at:
+          $ref: '#/components/schemas/Instant'
+        outcome:
+          type: string
+          enum: [PASS, FAIL]
+        accepted:
+          type: boolean
+        rejection_reason:
+          type: [string, 'null']
+        response_time_ms:
+          type: [integer, 'null']
+          minimum: 0
+        status_code:
+          type: [integer, 'null']
+        failure_category:
+          type: [string, 'null']
+    CheckRunPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckRun'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+    HistoryBucket:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          from,
+          to,
+          response_time_ms,
+          availability_ratio,
+          coverage_ratio,
+          classification,
+          sample_count,
+          observed_up_ms,
+          observed_down_ms,
+          unknown_ms,
+          provisional_ms,
+        ]
+      properties:
+        from:
+          $ref: '#/components/schemas/Instant'
+        to:
+          $ref: '#/components/schemas/Instant'
+        response_time_ms:
+          type: [number, 'null']
+          minimum: 0
+        availability_ratio:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 1
+        coverage_ratio:
+          type: number
+          minimum: 0
+          maximum: 1
+        classification:
+          type: string
+          enum: [UP, DOWN, UNKNOWN, PROVISIONAL, MIXED]
+        sample_count:
+          type: integer
+          minimum: 0
+        observed_up_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        observed_down_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        unknown_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        provisional_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+    HistoryResponse:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          check_id,
+          period,
+          from,
+          to,
+          resolution,
+          bucket_seconds,
+          generated_at,
+          data_through,
+          availability_ratio,
+          coverage_ratio,
+          observed_up_ms,
+          observed_down_ms,
+          unknown_ms,
+          provisional_ms,
+          buckets,
+        ]
+      properties:
+        check_id:
+          $ref: '#/components/schemas/Uuid'
+        period:
+          type: string
+          enum: [day, week, month]
+        from:
+          $ref: '#/components/schemas/Instant'
+        to:
+          $ref: '#/components/schemas/Instant'
+        resolution:
+          type: string
+          enum: [minute, hour]
+        bucket_seconds:
+          type: integer
+          minimum: 1
+        generated_at:
+          $ref: '#/components/schemas/Instant'
+        data_through:
+          $ref: '#/components/schemas/Instant'
+        availability_ratio:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 1
+        coverage_ratio:
+          type: number
+          minimum: 0
+          maximum: 1
+        observed_up_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        observed_down_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        unknown_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        provisional_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        buckets:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoryBucket'
+    PredictionModel:
+      type: object
+      additionalProperties: false
+      required: [name, version]
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+    PredictionResponse:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          check_id,
+          status,
+          risk_score,
+          risk_level,
+          computed_at,
+          valid_until,
+          horizon_seconds,
+          model,
+          reason_codes,
+        ]
+      properties:
+        check_id:
+          $ref: '#/components/schemas/Uuid'
+        status:
+          type: string
+          enum: [AVAILABLE, UNAVAILABLE, STALE, INSUFFICIENT_DATA]
+        risk_score:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 1
+        risk_level:
+          type: [string, 'null']
+          enum: [LOW, MEDIUM, HIGH, null]
+        valid_until:
+          oneOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        computed_at:
+          oneOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        horizon_seconds:
+          type: [integer, 'null']
+          minimum: 1
+        model:
+          oneOf:
+            - $ref: '#/components/schemas/PredictionModel'
+            - type: 'null'
+        reason_codes:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+    IncidentState:
+      type: string
+      enum: [OPEN, CLOSED]
+    ObservationMode:
+      type: string
+      enum: [OBSERVED, UNOBSERVED]
+    Incident:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          check_id,
+          check_name,
+          group_id_at_open,
+          status,
+          observation_mode,
+          started_at,
+          confirmed_at,
+          ended_at,
+          closure_reason,
+          observed_duration_ms,
+          wall_duration_ms,
+        ]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        check_id:
+          $ref: '#/components/schemas/Uuid'
+        check_name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        group_id_at_open:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+        status:
+          $ref: '#/components/schemas/IncidentState'
+        observation_mode:
+          $ref: '#/components/schemas/ObservationMode'
+        started_at:
+          $ref: '#/components/schemas/Instant'
+        confirmed_at:
+          $ref: '#/components/schemas/Instant'
+        ended_at:
+          oneOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        closure_reason:
+          type: [string, 'null']
+          enum: [RECOVERED, CONFIG_CHANGED, CHECK_DELETED, ADMINISTRATIVE, null]
+        observed_duration_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        wall_duration_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+    IncidentSegment:
+      type: object
+      additionalProperties: false
+      required: [starts_at, ends_at, kind]
+      properties:
+        starts_at:
+          $ref: '#/components/schemas/Instant'
+        ends_at:
+          oneOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        kind:
+          type: string
+          enum: [OBSERVED_DOWN, UNOBSERVED]
+    IncidentDetail:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          check_id,
+          check_name,
+          group_id_at_open,
+          status,
+          observation_mode,
+          started_at,
+          confirmed_at,
+          ended_at,
+          closure_reason,
+          observed_duration_ms,
+          wall_duration_ms,
+          generated_at,
+          segments,
+        ]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        check_id:
+          $ref: '#/components/schemas/Uuid'
+        check_name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        group_id_at_open:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+        status:
+          $ref: '#/components/schemas/IncidentState'
+        observation_mode:
+          $ref: '#/components/schemas/ObservationMode'
+        started_at:
+          $ref: '#/components/schemas/Instant'
+        confirmed_at:
+          $ref: '#/components/schemas/Instant'
+        ended_at:
+          oneOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        closure_reason:
+          type: [string, 'null']
+          enum: [RECOVERED, CONFIG_CHANGED, CHECK_DELETED, ADMINISTRATIVE, null]
+        observed_duration_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        wall_duration_ms:
+          $ref: '#/components/schemas/NonNegativeIntegerString'
+        generated_at:
+          $ref: '#/components/schemas/Instant'
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentSegment'
+    IncidentPage:
+      type: object
+      additionalProperties: false
+      required: [data, page, generated_at]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Incident'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+        generated_at:
+          $ref: '#/components/schemas/Instant'
+    MaintenanceState:
+      type: string
+      enum: [UPCOMING, ACTIVE, ENDED, CANCELLED]
+    MaintenanceWindowWrite:
+      type: object
+      additionalProperties: false
+      required: [target_type, target_id, starts_at, ends_at]
+      properties:
+        target_type:
+          type: string
+          enum: [CHECK, GROUP]
+        target_id:
+          $ref: '#/components/schemas/Uuid'
+        starts_at:
+          $ref: '#/components/schemas/Instant'
+        ends_at:
+          $ref: '#/components/schemas/Instant'
+        note:
+          type: [string, 'null']
+          maxLength: 1000
+    MaintenanceWindowPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: The target is immutable; cancel and recreate to change target.
+      properties:
+        starts_at:
+          $ref: '#/components/schemas/Instant'
+        ends_at:
+          $ref: '#/components/schemas/Instant'
+        note:
+          type: [string, 'null']
+          maxLength: 1000
+    MaintenanceWindow:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          target_type,
+          target_id,
+          starts_at,
+          ends_at,
+          note,
+          state,
+          resource_version,
+          created_at,
+          updated_at,
+        ]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        target_type:
+          type: string
+          enum: [CHECK, GROUP]
+        target_id:
+          $ref: '#/components/schemas/Uuid'
+        starts_at:
+          $ref: '#/components/schemas/Instant'
+        ends_at:
+          $ref: '#/components/schemas/Instant'
+        note:
+          type: [string, 'null']
+        state:
+          $ref: '#/components/schemas/MaintenanceState'
+        resource_version:
+          $ref: '#/components/schemas/ResourceVersion'
+        created_at:
+          $ref: '#/components/schemas/Instant'
+        updated_at:
+          $ref: '#/components/schemas/Instant'
+    MaintenanceWindowPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaintenanceWindow'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+    NotificationRecipient:
+      type: object
+      additionalProperties: false
+      required: [id, email, verification_state, resource_version, created_at]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        email:
+          type: string
+          format: email
+        verification_state:
+          type: string
+          enum: [PENDING, VERIFIED, DISABLED]
+        resource_version:
+          $ref: '#/components/schemas/ResourceVersion'
+        created_at:
+          $ref: '#/components/schemas/Instant'
+    NotificationRecipientPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationRecipient'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+    NotificationPolicyWrite:
+      type: object
+      additionalProperties: false
+      required: [mode, notify_down, notify_recovery, recipient_ids]
+      properties:
+        mode:
+          type: string
+          enum: [INHERIT, ACTIVE, DISABLED]
+        notify_down:
+          type: [boolean, 'null']
+        notify_recovery:
+          type: [boolean, 'null']
+        recipient_ids:
+          type: array
+          uniqueItems: true
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/Uuid'
+      allOf:
+        - if:
+            properties:
+              mode:
+                const: ACTIVE
+          then:
+            properties:
+              notify_down:
+                type: boolean
+              notify_recovery:
+                type: boolean
+              recipient_ids:
+                type: array
+                minItems: 1
+          else:
+            properties:
+              notify_down:
+                type: 'null'
+              notify_recovery:
+                type: 'null'
+              recipient_ids:
+                type: array
+                maxItems: 0
+    DefaultNotificationPolicyWrite:
+      type: object
+      additionalProperties: false
+      required: [mode, notify_down, notify_recovery, recipient_ids]
+      properties:
+        mode:
+          type: string
+          enum: [ACTIVE, DISABLED]
+        notify_down:
+          type: [boolean, 'null']
+        notify_recovery:
+          type: [boolean, 'null']
+        recipient_ids:
+          type: array
+          uniqueItems: true
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/Uuid'
+      allOf:
+        - if:
+            properties:
+              mode:
+                const: ACTIVE
+          then:
+            properties:
+              notify_down:
+                type: boolean
+              notify_recovery:
+                type: boolean
+              recipient_ids:
+                type: array
+                minItems: 1
+          else:
+            properties:
+              notify_down:
+                type: 'null'
+              notify_recovery:
+                type: 'null'
+              recipient_ids:
+                type: array
+                maxItems: 0
+    NotificationPolicy:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          scope_type,
+          scope_id,
+          mode,
+          notify_down,
+          notify_recovery,
+          recipient_ids,
+          effective_recipient_ids,
+          effective_policy_id,
+          effective_mode,
+          effective_notify_down,
+          effective_notify_recovery,
+          effective_policy_version,
+          resource_version,
+        ]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        scope_type:
+          type: string
+          enum: [DEFAULT, GROUP]
+        scope_id:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+        mode:
+          type: string
+          enum: [INHERIT, ACTIVE, DISABLED]
+        notify_down:
+          type: [boolean, 'null']
+        notify_recovery:
+          type: [boolean, 'null']
+        recipient_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/Uuid'
+        effective_recipient_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/Uuid'
+        effective_policy_id:
+          $ref: '#/components/schemas/Uuid'
+        effective_mode:
+          type: string
+          enum: [ACTIVE, DISABLED]
+        effective_notify_down:
+          type: [boolean, 'null']
+        effective_notify_recovery:
+          type: [boolean, 'null']
+        effective_policy_version:
+          $ref: '#/components/schemas/ResourceVersion'
+        resource_version:
+          $ref: '#/components/schemas/ResourceVersion'
+    PublicPageState:
+      type: string
+      enum: [DRAFT, PUBLISHED, DISABLED]
+    PublicPageWrite:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type: [string, 'null']
+          maxLength: 2000
+    PublicPagePatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        description:
+          type: [string, 'null']
+          maxLength: 2000
+    PublicComponentWrite:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          kind,
+          source_id,
+          display_name,
+          position,
+          show_url,
+          show_response_time,
+          show_incident_history,
+        ]
+      properties:
+        kind:
+          type: string
+          enum: [CHECK, GROUP]
+        source_id:
+          $ref: '#/components/schemas/Uuid'
+        display_name:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 160
+        position:
+          type: integer
+          minimum: 0
+        show_url:
+          type: boolean
+        show_response_time:
+          type: boolean
+        show_incident_history:
+          type: boolean
+    PublicComponent:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          kind,
+          source_id,
+          display_name,
+          position,
+          show_url,
+          show_response_time,
+          show_incident_history,
+        ]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        kind:
+          type: string
+          enum: [CHECK, GROUP]
+        source_id:
+          $ref: '#/components/schemas/Uuid'
+        display_name:
+          type: [string, 'null']
+        position:
+          type: integer
+          minimum: 0
+        show_url:
+          type: boolean
+        show_response_time:
+          type: boolean
+        show_incident_history:
+          type: boolean
+    PublicPage:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          title,
+          description,
+          state,
+          components,
+          resource_version,
+          page_revision,
+          created_at,
+          updated_at,
+        ]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        title:
+          type: string
+        description:
+          type: [string, 'null']
+        state:
+          $ref: '#/components/schemas/PublicPageState'
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicComponent'
+        resource_version:
+          $ref: '#/components/schemas/ResourceVersion'
+        page_revision:
+          oneOf:
+            - $ref: '#/components/schemas/ResourceVersion'
+            - type: 'null'
+        created_at:
+          $ref: '#/components/schemas/Instant'
+        updated_at:
+          $ref: '#/components/schemas/Instant'
+    PublicPagePage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicPage'
+        page:
+          $ref: '#/components/schemas/PageMeta'
+    PublicLinkResult:
+      type: object
+      additionalProperties: false
+      required: [page, public_url]
+      properties:
+        page:
+          $ref: '#/components/schemas/PublicPage'
+        public_url:
+          type: string
+          format: uri
+          description: Contains the raw token and is returned only on publish/rotation
+    PublicStatusComponent:
+      type: object
+      additionalProperties: false
+      required: [id, kind, display_name, health_state, maintenance_active, last_checked_at]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        kind:
+          type: string
+          enum: [CHECK, GROUP]
+        display_name:
+          type: string
+        url:
+          type: string
+          format: uri
+          description: Present only when this component explicitly allows URL publication.
+        health_state:
+          $ref: '#/components/schemas/HealthState'
+        maintenance_active:
+          type: boolean
+        last_response_time_ms:
+          type: [integer, 'null']
+          description: Omitted unless this component allows response-time publication; null means no observed sample.
+        last_checked_at:
+          oneOf:
+            - $ref: '#/components/schemas/Instant'
+            - type: 'null'
+        incident_history:
+          type: array
+          description: Omitted unless this component explicitly allows incident-history publication.
+          items:
+            type: object
+            additionalProperties: false
+            required: [started_at, ended_at, observed_duration_ms]
+            properties:
+              started_at:
+                $ref: '#/components/schemas/Instant'
+              ended_at:
+                oneOf:
+                  - $ref: '#/components/schemas/Instant'
+                  - type: 'null'
+              observed_duration_ms:
+                $ref: '#/components/schemas/NonNegativeIntegerString'
+    PublicStatusSnapshot:
+      type: object
+      additionalProperties: false
+      required: [title, description, page_revision, generated_at, overall_health_state, components]
+      properties:
+        title:
+          type: string
+        description:
+          type: [string, 'null']
+        page_revision:
+          $ref: '#/components/schemas/ResourceVersion'
+        generated_at:
+          $ref: '#/components/schemas/Instant'
+        overall_health_state:
+          $ref: '#/components/schemas/HealthState'
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicStatusComponent'

@@ -119,6 +119,10 @@ textarea:focus {
   font-size: 0.75rem;
   font-weight: 400;
 }
+
+.diagnostic-note {
+  margin: 0.9rem 0 0;
+}
 button {
   cursor: pointer;
 }

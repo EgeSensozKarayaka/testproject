@@ -20,8 +20,8 @@ function text(form: FormData, name: string): string {
 }
 
 function instant(value: string | null): string {
-  if (!value) return 'Devam ediyor';
-  return new Intl.DateTimeFormat('tr-TR', {
+  if (!value) return 'Ongoing';
+  return new Intl.DateTimeFormat('en-US', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -29,13 +29,13 @@ function instant(value: string | null): string {
 
 function duration(value: string): string {
   const minutes = Math.max(0, Math.round(Number(value) / 60_000));
-  if (minutes < 60) return `${minutes} dk`;
+  if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
-  return hours < 24 ? `${hours} sa ${minutes % 60} dk` : `${Math.floor(hours / 24)} gün`;
+  return hours < 24 ? `${hours}h ${minutes % 60}m` : `${Math.floor(hours / 24)}d`;
 }
 
 function percentage(value: number | null): string {
-  return value === null ? 'Veri yok' : `%${(value * 100).toFixed(value > 0.99 ? 2 : 1)}`;
+  return value === null ? 'No data' : `${(value * 100).toFixed(value > 0.99 ? 2 : 1)}%`;
 }
 
 function hasStringField(value: unknown, field: string): boolean {
@@ -60,21 +60,21 @@ function HistoryChart({ history }: { history: HistoryResponse }) {
     .join(' ');
 
   if (plotted.length === 0) {
-    return <p className="empty-inline">Bu dönem için ölçülmüş yanıt süresi yok.</p>;
+    return <p className="empty-inline">No response time measured for this period.</p>;
   }
 
   return (
     <div
       className="history-chart"
       role="img"
-      aria-label={`Yanıt süresi grafiği, en yüksek ${max} ms`}
+      aria-label={`Response time chart, peak ${max} ms`}
     >
       <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" aria-hidden="true">
         <line x1="0" x2={width} y1={height - 10} y2={height - 10} />
         <polyline points={points} />
       </svg>
       <span>0 ms</span>
-      <strong>{max} ms tepe</strong>
+      <strong>{max} ms peak</strong>
     </div>
   );
 }
@@ -129,7 +129,7 @@ export function OperationsWorkspace({
       setPublicPages(publicPageList.data.filter((item) => hasStringField(item, 'state')));
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) onSessionExpired?.();
-      setError(cause instanceof Error ? cause.message : 'Operasyon verileri yüklenemedi.');
+      setError(cause instanceof Error ? cause.message : 'Failed to load operations data.');
     } finally {
       setLoading(false);
     }
@@ -154,7 +154,7 @@ export function OperationsWorkspace({
       .catch((cause: unknown) => {
         if (!active) return;
         setHistory(null);
-        setError(cause instanceof Error ? cause.message : 'Geçmiş yüklenemedi.');
+        setError(cause instanceof Error ? cause.message : 'Failed to load history.');
       });
     return () => {
       active = false;
@@ -171,7 +171,7 @@ export function OperationsWorkspace({
       await loadOperations();
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) onSessionExpired?.();
-      setError(cause instanceof Error ? cause.message : 'İşlem tamamlanamadı.');
+      setError(cause instanceof Error ? cause.message : 'Operation could not be completed.');
     } finally {
       setBusy('');
     }
@@ -191,7 +191,7 @@ export function OperationsWorkspace({
           target_id: targetId ?? '',
           target_type: targetType as 'CHECK' | 'GROUP',
         }),
-      'Bakım penceresi oluşturuldu.',
+      'Maintenance window created.',
     );
   }
 
@@ -202,7 +202,7 @@ export function OperationsWorkspace({
     await command(
       'recipient:create',
       () => monitoringApi.createNotificationRecipient(session, text(form, 'email')),
-      'Adres eklendi; doğrulama e-postası Mailpit üzerinden gönderildi.',
+      'Address added; verification email sent via Mailpit.',
     );
     formElement.reset();
   }
@@ -220,7 +220,7 @@ export function OperationsWorkspace({
           notify_recovery: form.has('notify_recovery'),
           recipient_ids: form.getAll('recipient_ids').map(String),
         }),
-      'Varsayılan bildirim politikası güncellendi.',
+      'Default notification policy updated.',
     );
   }
 
@@ -239,11 +239,11 @@ export function OperationsWorkspace({
       const configured = await monitoringApi.replacePublicPageChecks(session, created, checks);
       const published = await monitoringApi.publishPublicPage(session, configured);
       setLastPublicUrl(published.public_url);
-      setNotice('Public durum sayfası yayınlandı. Bağlantıyı şimdi kopyalayın.');
+      setNotice('Public status page published. Copy the link now.');
       formElement.reset();
       await loadOperations();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Public sayfa yayınlanamadı.');
+      setError(cause instanceof Error ? cause.message : 'Failed to publish public page.');
     } finally {
       setBusy('');
     }
@@ -255,28 +255,28 @@ export function OperationsWorkspace({
   );
 
   return (
-    <section className="operations-stack" aria-label="Operasyon merkezi">
+    <section className="operations-stack" aria-label="Operations center">
       {(error || notice) && (
         <div className={`message ${error ? 'error' : 'success'}`} role={error ? 'alert' : 'status'}>
           {error || notice}
         </div>
       )}
-      {loading && <p role="status">Operasyon verileri yükleniyor…</p>}
+      {loading && <p role="status">Loading operations data…</p>}
 
       <section className="panel" aria-labelledby="history-title">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Geçmiş ve olaylar</p>
-            <h2 id="history-title">Performans geçmişi</h2>
+            <p className="eyebrow">History & incidents</p>
+            <h2 id="history-title">Performance history</h2>
           </div>
           <div className="inline-controls">
             <label>
-              Kontrol
+              Check
               <select
                 value={activeCheckId}
                 onChange={(event) => setSelectedCheckId(event.target.value)}
               >
-                {checks.length === 0 && <option value="">Kontrol yok</option>}
+                {checks.length === 0 && <option value="">No checks</option>}
                 {checks.map(({ check }) => (
                   <option key={check.id} value={check.id}>
                     {check.name}
@@ -285,14 +285,14 @@ export function OperationsWorkspace({
               </select>
             </label>
             <label>
-              Dönem
+              Period
               <select
                 value={period}
                 onChange={(event) => setPeriod(event.target.value as typeof period)}
               >
-                <option value="day">24 saat</option>
-                <option value="week">7 gün</option>
-                <option value="month">30 gün</option>
+                <option value="day">24 hours</option>
+                <option value="week">7 days</option>
+                <option value="month">30 days</option>
               </select>
             </label>
           </div>
@@ -305,37 +305,37 @@ export function OperationsWorkspace({
                 <dd>{percentage(history.availability_ratio)}</dd>
               </div>
               <div>
-                <dt>Kapsama</dt>
+                <dt>Coverage</dt>
                 <dd>{percentage(history.coverage_ratio)}</dd>
               </div>
               <div>
-                <dt>Çözünürlük</dt>
-                <dd>{history.resolution === 'minute' ? 'Dakika' : 'Saat'}</dd>
+                <dt>Resolution</dt>
+                <dd>{history.resolution === 'minute' ? 'Minute' : 'Hour'}</dd>
               </div>
               <div>
-                <dt>Veri sonu</dt>
+                <dt>Data through</dt>
                 <dd>{instant(history.data_through)}</dd>
               </div>
             </dl>
             <HistoryChart history={history} />
           </>
         ) : (
-          <p className="empty-inline">Bir kontrol seçildiğinde geçmiş burada gösterilir.</p>
+          <p className="empty-inline">History will be displayed here once a check is selected.</p>
         )}
 
-        <h3 className="subsection-title">Olay günlüğü</h3>
+        <h3 className="subsection-title">Incident log</h3>
         {incidents.length === 0 ? (
-          <p className="empty-inline">Henüz doğrulanmış incident yok.</p>
+          <p className="empty-inline">No confirmed incidents yet.</p>
         ) : (
           <div className="table-scroll">
             <table>
               <thead>
                 <tr>
-                  <th>Kontrol</th>
-                  <th>Durum</th>
-                  <th>Başlangıç</th>
-                  <th>Bitiş</th>
-                  <th>Süre</th>
+                  <th>Check</th>
+                  <th>Status</th>
+                  <th>Started</th>
+                  <th>Ended</th>
+                  <th>Duration</th>
                 </tr>
               </thead>
               <tbody>
@@ -344,7 +344,7 @@ export function OperationsWorkspace({
                     <td>{incident.check_name}</td>
                     <td>
                       <span className={`status-badge status-${incident.status.toLowerCase()}`}>
-                        {incident.status === 'OPEN' ? 'Açık' : 'Kapandı'}
+                        {incident.status === 'OPEN' ? 'Open' : 'Closed'}
                       </span>
                     </td>
                     <td>{instant(incident.started_at)}</td>
@@ -361,44 +361,44 @@ export function OperationsWorkspace({
       <section className="panel" aria-labelledby="maintenance-title">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Planlı çalışma</p>
-            <h2 id="maintenance-title">Bakım pencereleri</h2>
+            <p className="eyebrow">Scheduled maintenance</p>
+            <h2 id="maintenance-title">Maintenance windows</h2>
           </div>
-          <span className="count-pill">{activeMaintenance.length} açık</span>
+          <span className="count-pill">{activeMaintenance.length} open</span>
         </div>
         <form
           className="resource-form maintenance-form"
           onSubmit={(event) => void createMaintenance(event)}
         >
           <label>
-            Hedef
+            Target
             <select name="target" required defaultValue="">
               <option value="" disabled>
-                Kontrol veya grup seçin
+                Select check or group
               </option>
               {checks.map(({ check }) => (
                 <option key={check.id} value={`CHECK:${check.id}`}>
-                  Kontrol · {check.name}
+                  Check · {check.name}
                 </option>
               ))}
               {groups.map(({ group }) => (
                 <option key={group.id} value={`GROUP:${group.id}`}>
-                  Grup · {group.name}
+                  Group · {group.name}
                 </option>
               ))}
             </select>
           </label>
           <label>
-            Başlangıç
+            Starts at
             <input name="starts_at" type="datetime-local" required />
           </label>
           <label>
-            Bitiş
+            Ends at
             <input name="ends_at" type="datetime-local" required />
           </label>
           <label>
-            Not
-            <input name="note" maxLength={1000} placeholder="Planlı bakım" />
+            Note
+            <input name="note" maxLength={1000} placeholder="Scheduled maintenance" />
           </label>
           <div className="form-actions">
             <button
@@ -406,21 +406,21 @@ export function OperationsWorkspace({
               disabled={busy === 'maintenance:create'}
               type="submit"
             >
-              Bakım planla
+              Schedule maintenance
             </button>
           </div>
         </form>
         {maintenance.length === 0 ? (
-          <p className="empty-inline">Bakım penceresi yok.</p>
+          <p className="empty-inline">No maintenance windows.</p>
         ) : (
           <ul className="compact-list">
             {maintenance.map((window) => (
               <li key={window.id}>
                 <div>
-                  <strong>{window.target_type === 'CHECK' ? 'Kontrol' : 'Grup'} bakımı</strong>
+                  <strong>{window.target_type === 'CHECK' ? 'Check' : 'Group'} maintenance</strong>
                   <span>
                     {instant(window.starts_at)} – {instant(window.ends_at)} ·{' '}
-                    {window.note || 'Not yok'}
+                    {window.note || 'No note'}
                   </span>
                 </div>
                 <div className="row-actions">
@@ -433,12 +433,12 @@ export function OperationsWorkspace({
                         void command(
                           `maintenance:${window.id}`,
                           () => monitoringApi.cancelMaintenanceWindow(session, window),
-                          'Bakım penceresi iptal edildi.',
+                          'Maintenance window cancelled.',
                         )
                       }
                       type="button"
                     >
-                      İptal et
+                      Cancel
                     </button>
                   )}
                 </div>
@@ -451,22 +451,22 @@ export function OperationsWorkspace({
       <section className="panel" aria-labelledby="notifications-title">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">E-posta</p>
-            <h2 id="notifications-title">Bildirim ayarları</h2>
+            <p className="eyebrow">Email</p>
+            <h2 id="notifications-title">Notification settings</h2>
           </div>
-          <span className="count-pill">{recipients.length} adres</span>
+          <span className="count-pill">{recipients.length} {recipients.length === 1 ? 'address' : 'addresses'}</span>
         </div>
         <form className="inline-form" onSubmit={(event) => void createRecipient(event)}>
           <label>
-            E-posta adresi
+            Email address
             <input name="email" type="email" required maxLength={254} />
           </label>
           <button className="primary compact" disabled={busy === 'recipient:create'} type="submit">
-            Adres ekle
+            Add address
           </button>
         </form>
         {recipients.length === 0 ? (
-          <p className="empty-inline">Bildirim adresi eklenmedi.</p>
+          <p className="empty-inline">No notification addresses added.</p>
         ) : (
           <ul className="compact-list">
             {recipients.map((recipient) => (
@@ -475,10 +475,10 @@ export function OperationsWorkspace({
                   <strong>{recipient.email}</strong>
                   <span>
                     {recipient.verification_state === 'VERIFIED'
-                      ? 'Doğrulandı'
+                      ? 'Verified'
                       : recipient.verification_state === 'PENDING'
-                        ? 'Doğrulama bekliyor'
-                        : 'Devre dışı'}
+                        ? 'Pending verification'
+                        : 'Disabled'}
                   </span>
                 </div>
                 <div className="row-actions">
@@ -489,12 +489,12 @@ export function OperationsWorkspace({
                         void command(
                           `recipient:verify:${recipient.id}`,
                           () => monitoringApi.resendNotificationVerification(session, recipient),
-                          'Doğrulama e-postası yeniden gönderildi.',
+                          'Verification email resent.',
                         )
                       }
                       type="button"
                     >
-                      Doğrulamayı gönder
+                      Resend verification
                     </button>
                   )}
                   {recipient.verification_state === 'VERIFIED' && (
@@ -504,12 +504,12 @@ export function OperationsWorkspace({
                         void command(
                           `recipient:test:${recipient.id}`,
                           () => monitoringApi.sendNotificationTest(session, recipient),
-                          'Test e-postası gönderildi.',
+                          'Test email sent.',
                         )
                       }
                       type="button"
                     >
-                      Test e-postası
+                      Test email
                     </button>
                   )}
                   {recipient.verification_state !== 'DISABLED' && (
@@ -519,12 +519,12 @@ export function OperationsWorkspace({
                         void command(
                           `recipient:delete:${recipient.id}`,
                           () => monitoringApi.deleteNotificationRecipient(session, recipient),
-                          'Bildirim adresi devre dışı bırakıldı.',
+                          'Notification address disabled.',
                         )
                       }
                       type="button"
                     >
-                      Kaldır
+                      Remove
                     </button>
                   )}
                 </div>
@@ -534,12 +534,12 @@ export function OperationsWorkspace({
         )}
         {policy && (
           <form className="policy-form" onSubmit={(event) => void updatePolicy(event)}>
-            <h3>Varsayılan politika</h3>
+            <h3>Default policy</h3>
             <label>
-              Mod
+              Mode
               <select name="mode" defaultValue={policy.mode}>
-                <option value="ACTIVE">Aktif</option>
-                <option value="DISABLED">Kapalı</option>
+                <option value="ACTIVE">Active</option>
+                <option value="DISABLED">Disabled</option>
               </select>
             </label>
             <label className="check-option">
@@ -548,7 +548,7 @@ export function OperationsWorkspace({
                 type="checkbox"
                 defaultChecked={policy.notify_down === true}
               />{' '}
-              Kesinti e-postası
+              Down notification
             </label>
             <label className="check-option">
               <input
@@ -556,10 +556,10 @@ export function OperationsWorkspace({
                 type="checkbox"
                 defaultChecked={policy.notify_recovery === true}
               />{' '}
-              Kurtarma e-postası
+              Recovery email
             </label>
             <fieldset>
-              <legend>Alıcılar</legend>
+              <legend>Recipients</legend>
               {recipients
                 .filter((recipient) => recipient.verification_state === 'VERIFIED')
                 .map((recipient) => (
@@ -575,7 +575,7 @@ export function OperationsWorkspace({
                 ))}
             </fieldset>
             <button className="primary compact" disabled={busy === 'policy:update'} type="submit">
-              Politikayı kaydet
+              Save policy
             </button>
           </form>
         )}
@@ -584,26 +584,26 @@ export function OperationsWorkspace({
       <section className="panel" aria-labelledby="public-page-title">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Giriş gerektirmez</p>
-            <h2 id="public-page-title">Public durum sayfası</h2>
-            <p>Yalnız seçilen yayın alanları gösterilir; URL'ler varsayılan olarak gizlidir.</p>
+            <p className="eyebrow">No login required</p>
+            <h2 id="public-page-title">Public status page</h2>
+            <p>Only selected published fields are shown; URLs are hidden by default.</p>
           </div>
-          <span className="count-pill">{publicPages.length} sayfa</span>
+          <span className="count-pill">{publicPages.length} {publicPages.length === 1 ? 'page' : 'pages'}</span>
         </div>
         <form
           className="inline-form public-page-form"
           onSubmit={(event) => void createPublicPage(event)}
         >
           <label>
-            Sayfa başlığı
-            <input name="title" required maxLength={160} placeholder="Servis durumu" />
+            Page title
+            <input name="title" required maxLength={160} placeholder="Service status" />
           </label>
           <label>
-            Sayfa açıklaması
+            Page description
             <input
               name="description"
               maxLength={2000}
-              placeholder="Güncel servis sağlık bilgileri"
+              placeholder="Current service health information"
             />
           </label>
           <button
@@ -611,15 +611,15 @@ export function OperationsWorkspace({
             disabled={busy === 'public:create' || checks.length === 0}
             type="submit"
           >
-            Tüm kontrollerle yayınla
+            Publish with all checks
           </button>
         </form>
         {checks.length === 0 && (
-          <p className="empty-inline">Public sayfa yayınlamak için önce bir kontrol ekleyin.</p>
+          <p className="empty-inline">Add a check before publishing a public page.</p>
         )}
         {lastPublicUrl && (
-          <div className="public-link-result" role="group" aria-label="Public durum bağlantısı">
-            <strong>Tek sefer gösterilen bağlantı</strong>
+          <div className="public-link-result" role="group" aria-label="Public status link">
+            <strong>One-time displayed link</strong>
             <a href={lastPublicUrl} target="_blank" rel="noreferrer">
               {lastPublicUrl}
             </a>
@@ -632,12 +632,12 @@ export function OperationsWorkspace({
                 <div>
                   <strong>{page.title}</strong>
                   <span>
-                    {page.components.length} bileşen ·{' '}
+                    {page.components.length} {page.components.length === 1 ? 'component' : 'components'} ·{' '}
                     {page.state === 'PUBLISHED'
-                      ? 'Yayında'
+                      ? 'Published'
                       : page.state === 'DISABLED'
-                        ? 'Kapalı'
-                        : 'Taslak'}
+                        ? 'Disabled'
+                        : 'Draft'}
                   </span>
                 </div>
                 <div className="row-actions">
@@ -655,12 +655,12 @@ export function OperationsWorkspace({
                               );
                               setLastPublicUrl(result.public_url);
                             },
-                            'Bağlantı yenilendi; eski bağlantı artık geçersiz.',
+                            'Link rotated; the previous link is now invalid.',
                           )
                         }
                         type="button"
                       >
-                        Bağlantıyı yenile
+                        Rotate link
                       </button>
                       <button
                         className="danger compact"
@@ -668,12 +668,12 @@ export function OperationsWorkspace({
                           void command(
                             `public:disable:${page.id}`,
                             () => monitoringApi.disablePublicPage(session, page),
-                            'Public sayfa kapatıldı.',
+                            'Public page disabled.',
                           )
                         }
                         type="button"
                       >
-                        Yayını kapat
+                        Disable page
                       </button>
                     </>
                   ) : (
@@ -686,12 +686,12 @@ export function OperationsWorkspace({
                             const result = await monitoringApi.publishPublicPage(session, page);
                             setLastPublicUrl(result.public_url);
                           },
-                          'Public sayfa yeniden yayınlandı.',
+                          'Public page republished.',
                         )
                       }
                       type="button"
                     >
-                      Yayınla
+                      Publish
                     </button>
                   )}
                 </div>
@@ -706,10 +706,10 @@ export function OperationsWorkspace({
 
 function Status({ state }: { state: string }) {
   const labels: Record<string, string> = {
-    ACTIVE: 'Aktif',
-    CANCELLED: 'İptal',
-    ENDED: 'Bitti',
-    UPCOMING: 'Yaklaşan',
+    ACTIVE: 'Active',
+    CANCELLED: 'Cancelled',
+    ENDED: 'Ended',
+    UPCOMING: 'Upcoming',
   };
   return (
     <span className={`status-badge status-${state.toLowerCase()}`}>{labels[state] ?? state}</span>

@@ -517,6 +517,17 @@ databaseSuite('PostgreSQL persistence architecture', () => {
     });
     expect(resolved).toEqual({ owner_id: created.owner_id, user_status: 'ACTIVE' });
 
+    const touched = await withRoleCommit(pool, 'site_monitor_api', async (client) => {
+      const result = await client.query<{ rotated: boolean; session_id: string }>(
+        `SELECT session_id, rotated FROM security_api.touch_or_rotate_session(
+          $1,$2,statement_timestamp() + interval '24 hours',statement_timestamp() + interval '5 minutes'
+        )`,
+        [sessionDigest, Buffer.alloc(32, 44)],
+      );
+      return result.rows[0]!;
+    });
+    expect(touched).toEqual({ rotated: false, session_id: expect.any(String) });
+
     const profile = await withRoleCommit(pool, 'site_monitor_api', async (client) => {
       const result = await client.query<{ display_name: string; resource_version: string }>(
         'SELECT display_name, resource_version FROM security_api.update_current_user_profile($1,$2,$3)',

@@ -204,6 +204,7 @@ interface ClosedIncident {
 export interface CheckServiceOptions {
   checkLimit?: number;
   cursorTtlSeconds?: number;
+  developmentAllowedOrigins?: readonly string[];
   schedulerGraceSeconds?: number;
   securityKey: Buffer;
 }
@@ -601,6 +602,7 @@ async function suspendIncident(
 export class CheckService implements CheckServicePort {
   readonly #checkLimit: number;
   readonly #cursorTtlSeconds: number;
+  readonly #developmentAllowedOrigins: readonly string[];
   readonly #pool: Pool;
   readonly #schedulerGraceSeconds: number;
   readonly #securityKey: Buffer;
@@ -610,6 +612,7 @@ export class CheckService implements CheckServicePort {
     this.#securityKey = options.securityKey;
     this.#checkLimit = options.checkLimit ?? 500;
     this.#cursorTtlSeconds = options.cursorTtlSeconds ?? 900;
+    this.#developmentAllowedOrigins = options.developmentAllowedOrigins ?? [];
     this.#schedulerGraceSeconds = options.schedulerGraceSeconds ?? 5;
   }
 
@@ -620,7 +623,9 @@ export class CheckService implements CheckServicePort {
     correlationId: string,
   ): Promise<CheckCreateResult> {
     const configuration = normalize(() =>
-      normalizeCheckConfiguration(externalConfiguration(input)),
+      normalizeCheckConfiguration(externalConfiguration(input), {
+        developmentAllowedOrigins: this.#developmentAllowedOrigins,
+      }),
     );
     const subjectDigest = digest(this.#securityKey, 'check-create-subject', ownerId);
     const keyDigest = digest(this.#securityKey, 'check-create-key', idempotencyKey);
@@ -900,7 +905,9 @@ export class CheckService implements CheckServicePort {
         });
       }
       const changes = normalize(() =>
-        classifyCheckChanges(mapConfiguration(current), externalPatch(patch)),
+        classifyCheckChanges(mapConfiguration(current), externalPatch(patch), {
+          developmentAllowedOrigins: this.#developmentAllowedOrigins,
+        }),
       );
       if (changes.noop) return mapCheck(current);
       if (changes.probeChanged || changes.scheduleChanged) {
