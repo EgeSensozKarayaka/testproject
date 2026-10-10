@@ -600,3 +600,13 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Her observation'da group state row update; child başına N+1 query; cache'i source of truth yapmak.
 - **Gerekçe:** Tek source of truth, daha az write contention ve 20/200/500 profillerine uygun bounded aggregate.
 - **Sonuçlar:** Child status event'i realtime/public consumer'da group query invalidation üretir. Ölçüm sorun gösterirse rebuild edilebilir projection ayrı ADR ile eklenir.
+
+## D-066 — Entegrasyon veritabanları zorla değil, kontrollü retry ile silinir
+
+- **Tarih:** 2026-10-10 12:18 +06:00
+- **Durum:** Accepted — yerel tam kalite kapısı ve gerçek PostgreSQL paketiyle doğrulandı
+- **Bağlam:** GitHub PostgreSQL işi bütün 34 assertion geçmesine rağmen `57P01 terminating connection due to administrator command` uncaught exception'ıyla kapandı. `node-postgres` `Pool.end()` çağrısı, idle client socket'lerinin kapanış handshake'i sunucuda tamamen görünmez olmadan çözülebiliyor; hemen ardından kullanılan `DROP DATABASE ... WITH (FORCE)` bu bağlantıyı öldürerek pool error event'i üretiyordu.
+- **Karar:** Test veritabanı temizliği `WITH (FORCE)` kullanmayacaktır. Normal `DROP DATABASE`, yalnız PostgreSQL `55006 object_in_use` kodunda kısa ve toplam süresi sınırlı retry uygular; diğer bütün hatalar doğrudan yeniden fırlatılır. Ortak davranış `@site-monitor/database/testing` test-support sınırında tutulur.
+- **Alternatifler:** Pool error event'ini yutmak; sabit bir sleep eklemek; forced drop'u koruyup `57P01` kodunu görmezden gelmek; test veritabanlarını silmeden bırakmak.
+- **Gerekçe:** Bağlantı kapanış yarışını kaynağında kaldırmak, sabit zaman varsayımından kaçınmak ve gerçek izin/bağlantı hatalarının test işini başarısız etmeye devam etmesini sağlamak.
+- **Sonuçlar:** Temizlik en fazla beş saniye bekleyebilir ve yalnız kapanmakta olan session görünürlüğü için retry yapar. Unit regresyonları SQL'in `FORCE` içermediğini, `55006` retry'ını ve unrelated error fail-fast davranışını sabitler.

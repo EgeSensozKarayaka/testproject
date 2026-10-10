@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDatabasePool, createQueryDatabase, isDatabaseReady } from './index.js';
 import { getSchemaState, runMigrations, TARGET_SCHEMA_REVISION } from './migrations.js';
 import { resetDatabase, runSeeds } from './operations.js';
+import { dropTestDatabase } from './testing.js';
 
 const adminConnectionString = process.env.DATABASE_TEST_ADMIN_URL;
 const databaseSuite = adminConnectionString ? describe : describe.skip;
@@ -89,9 +90,7 @@ databaseSuite('PostgreSQL persistence architecture', () => {
   afterAll(async () => {
     if (pool) await pool.end();
     if (adminPool) {
-      await adminPool.query(
-        `DROP DATABASE IF EXISTS ${quotedIdentifier(databaseName)} WITH (FORCE)`,
-      );
+      await dropTestDatabase(adminPool, databaseName);
       await adminPool.end();
     }
   }, 30_000);

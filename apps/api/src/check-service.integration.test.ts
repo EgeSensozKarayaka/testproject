@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { createDatabasePool, runMigrations, type Pool } from '@site-monitor/database';
+import { dropTestDatabase } from '@site-monitor/database/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { CheckService } from './check-service.js';
@@ -64,9 +65,7 @@ databaseSuite('check service PostgreSQL boundary', () => {
     if (apiPool) await apiPool.end();
     if (schemaPool) await schemaPool.end();
     if (adminPool) {
-      await adminPool.query(
-        `DROP DATABASE IF EXISTS ${quotedIdentifier(databaseName)} WITH (FORCE)`,
-      );
+      await dropTestDatabase(adminPool, databaseName);
       await adminPool.end();
     }
   }, 30_000);

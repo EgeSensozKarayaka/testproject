@@ -306,3 +306,10 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Domain testleri acceptance, transition, incident, gap, group precedence, redaction, input immutability ve 250 adımlık sabit-seed sequence'i kapsar. Gerçek PostgreSQL regresyonları deadline/filter/duration ile 20/200/500 group aggregate fixture'ını kapsar; kapasite senaryosu yerel warm koşuda fixture dahil **359 ms** sürdü.
 - Mevcut revision 13 şeması yeterli kaldı; migration ve yeni runtime dependency eklenmedi. Kalıcı observation transaction'ı, scheduler/lease/fencing ve freshness worker Aşama 9'a bırakıldı.
 - Final `pnpm run ci`; format, OpenAPI drift, lint, strict typecheck, **147/147 unit**, **34/34 gerçek PostgreSQL integration** ve bütün production build'leriyle geçti.
+
+### 12:18 — Aşama 8 GitHub PostgreSQL cleanup yarışı düzeltmesi
+
+- GitHub PostgreSQL işi assertion başarısızlığı olmadan **34/34** testi geçirdi; Vitest işi test sonunda yakalanmamış PostgreSQL `57P01 terminating connection due to administrator command` hatası nedeniyle başarısız saydı. Serialized client, kapanışı başlamış (`_ending: true`) check-service test veritabanı bağlantısını gösterdi.
+- Kök neden `Pool.end()` ile socket kapanışının sunucuda tamamlanması arasındaki kısa pencere içinde `DROP DATABASE ... WITH (FORCE)` çalıştırılmasıydı. Pool error listener ekleyip hatayı yutmak yerine üç PostgreSQL suite'i ortak graceful cleanup helper'ına geçirildi.
+- Helper yalnız `55006 object_in_use` durumunu 25 ms aralık ve beş saniyelik toplam sınırla yeniden dener; zorla bağlantı sonlandırmaz ve diğer PostgreSQL hatalarını saklamaz. İki unit regresyonu no-force/retry ve unrelated error fail-fast kurallarını kanıtlar.
+- İlk yerel entegrasyon çağrısı GitHub'ın `postgres/postgres` hesabını mevcut Compose cluster'ına karşı kullandığı için authentication aşamasında başarısız oldu; belgelenmiş Compose yönetici hesabıyla düzeltilen çağrı **34/34** geçti. Ardından tam `pnpm run ci`; format, contract drift, lint, strict typecheck, **149/149 unit**, **34/34 gerçek PostgreSQL integration** ve bütün production build'leriyle tamamlandı.
