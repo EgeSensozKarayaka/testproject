@@ -109,6 +109,50 @@ function dereference(value, stack = new Set()) {
   );
 }
 
+// Fastify's default Ajv instance validates JSON Schema draft-07. OpenAPI 3.1
+// composition may use `unevaluatedProperties`, so flatten the simple object
+// allOf shape used by write DTOs into an equivalent draft-07 schema. The
+// canonical OpenAPI document and generated public types remain unchanged.
+function fastifySchema(value) {
+  if (Array.isArray(value)) return value.map((item) => fastifySchema(item));
+  if (!value || typeof value !== 'object') return value;
+
+  if (value.unevaluatedProperties !== undefined && Array.isArray(value.allOf)) {
+    const branches = value.allOf.map((item) => fastifySchema(item));
+    const canFlatten = branches.every(
+      (item) => item && typeof item === 'object' && !Array.isArray(item) && item.type === 'object',
+    );
+    if (canFlatten) {
+      const unevaluatedProperties = value.unevaluatedProperties;
+      const outer = Object.fromEntries(
+        Object.entries(value).filter(([key]) => key !== 'allOf' && key !== 'unevaluatedProperties'),
+      );
+      const properties = Object.assign({}, ...branches.map((item) => item.properties ?? {}));
+      const required = [...new Set(branches.flatMap((item) => item.required ?? []))];
+      const branchKeywords = Object.assign(
+        {},
+        ...branches.map((item) =>
+          Object.fromEntries(
+            Object.entries(item).filter(
+              ([key]) => !['properties', 'required', 'type'].includes(key),
+            ),
+          ),
+        ),
+      );
+      return fastifySchema({
+        ...branchKeywords,
+        ...outer,
+        type: 'object',
+        properties,
+        ...(required.length > 0 ? { required } : {}),
+        additionalProperties: unevaluatedProperties,
+      });
+    }
+  }
+
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, fastifySchema(item)]));
+}
+
 function parametersSchema(parameters, location) {
   const selected = parameters
     .map((parameter) => dereference(parameter))
@@ -134,7 +178,7 @@ function contentSchema(content) {
   if (!content || typeof content !== 'object') return undefined;
   for (const mediaType of ['application/json', 'application/problem+json']) {
     const media = content[mediaType];
-    if (media?.schema) return dereference(media.schema);
+    if (media?.schema) return fastifySchema(dereference(media.schema));
   }
   return undefined;
 }

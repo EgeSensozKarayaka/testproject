@@ -9,6 +9,7 @@ import { createLogger } from '@site-monitor/observability';
 
 import { buildApiApplication } from './app.js';
 import { AuthService } from './auth-service.js';
+import { CheckService } from './check-service.js';
 import { GroupService } from './group-service.js';
 
 const config = loadRuntimeConfig({ defaultPort: 13_000, serviceName: 'api' });
@@ -32,6 +33,10 @@ const authService = await AuthService.create(database, {
   rateLimitKey: authConfig.rateLimitKey,
 });
 const resourceConfig = loadResourceRuntimeConfig();
+const checkService = new CheckService(database, {
+  checkLimit: resourceConfig.checksPerOwnerLimit,
+  securityKey: authConfig.rateLimitKey,
+});
 const groupService = new GroupService(database, {
   groupLimit: resourceConfig.groupsPerOwnerLimit,
   securityKey: authConfig.rateLimitKey,
@@ -39,6 +44,7 @@ const groupService = new GroupService(database, {
 const app = buildApiApplication({
   allowedOrigin: process.env.WEB_ORIGIN ?? 'http://localhost:15173',
   authService,
+  checkService,
   cookieSecure: authConfig.cookieSecure,
   groupService,
   logger,

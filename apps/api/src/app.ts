@@ -8,12 +8,15 @@ import type { Logger } from 'pino';
 import { installProblemHandling } from './problem.js';
 import { requestIdFromHeader } from './request-id.js';
 import { registerAuthRoutes, type AuthServicePort } from './auth-routes.js';
+import { registerCheckRoutes } from './check-routes.js';
+import type { CheckServicePort } from './check-service.js';
 import { registerGroupRoutes } from './group-routes.js';
 import type { GroupServicePort } from './group-service.js';
 
 export interface ApiApplicationOptions {
   allowedOrigin: string;
   authService?: AuthServicePort;
+  checkService?: CheckServicePort;
   cookieSecure?: boolean;
   groupService?: GroupServicePort;
   logger: Logger;
@@ -62,6 +65,14 @@ export function buildApiApplication(options: ApiApplicationOptions) {
       authService: options.authService,
       cookieSecure: options.cookieSecure ?? false,
     });
+    if (options.checkService) {
+      void app.register(registerCheckRoutes, {
+        allowedOrigin: options.allowedOrigin,
+        authService: options.authService,
+        checkService: options.checkService,
+        cookieSecure: options.cookieSecure ?? false,
+      });
+    }
     if (options.groupService) {
       void app.register(registerGroupRoutes, {
         allowedOrigin: options.allowedOrigin,

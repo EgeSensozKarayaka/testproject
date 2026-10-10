@@ -2459,63 +2459,56 @@ export const openApiOperations = {
         required: ['X-CSRF-Token', 'Idempotency-Key'],
       },
       body: {
-        unevaluatedProperties: false,
-        allOf: [
-          {
-            type: 'object',
-            properties: {
-              name: {
-                type: 'string',
-                minLength: 1,
-                maxLength: 160,
-              },
-              url: {
-                type: 'string',
-                format: 'uri',
-                maxLength: 2048,
-                description:
-                  'Absolute HTTP(S) URL. Credentials are forbidden. The fragment is removed during canonicalization and the canonical UTF-8 serialization must not exceed 4096 bytes.',
-              },
-              interval_seconds: {
-                type: 'integer',
-                minimum: 30,
-                maximum: 3600,
-              },
-              timeout_ms: {
-                type: 'integer',
-                minimum: 100,
-                maximum: 60000,
-              },
-              expected_status_code: {
-                type: 'integer',
-                minimum: 100,
-                maximum: 599,
-              },
-              expected_body_substring: {
-                type: ['string', 'null'],
-                minLength: 1,
-                maxLength: 2048,
-                description:
-                  'Case-sensitive literal substring. In addition to this character bound, the API enforces a 2048-byte UTF-8 limit. Null disables body matching.',
-              },
-              group_id: {
-                oneOf: [
-                  {
-                    type: 'string',
-                    format: 'uuid',
-                  },
-                  {
-                    type: 'null',
-                  },
-                ],
-              },
-            },
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 160,
           },
-          {
-            type: 'object',
-            required: ['name', 'url', 'interval_seconds', 'timeout_ms', 'expected_status_code'],
+          url: {
+            type: 'string',
+            format: 'uri',
+            maxLength: 2048,
+            description:
+              'Absolute HTTP(S) URL. Credentials are forbidden. The fragment is removed during canonicalization and the canonical UTF-8 serialization must not exceed 4096 bytes.',
           },
-        ],
+          interval_seconds: {
+            type: 'integer',
+            minimum: 30,
+            maximum: 3600,
+          },
+          timeout_ms: {
+            type: 'integer',
+            minimum: 100,
+            maximum: 60000,
+          },
+          expected_status_code: {
+            type: 'integer',
+            minimum: 100,
+            maximum: 599,
+          },
+          expected_body_substring: {
+            type: ['string', 'null'],
+            minLength: 1,
+            maxLength: 2048,
+            description:
+              'Case-sensitive literal substring. In addition to this character bound, the API enforces a 2048-byte UTF-8 limit. Null disables body matching.',
+          },
+          group_id: {
+            oneOf: [
+              {
+                type: 'string',
+                format: 'uuid',
+              },
+              {
+                type: 'null',
+              },
+            ],
+          },
+        },
+        required: ['name', 'url', 'interval_seconds', 'timeout_ms', 'expected_status_code'],
+        additionalProperties: false,
       },
       response: {
         '201': {
@@ -3015,63 +3008,56 @@ export const openApiOperations = {
         required: ['X-CSRF-Token', 'If-Match'],
       },
       body: {
-        unevaluatedProperties: false,
-        allOf: [
-          {
-            type: 'object',
-            properties: {
-              name: {
-                type: 'string',
-                minLength: 1,
-                maxLength: 160,
-              },
-              url: {
-                type: 'string',
-                format: 'uri',
-                maxLength: 2048,
-                description:
-                  'Absolute HTTP(S) URL. Credentials are forbidden. The fragment is removed during canonicalization and the canonical UTF-8 serialization must not exceed 4096 bytes.',
-              },
-              interval_seconds: {
-                type: 'integer',
-                minimum: 30,
-                maximum: 3600,
-              },
-              timeout_ms: {
-                type: 'integer',
-                minimum: 100,
-                maximum: 60000,
-              },
-              expected_status_code: {
-                type: 'integer',
-                minimum: 100,
-                maximum: 599,
-              },
-              expected_body_substring: {
-                type: ['string', 'null'],
-                minLength: 1,
-                maxLength: 2048,
-                description:
-                  'Case-sensitive literal substring. In addition to this character bound, the API enforces a 2048-byte UTF-8 limit. Null disables body matching.',
-              },
-              group_id: {
-                oneOf: [
-                  {
-                    type: 'string',
-                    format: 'uuid',
-                  },
-                  {
-                    type: 'null',
-                  },
-                ],
-              },
-            },
+        minProperties: 1,
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            minLength: 1,
+            maxLength: 160,
           },
-          {
-            type: 'object',
-            minProperties: 1,
+          url: {
+            type: 'string',
+            format: 'uri',
+            maxLength: 2048,
+            description:
+              'Absolute HTTP(S) URL. Credentials are forbidden. The fragment is removed during canonicalization and the canonical UTF-8 serialization must not exceed 4096 bytes.',
           },
-        ],
+          interval_seconds: {
+            type: 'integer',
+            minimum: 30,
+            maximum: 3600,
+          },
+          timeout_ms: {
+            type: 'integer',
+            minimum: 100,
+            maximum: 60000,
+          },
+          expected_status_code: {
+            type: 'integer',
+            minimum: 100,
+            maximum: 599,
+          },
+          expected_body_substring: {
+            type: ['string', 'null'],
+            minLength: 1,
+            maxLength: 2048,
+            description:
+              'Case-sensitive literal substring. In addition to this character bound, the API enforces a 2048-byte UTF-8 limit. Null disables body matching.',
+          },
+          group_id: {
+            oneOf: [
+              {
+                type: 'string',
+                format: 'uuid',
+              },
+              {
+                type: 'null',
+              },
+            ],
+          },
+        },
+        additionalProperties: false,
       },
       response: {
         '200': {

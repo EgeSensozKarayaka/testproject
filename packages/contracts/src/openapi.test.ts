@@ -11,8 +11,10 @@ describe('generated OpenAPI runtime contract', () => {
 
   it('provides runtime request and response schemas', () => {
     expect(openApiOperations.createCheck.routeSchema.body).toMatchObject({
-      allOf: expect.any(Array),
-      unevaluatedProperties: false,
+      additionalProperties: false,
+      properties: expect.objectContaining({ url: expect.any(Object) }),
+      required: expect.arrayContaining(['name', 'url', 'interval_seconds']),
+      type: 'object',
     });
     expect(openApiOperations.createCheck.routeSchema.headers).toMatchObject({ type: 'object' });
     expect(openApiOperations.getLiveness.routeSchema.response[200]).toMatchObject({

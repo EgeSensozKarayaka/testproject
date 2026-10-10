@@ -38,7 +38,11 @@ export function clearSessionCookie(reply: FastifyReply, secure: boolean): void {
 
 export function assertTrustedBrowserRequest(request: FastifyRequest, allowedOrigin: string): void {
   const contentType = request.headers['content-type']?.split(';', 1)[0]?.trim().toLowerCase();
-  if (request.method !== 'DELETE' && contentType !== 'application/json') {
+  const contentLength = Number(request.headers['content-length'] ?? 0);
+  const hasBody =
+    request.headers['transfer-encoding'] !== undefined ||
+    (Number.isFinite(contentLength) && contentLength > 0);
+  if (request.method !== 'DELETE' && hasBody && contentType !== 'application/json') {
     throw new ApiProblemError({
       code: 'unsupported_media_type',
       detail: 'Commands require application/json.',
