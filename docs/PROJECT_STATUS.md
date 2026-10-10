@@ -1,6 +1,6 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 21:07 +06:00
+**Son güncelleme:** 2026-10-10 21:15 +06:00
 
 **Genel durum:** Aşama 0–14 teslim kapsamı tamamlandı; sistem full-stack doğrulama ve teslim provası aşamasında
 
@@ -11,6 +11,7 @@
 - Anonim `/status/:token` sayfası ayrı `site_monitor_public` read-only rolü ve `SECURITY DEFINER` allowlist projection'ı üzerinden çalışır; sayfa yenilenmeden 10 saniyede bir yakınsar. Public token URL loglarında maskelenir
 - Forward-only Revision 29–33 public canlı projection, gerekli-null sözleşmesi, deterministik genel sağlık önceliği ve fiziksel/sözleşme kolon eşlemelerini uygular. Yerel schema head **33**
 - Güncel teslim kapısı: format, 58-operation contract drift, lint, bütün strict typecheck'ler, **249/249 unit**, **92/92 gerçek PostgreSQL/socket/process integration**, bütün production build'leri ve public sayfa + iki-client dahil Playwright **4/4** geçti
+- Yerel full-stack teslim provasında zorunlu `app` servislerinin tamamı healthy, migration head 33/idempotent ve container stack üstündeki Playwright tekrar **4/4** geçti. Predictor kapalıdır
 
 - Aşama 14 Dilim 1: realtime snapshot ile beslenen responsive canlı durum dashboard'u; aktif/operasyonel/incident/bakım/dikkat özetleri, erişilebilir durum filtreleri, freshness ve bakım işaretleri, son yanıt/son kontrol bilgisi ve saniyede güncellenen aktif kesinti süresi
 - Durum ekranı yüksek öncelikli sorunları önce sıralar, yönetim kartına klavye ile izlenebilir bağlantı verir ve dar ekranlarda bilgi hiyerarşisini korur. Süre biçimleme ve dashboard filtre/özet davranışları bileşen testleriyle, temel görünürlük ise Playwright kabul akışıyla korunur
@@ -205,7 +206,8 @@
 - Auth security audit olaylarının temel mutation kayıtları vardır; ayrıntılı deny/metric/export kapsamı Aşama 17 gözlemlenebilirlik sertleştirmesinde genişletilecektir.
 - Housekeeping retention otomatik çalışır; partition'ı geri dönüşsüz silmeden önce 24 saat detach grace'i uygular. Production legal hold/archive politikası ve managed restore drill'i henüz yoktur.
 - Local restore provası production RPO/RTO/PITR garantisi değildir.
-- Soğuk Docker image build'i registry bağlantı hızına bağlı olarak birkaç dakika sürebilir; warm build ve normal `up` akışı daha hızlıdır. Build cache mount/prune optimizasyonu Aşama 17 operasyonel sertleştirme kapsamındadır.
+- Soğuk Docker image build'i registry bağlantı hızına bağlıdır; paylaşılan BuildKit pnpm cache'i ve düşük network concurrency uygulanmıştır, warm build ve normal `up` akışı daha hızlıdır.
+- Son local temiz image build denemesi dış npm registry'sindeki `ECONNRESET/error 23` kesintileri nedeniyle tamamlanamadı. Dockerfile'lara kalıcı pnpm cache, düşük concurrency ve artırılmış retry eklendi; çalışan stack doğrulanmış host build çıktılarıyla güncellendi. GitHub `container-smoke` temiz build sonucu teslim öncesi nihai uzaktan kanıttır.
 - Host `5432` ve `3000` başka projeler tarafından kullanıldığından PostgreSQL `15432`, API `13000`, web `15173` portundadır.
 - Liste sayfası kullanıcı isteğiyle 100'er kayıt yükler. 20/200/500 API profili ve 500 kayıtlık bounded UI fixture'ı geçti; tarayıcıda bütün sayfaları elle açarak çok daha büyük DOM üretme senaryosu virtualization kullanmaz.
 - Group cursor şu anda tek aktif HMAC anahtarı kullanır; kesintisiz anahtar rotasyonu için önceki doğrulama anahtarını kabul eden key-ring Aşama 17 sertleştirmesinde eklenmelidir.

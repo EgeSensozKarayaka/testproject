@@ -1,6 +1,8 @@
 FROM node:24.19.0-bookworm-slim AS build
 
 ENV CI=true
+ENV PNPM_CONFIG_NETWORK_CONCURRENCY=4
+ENV PNPM_CONFIG_FETCH_RETRIES=5
 WORKDIR /workspace
 
 RUN npm install --global pnpm@11.25.0
@@ -8,7 +10,8 @@ RUN npm install --global pnpm@11.25.0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY packages/database ./packages/database
 
-RUN pnpm install --filter @site-monitor/database... --frozen-lockfile
+RUN --mount=type=cache,id=site-monitor-pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --filter @site-monitor/database... --frozen-lockfile
 RUN pnpm --filter @site-monitor/database build
 RUN pnpm --filter @site-monitor/database deploy --prod /opt/app
 
