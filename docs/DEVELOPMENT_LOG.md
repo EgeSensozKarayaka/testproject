@@ -606,4 +606,9 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - `docker compose --profile app up --detach --build --wait` temiz image denemesi npm registry tarafındaki yoğun `ECONNRESET/error 23` kesintileri nedeniyle tamamlanamadı. Kaynak veya compile hatası olarak sunulmadı; aynı hostta production build'ler daha önce başarıyla tamamlanmıştı.
 - Üç builder Dockerfile'ına paylaşılan BuildKit pnpm store cache'i, beş fetch retry ve düşük network concurrency eklendi. Böylece sonraki temiz build'ler indirilen paketleri denemeler/imajlar arasında koruyacak ve registry'yi aynı anda yüzlerce istekle zorlamayacaktır.
 - Teslim provası için mevcut local runtime imajlarına doğrulanmış host `dist` çıktıları kopyalandı; migration container Revision 33'te `applied none` döndürdü. API, web, monitor, notification, housekeeping, realtime, PostgreSQL, Mailpit ve target simulator healthy; predictor kapalıdır. Konteyner stack üstünde Playwright **4/4** tekrar geçti.
+
+### 21:19 — GitHub runner 500-check UI test kararlılığı
+
+- GitHub Actions run `38062943937`, 500-check fixture'ını 100'er kayıtla sınırlayan UI testinin varsayılan 5 saniye sınırında timeout olduğunu annotation ile gösterdi; diğer job'lar çalışmaya devam etti.
+- Test gerçek yerel koşuda **6/6** geçti ve tek dosya toplam süresi **4,72 sn** ölçüldü. Bilinçli ağır DOM fixture'ına 15 saniyelik test-local bütçe verildi; global timeout veya ürün sayfalama davranışı gevşetilmedi.
 - Compose image rebuild'i sırasında npm registry bağlantısı çok sayıda `ECONNRESET/error 23` yeniden denemesine girdiği için dış ağ bekleyişi sonlandırıldı. Kaynak production bundle'ı host bağımlılıklarıyla başarıyla build edildi ve yalnız yerel E2E için mevcut sağlıklı web container'ına kopyalandı; bu nedenle bu dilim temiz Docker image rebuild kanıtı iddia etmez. Dockerfile değişmedi, CI production build'i geçti.

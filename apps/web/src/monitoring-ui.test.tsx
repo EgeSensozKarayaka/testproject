@@ -304,5 +304,5 @@ describe('MonitoringDashboard', () => {
     expect(screen.queryByRole('heading', { name: 'Capacity 201' })).toBeNull();
     expect(screen.getByText('200 kontrol')).toBeDefined();
     expect(screen.getByRole('button', { name: 'Daha fazla kontrol yükle' })).toBeDefined();
-  });
+  }, 15_000);
 });
