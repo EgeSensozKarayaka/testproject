@@ -40,6 +40,7 @@ describe('monitor worker configuration', () => {
       perOwnerConcurrency: 32,
       recoveryPollMs: 1_000,
       scheduleBatchSize: 64,
+      schedulerGraceMs: 5_000,
       schedulerPollMs: 250,
       shutdownGraceMs: 30_000,
     });

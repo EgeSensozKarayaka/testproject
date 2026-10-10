@@ -1,6 +1,6 @@
 # AI Kullanımı
 
-**Son güncelleme:** 2026-10-10 13:48 +06:00
+**Son güncelleme:** 2026-10-10 14:17 +06:00
 
 ## Araç ve model
 
@@ -29,6 +29,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 11. Aşama 9'un ikinci uygulama diliminde AI sabit cadence/deterministik retry yardımcılarını ve check-first PostgreSQL job queue adapter'ını uyguladı. Owner-fair seçim pencere fonksiyonuyla global limitten önce hesaplandı; iki worker yarışı, attempt lineage, monoton fence, conditional start/heartbeat ve cancellation görünürlüğü gerçek PostgreSQL üzerinde doğrulandı.
 12. Aşama 9'un üçüncü uygulama diliminde AI process-secret HMAC anahtarlı owner/hostname slotları, global-owner-host bounded concurrency, active-task registry, strict snapshot decode, lease heartbeat/cancellation abort ve typed result/fault sink sınırı olan probe dispatcher'ı uyguladı. Atomik result sink henüz bulunmadığı için production polling loop'unu erken aktive etmeyerek `RUNNING` job bırakma ve sonuç kaybı riski önlendi.
 13. Aşama 9'un dördüncü uygulama diliminde AI cancellation acknowledgement, typed infrastructure retry/DEAD ve owner-fair expired-lease recovery'yi check→job→attempt kilit sırasıyla uyguladı. PostgreSQL testi gerçek request timestamp'inin sürücüde mikrosaniyeden milisaniyeye yuvarlanması nedeniyle eski manual-intent temizleme eşitliğinin hatalı olduğunu yakaladı; satır zaten kilitli olduğundan kırılgan timestamp karşılaştırması kaldırıldı ve coalesced intent'in terminal geçişle aynı transaction'da materialize edilmesi doğrulandı.
+14. Aşama 9'un beşinci uygulama diliminde AI probe sonucunu saf reducer'a bağlayan atomik observation adapter'ını uyguladı. Concurrent duplicate writer, manual-intent materialization, PASS/FAIL incident geçişleri, diagnostic/cancellation reddi, rollback ve payload redaction gerçek PostgreSQL üzerinde doğrulandı. Aynı milisaniyedeki hızlı run'ların zero-length segment/interval üretme riski incelemede bulununca canonical run zamanı DB saatinden ve kilitli lineage'dan check başına monoton üretildi; lease geçerliliği ayrı gerçek DB gözlem anıyla korundu.
 
 ## Güvenlik ve gizlilik
 

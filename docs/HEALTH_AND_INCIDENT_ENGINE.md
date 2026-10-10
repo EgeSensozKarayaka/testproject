@@ -4,7 +4,7 @@
 **Tarih:** 2026-10-10 11:02 +06:00
 **Dayanak:** `REQUIREMENTS.md`, `ACCEPTANCE_CRITERIA.md`, `DOMAIN_MODEL.md`, `STATE_MACHINES.md`, `DATABASE_SCHEMA.md`, `EVENT_CATALOG.md`, `CHECKS_AND_GROUPS.md`, `CHECK_ENGINE.md`
 **Saf domain paketi:** `packages/domain`
-**Kalıcı uygulayıcı:** `apps/monitor-worker` — Aşama 9 observation transaction'ında bağlanacak
+**Kalıcı uygulayıcı:** `apps/monitor-worker` — Aşama 9 atomik observation transaction'ına bağlandı ve gerçek PostgreSQL üzerinde doğrulandı
 
 ## 1. Amaç
 
@@ -36,13 +36,13 @@ Bu aşama probe çalıştırmaz, job claim etmez, SQL transaction'ı açmaz, e-p
 - Typed transition effect ve domain event fact'leri
 - Table-driven, sequence, property/invariant ve idempotency testleri
 
-### 2.2 Aşama 9'a bırakılanlar
+### 2.2 Aşama 9 sorumlulukları
 
 - Job/attempt claim, lease, heartbeat ve retry
-- Gerçek `check_runs` insert'i ve attempt idempotency guard'ı
-- Satır kilitleri, SQL effect uygulama ve transaction commit'i
+- Gerçek `check_runs` insert'i ve attempt idempotency guard'ı — uygulandı
+- Satır kilitleri, SQL effect uygulama ve transaction commit'i — uygulandı
 - Freshness reconciliation işlerinin kalıcı planlanması/claim edilmesi
-- Motoru gerçek probe sonuç akışına bağlama
+- Motoru gerçek probe sonuç akışına bağlama — persistence sink uygulandı; production loop aktivasyonu açık
 - Worker concurrency, fairness, overlap engeli ve restart recovery
 
 ### 2.3 Sonraki aşamalara bırakılanlar
@@ -456,9 +456,9 @@ Failure halinde transaction'ın hiçbiri görünür olmaz. External e-posta veya
 
 ## 15. Şema ve Migration Değerlendirmesi
 
-Mevcut revision 13 tabloları Aşama 8 saf motoru için yeterlidir. Tasarım aşamasında yeni kolon zorunluluğu bulunmamıştır.
+Revision 14, Aşama 9 entegrasyonu için attempt result pointer'ı, rejection allowlist'i ve destination activation kaydını forward-only olarak eklemiştir. Atomik observation adapter'ı bu şema üzerinde doğrulanmıştır.
 
-Aşama 9 entegrasyonundan önce aşağıdakiler migration/test review'undan geçer:
+Aşağıdakiler migration/test review'undan geçmiştir:
 
 - rejection reason canonical allowlist'inin DB constraint gerektirip gerektirmediği;
 - monitor rolünün gereken kolonlarda least-privilege UPDATE yetkileri;

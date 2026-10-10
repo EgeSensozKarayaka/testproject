@@ -670,3 +670,13 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Consumer olmasa da sonsuza kadar PENDING dispatch; process environment flag'i; consumer açılışında bütün eski satırları tüketmek; outbox'ı monitoring history olarak kullanmak.
 - **Gerekçe:** Monitoring transaction'ını bağımsız tutmak, kayıp ile henüz devrede olmayan capability'yi ayırmak ve 20/200/500 check ölçeğinde dispatch tablosunun kontrolsüz büyümesini engellemek.
 - **Sonuçlar:** Revision 14 küçük activation tablosu ve ortak routing helper'ı gerektirir. Sonraki consumer aşamalarında aktivasyon/reconciliation sırası ayrıca test edilir; source-of-truth yine run/current/incident tablolarıdır.
+
+## D-073 — Canonical run zamanı DB-türetilmiş ve check başına monotondur
+
+- **Tarih:** 2026-10-10 14:17 +06:00
+- **Durum:** Accepted — atomik observation adapter ve gerçek PostgreSQL testleriyle doğrulandı
+- **Bağlam:** PostgreSQL timestamp'leri mikrosaniye, Node domain snapshot'ı ve run partition lineage'ı milisaniye çözünürlükte işlenir. Arka arkaya çok hızlı tamamlanan iki accepted run aynı milisaniyeye düşerse incident segmenti veya health interval'ı `ended_at = started_at` olabilir; pozitif aralık constraint'i transaction'ı reddeder. Worker host saati ise canonical ordering kaynağı olamaz.
+- **Karar:** Observation transaction current-state satırını kilitledikten sonra gerçek DB gözlem anını alır. Kalıcı `finished_at`, `clock_timestamp()` milisaniyesi, attempt `started_at + 1 ms` ve varsa son accepted run `finished_at + 1 ms` değerlerinin en büyüğüdür. Lease expiry, ileri taşınabilen logical `finished_at` yerine aynı sorgudaki gerçek DB gözlem anına göre değerlendirilir.
+- **Alternatifler:** Host saati; yalnız `transaction_timestamp()` truncation; eşit zamanlı interval/segmentlere izin vermek; constraint hatasında keyfi sleep/retry; mikro saniyeyi bütün TypeScript domain modeline taşımak.
+- **Gerekçe:** Worker saatine güvenmeden kesin run sırası ve pozitif timeline aralıkları üretmek; lease currentness ile presentation/persistence zamanını birbirinden ayırmak; yapay bekleme eklememek.
+- **Sonuçlar:** Çok hızlı ardışık accepted transition'lar check başına en az bir milisaniye ilerler ve nadiren gerçek duvar saatinin birkaç milisaniye önünde logical zaman taşıyabilir. Bu bounded sapma check-scope ordering karşılığında kabul edilir; lease/cancellation kararı bundan etkilenmez.

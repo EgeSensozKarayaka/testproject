@@ -65,7 +65,7 @@ export type LeaseStatus =
     }
   | { outcome: 'LEASE_LOST' };
 
-interface LockedCheckRow {
+export interface LockedCheckRow {
   cadence_anchor_at: Date | string;
   execution_state: 'ACTIVE' | 'PAUSED';
   expected_body_substring: string | null;
@@ -146,6 +146,95 @@ function probeSnapshot(check: LockedCheckRow): Record<string, unknown> {
   };
 }
 
+export async function materializePendingManualIntent(
+  client: PoolClient,
+  candidate: CheckCandidate,
+  check: LockedCheckRow,
+  workerId: string,
+): Promise<string | null> {
+  if (check.manual_requested_at === null) return null;
+  if (check.manual_requested_mode === null) {
+    throw new Error('Manual request mode invariant violated.');
+  }
+
+  const scheduledFor = check.manual_requested_at;
+  const manualMode = check.manual_requested_mode;
+  if (
+    check.lifecycle_state === 'DELETED' ||
+    (check.execution_state === 'PAUSED' && manualMode === 'STATEFUL')
+  ) {
+    const cleared = await client.query(
+      `UPDATE app.checks
+       SET manual_requested_at = NULL, manual_requested_mode = NULL,
+           updated_at = updated_at
+       WHERE owner_id = $1 AND id = $2
+         AND manual_requested_at IS NOT NULL AND manual_requested_mode = $3`,
+      [candidate.ownerId, candidate.checkId, manualMode],
+    );
+    if (cleared.rowCount !== 1) throw new Error('Manual request changed while locked.');
+    return null;
+  }
+
+  const inserted = await client.query<{ available_at: Date | string; id: string }>(
+    `INSERT INTO monitoring.check_jobs
+       (owner_id, check_id, trigger_kind, manual_mode, scheduled_for,
+        available_at, priority, state, config_snapshot, resource_version,
+        probe_generation, schedule_generation)
+     VALUES ($1, $2, 'MANUAL', $3, $4, transaction_timestamp(), 100,
+             'PENDING', $5::jsonb, $6::bigint, $7::bigint, $8::bigint)
+     RETURNING id::text, available_at`,
+    [
+      candidate.ownerId,
+      candidate.checkId,
+      manualMode,
+      scheduledFor,
+      JSON.stringify(probeSnapshot(check)),
+      check.resource_version,
+      check.probe_generation,
+      check.schedule_generation,
+    ],
+  );
+  const jobId = inserted.rows[0]!.id;
+  const availableAt = instant(inserted.rows[0]!.available_at);
+  const cleared = await client.query(
+    `UPDATE app.checks
+     SET manual_requested_at = NULL, manual_requested_mode = NULL,
+         updated_at = updated_at
+     WHERE owner_id = $1 AND id = $2
+       AND manual_requested_at IS NOT NULL AND manual_requested_mode = $3`,
+    [candidate.ownerId, candidate.checkId, manualMode],
+  );
+  if (cleared.rowCount !== 1) throw new Error('Manual request changed while locked.');
+
+  const payload = {
+    check_id: candidate.checkId,
+    job_id: jobId,
+    job_kind: 'MANUAL',
+    not_before: availableAt,
+    probe_generation: check.probe_generation,
+    schedule_generation: check.schedule_generation,
+  };
+  await client.query(
+    `INSERT INTO audit.events
+       (occurred_at, owner_id, actor_type, actor_id, action, resource_type,
+        resource_id, correlation_id, result, metadata)
+     VALUES (transaction_timestamp(), $1, 'WORKER', $2, 'check.job_available',
+             'check_job', $3, $3, 'SUCCESS', $4::jsonb)`,
+    [candidate.ownerId, workerId, jobId, JSON.stringify(payload)],
+  );
+  await writeActivatedOutboxEvent(client, {
+    aggregateId: jobId,
+    aggregateType: 'check_job',
+    aggregateVersion: check.resource_version,
+    correlationId: jobId,
+    destinations: ['AUDIT'],
+    eventType: 'check.job_available',
+    ownerId: candidate.ownerId,
+    payload,
+  });
+  return jobId;
+}
+
 export class PostgresJobQueue {
   constructor(
     private readonly pool: Pool,
@@ -179,87 +268,7 @@ export class PostgresJobQueue {
     candidate: CheckCandidate,
     check: LockedCheckRow,
   ): Promise<string | null> {
-    if (check.manual_requested_at === null) return null;
-    if (check.manual_requested_mode === null) {
-      throw new Error('Manual request mode invariant violated.');
-    }
-
-    const scheduledFor = check.manual_requested_at;
-    const manualMode = check.manual_requested_mode;
-    if (
-      check.lifecycle_state === 'DELETED' ||
-      (check.execution_state === 'PAUSED' && manualMode === 'STATEFUL')
-    ) {
-      const cleared = await client.query(
-        `UPDATE app.checks
-         SET manual_requested_at = NULL, manual_requested_mode = NULL,
-             updated_at = updated_at
-         WHERE owner_id = $1 AND id = $2
-           AND manual_requested_at IS NOT NULL AND manual_requested_mode = $3`,
-        [candidate.ownerId, candidate.checkId, manualMode],
-      );
-      if (cleared.rowCount !== 1) throw new Error('Manual request changed while locked.');
-      return null;
-    }
-
-    const inserted = await client.query<{ available_at: Date | string; id: string }>(
-      `INSERT INTO monitoring.check_jobs
-         (owner_id, check_id, trigger_kind, manual_mode, scheduled_for,
-          available_at, priority, state, config_snapshot, resource_version,
-          probe_generation, schedule_generation)
-       VALUES ($1, $2, 'MANUAL', $3, $4, transaction_timestamp(), 100,
-               'PENDING', $5::jsonb, $6::bigint, $7::bigint, $8::bigint)
-       RETURNING id::text, available_at`,
-      [
-        candidate.ownerId,
-        candidate.checkId,
-        manualMode,
-        scheduledFor,
-        JSON.stringify(probeSnapshot(check)),
-        check.resource_version,
-        check.probe_generation,
-        check.schedule_generation,
-      ],
-    );
-    const jobId = inserted.rows[0]!.id;
-    const availableAt = instant(inserted.rows[0]!.available_at);
-    const cleared = await client.query(
-      `UPDATE app.checks
-       SET manual_requested_at = NULL, manual_requested_mode = NULL,
-           updated_at = updated_at
-       WHERE owner_id = $1 AND id = $2
-         AND manual_requested_at IS NOT NULL AND manual_requested_mode = $3`,
-      [candidate.ownerId, candidate.checkId, manualMode],
-    );
-    if (cleared.rowCount !== 1) throw new Error('Manual request changed while locked.');
-
-    const payload = {
-      check_id: candidate.checkId,
-      job_id: jobId,
-      job_kind: 'MANUAL',
-      not_before: availableAt,
-      probe_generation: check.probe_generation,
-      schedule_generation: check.schedule_generation,
-    };
-    await client.query(
-      `INSERT INTO audit.events
-         (occurred_at, owner_id, actor_type, actor_id, action, resource_type,
-          resource_id, correlation_id, result, metadata)
-       VALUES (transaction_timestamp(), $1, 'WORKER', $2, 'check.job_available',
-               'check_job', $3, $3, 'SUCCESS', $4::jsonb)`,
-      [candidate.ownerId, this.workerId, jobId, JSON.stringify(payload)],
-    );
-    await writeActivatedOutboxEvent(client, {
-      aggregateId: jobId,
-      aggregateType: 'check_job',
-      aggregateVersion: check.resource_version,
-      correlationId: jobId,
-      destinations: ['AUDIT'],
-      eventType: 'check.job_available',
-      ownerId: candidate.ownerId,
-      payload,
-    });
-    return jobId;
+    return materializePendingManualIntent(client, candidate, check, this.workerId);
   }
 
   async listMaterializationCandidates(limit: number): Promise<CheckCandidate[]> {

@@ -2,7 +2,7 @@
 
 **Aşama:** 9 — Kalıcı Scheduler ve Monitor Worker
 
-**Durum:** Uygulama devam ediyor — temel şema, materialization/lease, bounded dispatcher ve fault/recovery dilimleri doğrulandı; production loop henüz aktif değil
+**Durum:** Uygulama devam ediyor — temel şema, materialization/lease, bounded dispatcher, fault/recovery ve atomik observation persistence dilimleri doğrulandı; production loop henüz aktif değil
 
 **Tarih:** 2026-10-10 12:33 +06:00
 
@@ -428,9 +428,9 @@ Target result geldikten sonra tek kısa transaction:
 1. Check'i kilitle.
 2. Job ve attempt'ı kilitle.
 3. Attempt `result_recorded_at` doluysa attempt üzerindeki `(result_run_finished_at,result_run_id)` pointer'ıyla doğru partition'daki mevcut run'ı bulup idempotent dön; yeni event yazma.
-4. Canonical `finished_at` değerini DB zamanından al.
-5. Current-state, açık incident/segment ve açık interval'i kilitle.
-6. Attempt-current girdisini job state, owner, fence ve lease expiry üzerinden hesapla.
+4. Current-state, açık incident/segment ve açık interval'i canonical sırayla kilitle.
+5. Canonical `finished_at` değerini DB saatinden, attempt başlangıcından ve son accepted run'dan kesin ileri olacak şekilde milisaniye çözünürlükte üret.
+6. Attempt-current girdisini job state, owner, fence ve gerçek DB gözlem anındaki lease expiry üzerinden hesapla.
 7. Run/incident/segment/interval UUIDv7 allocation'larını adapter'da üret.
 8. Aşama 8 reducer'ını immutable snapshot ile çalıştır.
 9. Immutable `check_runs` satırını acceptance kararıyla insert et.
@@ -460,6 +460,8 @@ Bu kontrol generation ve lifecycle acceptance'ından ayrıdır. Reducer canonica
 `check_job_attempts.result_recorded_at`, attempt başına tek result transaction guard'ıdır. Partitioned run tablosunda global unique attempt constraint taklit edilmez. Attempt row lock, insert ve result marker aynı transaction'da olduğundan ikinci writer yeni run oluşturamaz.
 
 Attempt satırına nullable `(result_run_finished_at,result_run_id)` çifti eklenir ve marker ile üçlü all-null/all-present constraint'i uygulanır. Bu çift, run'ın partition key'ini ve kimliğini taşıdığı için duplicate replay doğrudan `(owner_id,check_id,finished_at,id)` primary key lookup'u yapar; bütün aylık partition'ları taramaz. Aynı transaction'da run insert edildikten sonra attempt pointer'ı yazılır; PostgreSQL sürümüyle doğrulanan deferred composite FK lineage'ı DB seviyesinde de korur. Duplicate replay ikinci health/incident/outbox effect'i üretmez.
+
+`check_runs.finished_at` worker saatinden alınmaz. Adapter kilitli snapshot üzerinde `clock_timestamp()`, attempt `started_at + 1 ms` ve varsa son accepted run `finished_at + 1 ms` değerlerinin en büyüğünü kullanır. Böylece hızlı ardışık transition'lar zero-length interval/segment üretmez. Lease geçerliliği bu logical zamana değil aynı sorgudaki gerçek DB gözlem anına göre değerlendirilir.
 
 ### 14.3 Run içeriği
 
@@ -782,7 +784,7 @@ Retry attempt ve backoff loglanır fakat SQL metni/parametreleri veya hassas sna
 10. 20/200/500 kapasite, process-kill/restart ve API-isolation kanıtları
 11. Compose smoke, tam CI, karar/geliştirme/proje durumu güncellemeleri
 
-İlk altı dilim uygulanmış ve doğrulanmıştır. Her dilim küçük ve anlamlı commit olur. Migration revision uygulandıktan sonra değiştirilmez; bulunan sorun yeni forward migration ile düzeltilir.
+İlk yedi dilim uygulanmış ve doğrulanmıştır. Her dilim küçük ve anlamlı commit olur. Migration revision uygulandıktan sonra değiştirilmez; bulunan sorun yeni forward migration ile düzeltilir.
 
 ## 26. Tamamlanma kapısı
 

@@ -266,6 +266,7 @@ export interface MonitorRuntimeConfig {
   perOwnerConcurrency: number;
   recoveryPollMs: number;
   scheduleBatchSize: number;
+  schedulerGraceMs: number;
   schedulerPollMs: number;
   shutdownGraceMs: number;
 }
@@ -286,6 +287,7 @@ export function loadMonitorRuntimeConfig(
       MONITOR_PER_OWNER_CONCURRENCY: z.coerce.number().int().min(1).max(1_000).default(32),
       MONITOR_RECOVERY_POLL_MS: z.coerce.number().int().min(100).max(60_000).default(1_000),
       MONITOR_SCHEDULE_BATCH_SIZE: z.coerce.number().int().min(1).max(2_000).default(64),
+      MONITOR_SCHEDULER_GRACE_MS: z.coerce.number().int().min(0).max(60_000).default(5_000),
       MONITOR_SCHEDULER_POLL_MS: z.coerce.number().int().min(25).max(60_000).default(250),
       MONITOR_SHUTDOWN_GRACE_MS: z.coerce.number().int().min(1_000).max(600_000).default(30_000),
     })
@@ -316,6 +318,7 @@ export function loadMonitorRuntimeConfig(
     perOwnerConcurrency: parsed.MONITOR_PER_OWNER_CONCURRENCY,
     recoveryPollMs: parsed.MONITOR_RECOVERY_POLL_MS,
     scheduleBatchSize: parsed.MONITOR_SCHEDULE_BATCH_SIZE,
+    schedulerGraceMs: parsed.MONITOR_SCHEDULER_GRACE_MS,
     schedulerPollMs: parsed.MONITOR_SCHEDULER_POLL_MS,
     shutdownGraceMs: parsed.MONITOR_SHUTDOWN_GRACE_MS,
   };

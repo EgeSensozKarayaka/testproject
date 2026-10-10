@@ -1,8 +1,8 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 13:48 +06:00
+**Son güncelleme:** 2026-10-10 14:17 +06:00
 
-**Genel durum:** Aşama 0–8 tamamlandı ve doğrulandı; Aşama 9 fault settlement/lease recovery dilimi tamamlandı, result persistence ve production loop uygulaması devam ediyor
+**Genel durum:** Aşama 0–8 tamamlandı ve doğrulandı; Aşama 9 atomik observation persistence dilimi tamamlandı, freshness/runtime loop uygulaması devam ediyor
 
 ## Tamamlanan
 
@@ -18,6 +18,8 @@
 - Strict snapshot decode, task-scoped abort controller, heartbeat/cancellation gözetimi, lease-loss fencing, izole promise registry ve typed target-result/infrastructure-fault sink sınırıyla probe orchestration
 - Current worker/fence/attempt/lease guard'lı cancellation acknowledgement; transient engine/cancellation fault için deterministik bounded retry, desteklenmeyen snapshot veya tükenen bütçe için `DEAD`
 - Owner-fair expired-lease taraması; check→job→attempt kilit sırasıyla tek recovery, `LEASE_LOST` attempt lineage, geçersiz generation/pause/delete/cancellation için terminal cancel ve terminal geçişle aynı transaction'da coalesced manual intent materialization
+- Aşama 7 probe sonucunu Aşama 8 reducer'ına bağlayan atomik PostgreSQL observation adapter'ı; immutable run, current state, interval, incident, segment, audit, activation-aware outbox, attempt pointer, job terminal geçişi ve bekleyen manual intent'in tek transaction'da uygulanması
+- DB-türetilmiş ve check başına monoton `finished_at`; lease geçerliliğini ayrı gerçek DB gözlem anında değerlendiren, aynı milisaniyedeki ardışık run'larda zero-length incident segmenti/health interval'ı üretmeyen zaman politikası
 - Aşama 8 saf state reducer'ı; immutable snapshot/invariant doğrulaması, canonical observation acceptance precedence, sabit iki-failure threshold, provisional timeline çözümleme, incident segment/duration effect'leri, deadline reconciliation ve bounded event fact'leri
 - Check ve group API sorgularında reconciler'dan bağımsız `fresh_until` read-time override'ı; effective UNKNOWN/UNOBSERVED görünümü, incident duration cap'i ve aynı semantiği kullanan set-based group aggregate
 - Scheduler/DB'den bağımsız güvenli HTTP probe motoru; versioned snapshot doğrulama, frozen DNS candidate pinning, public IPv4/IPv6 policy, redirect, total deadline/cancellation, bounded streaming/decompression ve typed hata taksonomisi
@@ -52,6 +54,8 @@
 
 ## Doğrulama Kanıtları
 
+- Aşama 9 observation adapter'ı gerçek PostgreSQL üzerinde **4/4** hedefli testte geçti: iki eşzamanlı writer tek run/effect üretti ve duplicate replay aynı partition pointer'ından döndü; pending manual intent terminal transaction'da materialize edildi; FAIL/FAIL/PASS incident'ı pozitif süreyle açıp kapattı; diagnostic ve cancellation reddi state'i değiştirmedi; invalid snapshot bütün transaction'ı rollback etti.
+- Observation persistence dilimi final `pnpm run ci` kapısında format, 57-operation contract drift, lint, bütün workspace strict typecheck'leri, **21 dosyada 161/161 unit**, **6 dosyada 47/47 gerçek PostgreSQL/socket integration** ve bütün production build'leriyle geçti.
 - Aşama 9 fault/recovery diliminde cancellation + manual-intent atomikliği, transient retry, unsupported snapshot ve tükenen retry bütçesi için `DEAD`, iki eşzamanlı sweeper'ın tek expired lease'i yalnız bir kez recover etmesi ve expired cancellation'ın retry edilmemesi gerçek PostgreSQL üzerinde **7/7** job-queue testiyle geçti.
 - Fault/recovery sonrasında final `pnpm run ci` kapısı format, 57-operation contract drift, lint, bütün workspace strict typecheck'leri, **21 dosyada 161/161 unit**, **5 dosyada 43/43 gerçek PostgreSQL/socket integration** ve bütün production build'leriyle geçti.
 - Aşama 9 dispatcher diliminde concurrency gate, active-task isolation, saturated-candidate scan, unsupported snapshot, heartbeat cancellation ve heartbeat-hang safety deadline senaryoları **6/6** geçti. Doymuş büyük owner içindeki aday claim edilmezken aynı batch'teki başka owner ilerledi; task tamamlanınca bütün slot bucket'ları temizlendi.
@@ -95,8 +99,8 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Dispatcher'ın production polling loop'una bağlanması ve probe sonucu kalıcılığı
-- Saf health/incident planlarının PostgreSQL observation transaction'ına bağlanması, maintenance reconciliation ve incident e-posta politikaları
+- Dispatcher'ın production polling loop'una bağlanması ve freshness reconciliation
+- Maintenance reconciliation ve incident e-posta politikaları
 - Rollup/retention background işleri, history sorguları ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
 - Predictor analiz algoritması/model lifecycle'ı
@@ -105,8 +109,8 @@
 
 ## Bilinen Sınırlamalar
 
-- Authenticated ekran group/check yapılandırmasını yönetir; probe ve sağlık motorları henüz Aşama 9 scheduler/sonuç kalıcılığı transaction'ına bağlı olmadığından nihai canlı monitoring dashboard'u değildir.
-- Bounded dispatcher ve probe orchestration kodu test edilmiştir fakat atomik result/fault sink tamamlanmadan production worker loop'unda başlatılmaz; mevcut monitor worker bu nedenle henüz hedeflere periyodik istek göndermez.
+- Authenticated ekran group/check yapılandırmasını yönetir; probe ve sağlık motorları kalıcılık seviyesinde bağlanmış olsa da canlı monitoring projection/UI henüz uygulanmadığından nihai durum paneli değildir.
+- Bounded dispatcher, fault sink ve atomik result sink test edilmiştir; freshness/runtime koordinasyonu tamamlanmadan production worker loop'u başlatılmaz. Mevcut monitor worker bu nedenle henüz hedeflere periyodik istek göndermez.
 - Auth rate limit PostgreSQL fixed-window yaklaşımıdır. V1 ve yatay API replica'ları için tutarlıdır; yüksek hacimli internet trafiğinde edge WAF/CDN katmanı gerekir.
 - Yerel Compose kolaylığı için tek PostgreSQL bootstrap login'i dar `NOLOGIN` rollere geçer. Production'da servis başına ayrı login wrapper/secret gerekir.
 - Yerel HTTP ortamında session cookie `Secure=false`; production config fail-fast secret ve HTTPS/Secure cookie gerektirir.
@@ -120,4 +124,4 @@
 
 ## Sıradaki İş
 
-Aşama 9'un sıradaki dilimi: probe sonucunu saf sağlık/incident planına bağlayan atomik observation adapter. Ardından production loop aktivasyonu, freshness reconciler ve 20/200/500 dayanıklılık kanıtları gelecek.
+Aşama 9'un sıradaki dilimi deadline tabanlı freshness reconciler'dır. Ardından güvenli runtime loop aktivasyonu, graceful shutdown/readiness ve 20/200/500 dayanıklılık kanıtları gelecek.

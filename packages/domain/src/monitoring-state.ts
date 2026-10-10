@@ -9,7 +9,7 @@ export type ObservationOutcome = 'PASS' | 'FAIL';
 export type ManualRunMode = 'STATEFUL' | 'DIAGNOSTIC' | null;
 export type IncidentObservationMode = 'OBSERVED' | 'UNOBSERVED';
 export type TimelineClassification = 'UNKNOWN' | 'UP' | 'PROVISIONAL' | 'DOWN';
-export type TimelineSource = 'STARTUP' | 'RUN' | 'FRESHNESS';
+export type TimelineSource = 'STARTUP' | 'RUN' | 'FRESHNESS' | 'CONFIG' | 'PAUSE' | 'RESUME';
 
 export type ObservationRejectionReason =
   | 'DUPLICATE_RUN'
