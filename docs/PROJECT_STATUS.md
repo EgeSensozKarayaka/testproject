@@ -1,6 +1,6 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 10:44 +06:00
+**Son güncelleme:** 2026-10-10 10:56 +06:00
 **Genel durum:** Aşama 0–7 tamamlandı ve doğrulandı; sıradaki çalışma Aşama 8 sağlık/incident/grup durumu tasarımıdır
 
 ## Tamamlanan
@@ -41,6 +41,7 @@
 - Final yerel `pnpm run ci`; format, generated-contract drift, lint, strict typecheck, **17 dosyada 131/131 unit test**, integration kapıları ve bütün production build'leriyle geçti.
 - Gerçek PostgreSQL admin URL'siyle birleşik integration paketi **4 dosyada 32/32** geçti; buna Aşama 7'nin gerçek socket entegrasyonları da dahildir.
 - Güncel target-simulator ve monitor-worker imajları üretildi; iki container healthy oldu. Canlı match body, 64-byte bounded response, `302` redirect ve sıkıştırılmış response `200`; worker readiness `200` döndürdü. Tam Compose profilindeki bütün servisler healthy kaldı.
+- Aşama 7 GitHub Actions koşusu [`38025620652`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38025620652) başarıyla tamamlandı: Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin beşi de geçti.
 
 - `pnpm test:unit`: **13 dosyada 85/85 test geçti**.
 - Gerçek PostgreSQL admin URL'siyle birleşik paket: **28/28 test geçti**; sıfırdan migration `1..13`, checksum drift, RLS/context temizliği, auth/group/check transaction sınırları ve 20/200/500 cursor profili doğrulandı.
