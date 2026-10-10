@@ -1,10 +1,14 @@
 import { openApiOperations } from '@site-monitor/contracts/openapi';
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 import type { AuthenticatedSession, AuthService } from './auth-service.js';
+import {
+  assertTrustedBrowserRequest,
+  clearSessionCookie,
+  readSessionCookie,
+  setSessionCookie,
+} from './browser-security.js';
 import { ApiProblemError } from './problem.js';
-
-const SESSION_COOKIE = 'site_monitor_session';
 
 export interface AuthRoutesOptions {
   allowedOrigin: string;
@@ -16,6 +20,7 @@ export type AuthServicePort = Pick<
   AuthService,
   | 'confirmEmail'
   | 'confirmPasswordReset'
+  | 'enforceRateLimit'
   | 'getSession'
   | 'login'
   | 'logout'
@@ -30,54 +35,12 @@ function networkScope(request: FastifyRequest): string {
   return request.ip;
 }
 
-function sessionCookie(request: FastifyRequest): string | undefined {
-  for (const item of request.headers.cookie?.split(';') ?? []) {
-    const separator = item.indexOf('=');
-    if (separator < 0 || item.slice(0, separator).trim() !== SESSION_COOKIE) continue;
-    try {
-      return decodeURIComponent(item.slice(separator + 1).trim());
-    } catch {
-      return undefined;
-    }
-  }
-  return undefined;
-}
-
 function responseBody(session: AuthenticatedSession) {
   return {
     csrf_token: session.csrfToken,
     expires_at: session.expiresAt,
     user: session.user,
   };
-}
-
-function assertTrustedBrowserRequest(request: FastifyRequest, allowedOrigin: string): void {
-  const contentType = request.headers['content-type']?.split(';', 1)[0]?.trim().toLowerCase();
-  if (contentType !== 'application/json') {
-    throw new ApiProblemError({
-      code: 'unsupported_media_type',
-      detail: 'Authentication commands require application/json.',
-      status: 415,
-    });
-  }
-
-  const origin = request.headers.origin;
-  let trusted = origin === allowedOrigin;
-  if (!origin && request.headers.referer) {
-    try {
-      trusted = new URL(request.headers.referer).origin === allowedOrigin;
-    } catch {
-      trusted = false;
-    }
-  }
-  const fetchSite = request.headers['sec-fetch-site'];
-  if (!trusted || (fetchSite !== undefined && !['same-origin', 'same-site'].includes(fetchSite))) {
-    throw new ApiProblemError({
-      code: 'csrf_failed',
-      detail: 'The request did not originate from the trusted web application.',
-      status: 403,
-    });
-  }
 }
 
 export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOptions) {
@@ -94,25 +57,6 @@ export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOpti
       done(error as Error);
     }
   });
-
-  function setSessionCookie(reply: FastifyReply, token: string) {
-    reply.setCookie(SESSION_COOKIE, token, {
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60,
-      path: '/',
-      sameSite: 'strict',
-      secure: options.cookieSecure,
-    });
-  }
-
-  function clearSessionCookie(reply: FastifyReply) {
-    reply.clearCookie(SESSION_COOKIE, {
-      httpOnly: true,
-      path: '/',
-      sameSite: 'strict',
-      secure: options.cookieSecure,
-    });
-  }
 
   app.post(
     openApiOperations.register.path,
@@ -142,17 +86,18 @@ export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOpti
     openApiOperations.getMe.path,
     { schema: openApiOperations.getMe.routeSchema },
     async (request, reply) => {
-      const token = sessionCookie(request);
+      const token = readSessionCookie(request);
       const session = token ? await options.authService.getSession(token) : null;
       if (!session) {
-        clearSessionCookie(reply);
+        clearSessionCookie(reply, options.cookieSecure);
         throw new ApiProblemError({
           code: 'authentication_required',
           detail: 'A valid session is required.',
           status: 401,
         });
       }
-      if (session.tokenReplacement) setSessionCookie(reply, session.tokenReplacement);
+      if (session.tokenReplacement)
+        setSessionCookie(reply, session.tokenReplacement, options.cookieSecure);
       reply.header('ETag', `"rv-${session.user.resource_version}"`);
       reply.header('Cache-Control', 'no-store').header('Pragma', 'no-cache');
       return session.user;
@@ -163,9 +108,9 @@ export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOpti
     openApiOperations.updateMe.path,
     { schema: openApiOperations.updateMe.routeSchema },
     async (request, reply) => {
-      const token = sessionCookie(request);
+      const token = readSessionCookie(request);
       if (!token) {
-        clearSessionCookie(reply);
+        clearSessionCookie(reply, options.cookieSecure);
         throw new ApiProblemError({
           code: 'authentication_required',
           detail: 'A valid session is required.',
@@ -203,7 +148,7 @@ export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOpti
         networkScope: networkScope(request),
         password: body.password,
       });
-      setSessionCookie(reply, result.token);
+      setSessionCookie(reply, result.token, options.cookieSecure);
       reply.header('Cache-Control', 'no-store').header('Pragma', 'no-cache');
       return responseBody(result.session);
     },
@@ -213,17 +158,18 @@ export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOpti
     openApiOperations.getSession.path,
     { schema: openApiOperations.getSession.routeSchema },
     async (request, reply) => {
-      const token = sessionCookie(request);
+      const token = readSessionCookie(request);
       const session = token ? await options.authService.getSession(token) : null;
       if (!session) {
-        clearSessionCookie(reply);
+        clearSessionCookie(reply, options.cookieSecure);
         throw new ApiProblemError({
           code: 'authentication_required',
           detail: 'A valid session is required.',
           status: 401,
         });
       }
-      if (session.tokenReplacement) setSessionCookie(reply, session.tokenReplacement);
+      if (session.tokenReplacement)
+        setSessionCookie(reply, session.tokenReplacement, options.cookieSecure);
       reply.header('Cache-Control', 'no-store').header('Pragma', 'no-cache');
       return responseBody(session);
     },
@@ -233,7 +179,7 @@ export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOpti
     openApiOperations.logout.path,
     { schema: openApiOperations.logout.routeSchema },
     async (request, reply) => {
-      const token = sessionCookie(request);
+      const token = readSessionCookie(request);
       if (token) {
         const session = await options.authService.getSession(token, false);
         if (session) {
@@ -251,7 +197,7 @@ export function registerAuthRoutes(app: FastifyInstance, options: AuthRoutesOpti
           await options.authService.logout(token);
         }
       }
-      clearSessionCookie(reply);
+      clearSessionCookie(reply, options.cookieSecure);
       return reply.code(204).send();
     },
   );

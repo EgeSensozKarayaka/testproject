@@ -1,8 +1,8 @@
 # Kontrol ve Grup Yönetimi Mimarisi
 
 **Aşama:** 6 — Kontrol ve Grup Yönetimi  
-**Durum:** Kullanıcı tarafından onaylandı; sözleşme/domain/revision 12 temeli uygulandı, API ve UI uygulaması sürüyor
-**Tarih:** 2026-10-10 06:52 +06:00  
+**Durum:** Kullanıcı tarafından onaylandı; sözleşme/domain/revision 12 ve group API uygulandı, check API ile UI uygulaması sürüyor
+**Son güncelleme:** 2026-10-10 07:47 +06:00  
 **Bağlı belgeler:** [`REQUIREMENTS.md`](./REQUIREMENTS.md), [`ACCEPTANCE_CRITERIA.md`](./ACCEPTANCE_CRITERIA.md), [`DOMAIN_MODEL.md`](./DOMAIN_MODEL.md), [`STATE_MACHINES.md`](./STATE_MACHINES.md), [`DATABASE.md`](./DATABASE.md), [`API_DESIGN.md`](./API_DESIGN.md), [`API_ERRORS.md`](./API_ERRORS.md), [`EVENT_CATALOG.md`](./EVENT_CATALOG.md), [`openapi-v1.yaml`](./openapi-v1.yaml), [`AUTH_AND_OWNERSHIP.md`](./AUTH_AND_OWNERSHIP.md)
 
 ## 1. Amaç ve sınır

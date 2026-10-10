@@ -221,3 +221,14 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Sonuç: domain/OpenAPI **32/32**, gerçek PostgreSQL migration/rol/RLS paketi **13/13** geçti. Contract drift kontrolü ve ilgili strict TypeScript kontrolleri geçti.
 - İlk GitHub Node kalite koşusu, kontrol karakterlerini yakalayan regex'i ESLint `no-control-regex` kuralı nedeniyle reddetti. Aynı doğrulama explicit code-point taramasına çevrildi; davranış değişmeden lint, 29 domain testi ve strict domain type-check yeniden geçti.
 - Henüz check/group route, application service, React yönetim ekranı veya gerçek probe uygulanmadı; Aşama 6 tamamlandı sayılmıyor.
+
+### 07:47 — Aşama 6 authenticated group API dilimi
+
+- Cookie/session çözümleme, CSRF doğrulama, exact-origin kontrolü ve güçlü resource ETag ayrıştırması ortak API yardımcılarına çıkarıldı; auth davranışının mevcut testleri korunarak tekrar kullanıldı.
+- Group create/get/list/update/delete route ve application service katmanı uygulandı. Bütün sorgular explicit owner predicate ve transaction-local `FORCE RLS` bağlamını birlikte kullanır.
+- Create; replica-safe advisory lock, normalized request hash, HMAC idempotency key/subject, owner kotası, group, `INHERIT` notification policy, audit, realtime outbox ve receipt'i tek transaction'da yazar.
+- Update no-op churn üretmez; gerçek değişiklik güçlü `If-Match` ile version artırır. Delete group ve child check'leri deterministik sırayla kilitler, group'u soft-delete eder ve check'leri version artırarak aynı transaction'da ungroup eder.
+- Liste sorgusu history scan etmeden current-state aggregate'i üretir; `created_at,id` keyset cursor HMAC ile imzalı ve süre sınırlıdır. `CHECKS_PER_OWNER_LIMIT`/`GROUPS_PER_OWNER_LIMIT` deployment config'i pozitif sayı veya açık `unlimited` değeri kabul eder.
+- HTTP testleri parametrik route'ların OpenAPI `{group_id}` metniyle literal kaydedildiğini ortaya çıkardı. Generator Fastify `:group_id` biçimine dönüştürüldü ve 57 operation artifact'i yeniden üretildi.
+- Route/auth/config odaklı **18/18** test ve gerçek PostgreSQL group service paketi **6/6** geçti. PostgreSQL paketi concurrent aynı-key create, key/payload conflict, cross-owner 404, stale ETag 412, signed cursor tamper, atomic detach ve transaction içi quota'yı kanıtladı.
+- Tüm repository kalite kapısının ilk çalışması yalnız yeni testteki ESLint `unbound-method`/unsafe mock tanımlarını yakaladı; port fonksiyon tipleri ve typed mock'lar düzeltildi. Final `pnpm run ci` format, generated-contract drift, lint, strict typecheck, **73/73 unit test** ve bütün production build'leriyle geçti. Env'siz birleşik koşuda integration testleri tasarlandığı gibi skip oldu; ayrıca admin URL ile çalıştırılan gerçek PostgreSQL group paketi **6/6** geçti.

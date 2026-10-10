@@ -2,7 +2,7 @@
 
 Çok kullanıcılı ve kullanıcı bazlı sahiplik izolasyonuna sahip site erişilebilirlik izleme ürünü. Repository; React web uygulaması, Node.js API ve worker süreçleri, PostgreSQL, Mailpit, deterministik hedef simülatörü ve ana sistemden bağımsız opsiyonel Python predictor için çalışır bir geliştirme temeli içerir.
 
-Aşama 5 sonunda güvenli hesap kaydı, Mailpit e-posta doğrulaması, giriş/çıkış, server-side session, parola sıfırlama, profil okuma/güncelleme ve kullanıcı sahiplik izolasyonu çalışır durumdadır. Check ve monitoring domain akışları sonraki aşamalarda uygulanacaktır.
+Aşama 6 geliştirmesinde güvenli hesap akışlarına ek olarak owner-scoped group create/get/list/update/delete API'si çalışır durumdadır. Check yönetimi ve monitoring çalışma akışları sonraki dilimlerde uygulanacaktır.
 
 ## Ön koşullar
 
@@ -73,6 +73,8 @@ pnpm dev
 ```
 
 `.env.example` gerekirse `.env` olarak kopyalanabilir. `.env` Git tarafından dışlanır ve örnek dosyada gerçek secret bulunmaz.
+
+Canlı kaynak kotası ürünün sabit 50 kontrol varsayımı değildir. `CHECKS_PER_OWNER_LIMIT` ve `GROUPS_PER_OWNER_LIMIT` pozitif deployment değerleridir; bilinçli limitsiz yerel kurulum için yalnız `unlimited` literal'i kabul edilir.
 
 ## Opsiyonel predictor
 
@@ -167,8 +169,8 @@ Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ile
 
 ## Dürüst durum
 
-Aşama 0–5 tamamlanmıştır. On bir immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
+Aşama 0–5 tamamlanmıştır; Aşama 6 sürmektedir. On iki immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları ve group API uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
 
-Check/group CRUD, scheduler, HTTP probe motoru, incident geçişleri, bakım reconciliation, incident bildirimleri, history sorguları, SSE, ürün dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran auth temelini kanıtlar; nihai monitoring paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
+Check CRUD, group/check UI, scheduler, HTTP probe motoru, incident geçişleri, bakım reconciliation, incident bildirimleri, history sorguları, SSE, ürün dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran auth temelini kanıtlar; nihai monitoring paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
 
 Güncel kapsam ve kanıtlar için [proje durumu](docs/PROJECT_STATUS.md), ayrıntılı araç zinciri için [geliştirme ortamı mimarisi](docs/DEVELOPMENT_ENVIRONMENT.md) belgelerine bakın.

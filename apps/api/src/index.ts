@@ -1,9 +1,15 @@
-import { loadAuthRuntimeConfig, loadDatabaseUrl, loadRuntimeConfig } from '@site-monitor/config';
+import {
+  loadAuthRuntimeConfig,
+  loadDatabaseUrl,
+  loadResourceRuntimeConfig,
+  loadRuntimeConfig,
+} from '@site-monitor/config';
 import { createDatabasePool, isDatabaseReady } from '@site-monitor/database';
 import { createLogger } from '@site-monitor/observability';
 
 import { buildApiApplication } from './app.js';
 import { AuthService } from './auth-service.js';
+import { GroupService } from './group-service.js';
 
 const config = loadRuntimeConfig({ defaultPort: 13_000, serviceName: 'api' });
 const logger = createLogger({
@@ -25,10 +31,16 @@ const authService = await AuthService.create(database, {
   },
   rateLimitKey: authConfig.rateLimitKey,
 });
+const resourceConfig = loadResourceRuntimeConfig();
+const groupService = new GroupService(database, {
+  groupLimit: resourceConfig.groupsPerOwnerLimit,
+  securityKey: authConfig.rateLimitKey,
+});
 const app = buildApiApplication({
   allowedOrigin: process.env.WEB_ORIGIN ?? 'http://localhost:15173',
   authService,
   cookieSecure: authConfig.cookieSecure,
+  groupService,
   logger,
   readiness: async () => isDatabaseReady(database),
   serviceName: config.serviceName,

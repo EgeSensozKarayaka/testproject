@@ -134,6 +134,18 @@ function normalizeError(error: unknown): ApiProblemError {
         status: 428,
       });
     }
+    const invalidIfMatch = fastifyError.validation.some(
+      (item) =>
+        item.instancePath.toLowerCase() === '/if-match' ||
+        item.schemaPath.toLowerCase().includes('if-match'),
+    );
+    if (invalidIfMatch) {
+      return new ApiProblemError({
+        code: 'invalid_precondition',
+        detail: 'If-Match must contain one valid strong resource ETag.',
+        status: 400,
+      });
+    }
     return new ApiProblemError({
       code: 'validation_failed',
       detail: 'One or more fields are invalid.',

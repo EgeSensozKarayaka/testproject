@@ -30,6 +30,7 @@ function createService(overrides: Partial<AuthServicePort> = {}): AuthServicePor
   return {
     confirmEmail: vi.fn<AuthServicePort['confirmEmail']>(() => Promise.resolve()),
     confirmPasswordReset: vi.fn<AuthServicePort['confirmPasswordReset']>(() => Promise.resolve()),
+    enforceRateLimit: vi.fn<AuthServicePort['enforceRateLimit']>(() => Promise.resolve()),
     getSession: vi.fn<AuthServicePort['getSession']>(() => Promise.resolve(null)),
     login: vi.fn<AuthServicePort['login']>(() =>
       Promise.resolve({ session: session(), token: 'opaque-session-token' }),

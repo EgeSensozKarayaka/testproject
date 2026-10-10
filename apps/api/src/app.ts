@@ -8,11 +8,14 @@ import type { Logger } from 'pino';
 import { installProblemHandling } from './problem.js';
 import { requestIdFromHeader } from './request-id.js';
 import { registerAuthRoutes, type AuthServicePort } from './auth-routes.js';
+import { registerGroupRoutes } from './group-routes.js';
+import type { GroupServicePort } from './group-service.js';
 
 export interface ApiApplicationOptions {
   allowedOrigin: string;
   authService?: AuthServicePort;
   cookieSecure?: boolean;
+  groupService?: GroupServicePort;
   logger: Logger;
   readiness: () => Promise<boolean>;
   serviceName: string;
@@ -59,6 +62,14 @@ export function buildApiApplication(options: ApiApplicationOptions) {
       authService: options.authService,
       cookieSecure: options.cookieSecure ?? false,
     });
+    if (options.groupService) {
+      void app.register(registerGroupRoutes, {
+        allowedOrigin: options.allowedOrigin,
+        authService: options.authService,
+        cookieSecure: options.cookieSecure ?? false,
+        groupService: options.groupService,
+      });
+    }
   }
 
   app.get('/health/live', { schema: openApiOperations.getLiveness.routeSchema }, () =>

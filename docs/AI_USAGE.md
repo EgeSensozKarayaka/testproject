@@ -1,6 +1,6 @@
 # AI Kullanımı
 
-**Son güncelleme:** 2026-10-10 04:53 +06:00
+**Son güncelleme:** 2026-10-10 07:47 +06:00
 
 ## Araç ve model
 
@@ -21,6 +21,8 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 3. Kalıcı veri, API sözleşmesi ve kimlik doğrulama her biri önce nihai mimari belgesi, sonra uygulama ve kanıt kapılarıyla ayrı aşamalara bölündü.
 4. Aşama 5'te opaque session, Argon2id, CSRF/origin savunması, PostgreSQL rate limit, encrypted durable auth e-postası ve Mailpit doğrulaması uygulandı.
 5. Uygulama sırasında temiz veritabanında bulunan notifier schema grant eksikliği, uygulanmış migration değiştirilmeden yeni forward-only migration ile giderildi.
+6. Aşama 6'da check/group kapsamı önce nihai mimariye ayrıldı; ilk uygulama dilimi domain/migration temeli, ikinci dilim authenticated group API olarak küçük commit ve gerçek PostgreSQL kanıtlarıyla ilerletildi.
+7. Group route testleri OpenAPI-to-Fastify parametrik yol uyumsuzluğunu ortaya çıkardı; AI önerisi generator seviyesinde düzeltilip contract drift ve gerçek UUID route testleriyle doğrulandı.
 
 ## Güvenlik ve gizlilik
 

@@ -490,3 +490,13 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Cascade check delete; group ID'yi check'lerde bırakmak; asenkron/batch ungroup; child ETag'lerini değiştirmemek.
 - **Gerekçe:** AC-029'u veri kaybetmeden ve yarışa dayanıklı biçimde sağlamak; bakım/bildirim/public kapsamını açıkça sonlandırmak.
 - **Sonuçlar:** Fan-out owner kotasıyla bounded'dır. Açık istemci eski check ETag'iyle update yaparsa `412` alır; notification history fiziksel silinmez.
+
+## D-055 — OpenAPI runtime yolu framework sözdizimine generator'da çevrilir
+
+- **Tarih:** 2026-10-10 07:47 +06:00
+- **Durum:** Accepted — parametrik group route testleriyle doğrulandı
+- **Bağlam:** Canonical OpenAPI yolları `{group_id}` biçimini kullanır; Fastify parametrik route için `:group_id` bekler. Şablonu aynen runtime kaydına taşımak route'u literal yaparak gerçek UUID isteklerini 404'e düşürür.
+- **Karar:** OpenAPI YAML canonical ve framework bağımsız kalacaktır. Runtime artifact generator'ı doğrulanmış `{name}` path parametrelerini Fastify `:name` biçimine deterministik çevirecektir; generated dosyalar elle değiştirilmeyecektir.
+- **Alternatifler:** YAML'de framework'e özel colon sözdizimi; her handler'da elle path yazmak; generated path'i handler'da ad hoc dönüştürmek.
+- **Gerekçe:** Tek sözleşme kaynağını korumak, 57 operation boyunca aynı adaptasyonu uygulamak ve sözleşme/route drift'ini testle yakalamak.
+- **Sonuçlar:** Parametrik bütün mevcut ve gelecek API route'ları düzeltmeden yararlanır. Generator drift kontrolü dönüşümü korur; route testleri gerçek UUID yolunu kullanır.

@@ -47,6 +47,41 @@ export function loadDatabaseUrl(environment: NodeJS.ProcessEnv = process.env): s
     .parse(environment.DATABASE_URL);
 }
 
+export interface ResourceRuntimeConfig {
+  checksPerOwnerLimit: number;
+  groupsPerOwnerLimit: number;
+}
+
+function resourceLimit(value: string | undefined, fallback: number, name: string): number {
+  const candidate = value ?? String(fallback);
+  if (candidate === 'unlimited') return 0;
+  if (!/^[1-9][0-9]*$/u.test(candidate)) {
+    throw new Error(`${name} must be a positive integer or unlimited`);
+  }
+  const parsed = Number(candidate);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new Error(`${name} must be a positive safe integer or unlimited`);
+  }
+  return parsed;
+}
+
+export function loadResourceRuntimeConfig(
+  environment: NodeJS.ProcessEnv = process.env,
+): ResourceRuntimeConfig {
+  return {
+    checksPerOwnerLimit: resourceLimit(
+      environment.CHECKS_PER_OWNER_LIMIT,
+      500,
+      'CHECKS_PER_OWNER_LIMIT',
+    ),
+    groupsPerOwnerLimit: resourceLimit(
+      environment.GROUPS_PER_OWNER_LIMIT,
+      100,
+      'GROUPS_PER_OWNER_LIMIT',
+    ),
+  };
+}
+
 export interface AuthRuntimeConfig {
   cookieSecure: boolean;
   csrfKey: Buffer;

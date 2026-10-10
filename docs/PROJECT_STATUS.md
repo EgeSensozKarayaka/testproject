@@ -1,12 +1,12 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 07:19 +06:00
-**Genel durum:** Aşama 5 doğrulandı; Aşama 6 sözleşme/domain/revision 12 temeli uygulandı, API ve UI uygulaması sürüyor
+**Son güncelleme:** 2026-10-10 07:47 +06:00
+**Genel durum:** Aşama 5 doğrulandı; Aşama 6 group API dilimi gerçek PostgreSQL ile doğrulandı, check API ve UI uygulaması sürüyor
 
 ## Tamamlanan
 
 - Aşama 0 gereksinim/kabul kriterleri, Aşama 1 domain/durum makineleri, Aşama 2 monorepo/runtime/CI temeli, Aşama 3 kalıcılık ve Aşama 4 API/event/hata sözleşmeleri
-- PostgreSQL 18.6 üzerinde on bir checksum'lı, immutable ve forward-only migration; schema-aware readiness, ayrı migration container'ı ve idempotent development seed'i
+- PostgreSQL 18.6 üzerinde on iki checksum'lı, immutable ve forward-only migration; schema-aware readiness, ayrı migration container'ı ve idempotent development seed'i
 - Private tablolar için composite sahiplik kısıtları, `FORCE RLS`, transaction-local owner context'i ve dar service rolleri
 - Canonical OpenAPI 3.1'den deterministik TypeScript tipleri ile Fastify runtime şemaları; merkezi RFC 9457 problem yanıtı ve UUIDv7 request korelasyonu
 - 15–128 code-point parola politikası, zxcvbn güç kontrolü, bounded async Argon2id hash/verify ve parametre yükseltme yolu
@@ -20,12 +20,17 @@
 - Aşama 6 için check/group CRUD, pause/resume/delete, manual job coalescing, URL doğrulama, quota, ETag/idempotency, transaction ve test mimarisi
 - Check/group saf domain doğrulaması ve değişiklik sınıflandırması; HTTP(S) canonicalization, bariz private/local hedef engeli ve UTF-8 expected-text sınırı
 - Revision 12 group description, DB byte constraint'i, soft-delete yetki sınırı ve API'nin owner-scoped current-state/manual-job/audit/outbox yazma temeli
+- Authenticated group create/get/list/update/delete API'si; CSRF/origin, owner rate limit, güçlü ETag/If-Match, HMAC cursor, atomik idempotency receipt, deployment kotası, audit ve outbox
+- Group silmede deterministik satır kilidi, soft-delete ve bağlı canlı check'lerin aynı transaction'da version artırılarak gruptan ayrılması
+- OpenAPI `{param}` yollarını Fastify `:param` yollarına çeviren deterministik runtime contract üretimi
 
 ## Doğrulama Kanıtları
 
-- `pnpm test:unit`: **8 dosyada 35/35 test geçti**.
+- `pnpm test:unit`: **11 dosyada 73/73 test geçti**.
 - Gerçek PostgreSQL admin URL'siyle ilgili paket: **13/13 test geçti**; sıfırdan migration `1..12`, checksum drift, RLS/context temizliği, auth sınırları ve Aşama 6 description/byte/soft-delete/audit-outbox yetkileri doğrulandı.
 - Aşama 6 domain/OpenAPI odaklı paket: **32/32 test geçti**; contract drift ve ilgili strict TypeScript kontrolleri geçti.
+- Group HTTP sınırı ve config odaklı paket dahil **18/18 test geçti**; gerçek PostgreSQL group service paketi **6/6** geçti. Concurrent idempotency, owner izolasyonu, stale ETag, cursor tamper, atomik detach ve quota doğrulandı.
+- Final `pnpm run ci`; format, generated-contract drift, lint, strict typecheck, 73 unit test ve bütün production build'leriyle geçti. Admin URL ayrı verildiğinde group integration paketi de 6/6 geçti.
 - `pnpm typecheck`: ortak paketler, React, API, iki worker ve target simulator için strict TypeScript kontrolü geçti.
 - Playwright: auth frontend smoke, iki bağımsız browser context ve UI → Mailpit → verification → login → logout akışı **3/3 geçti**.
 - Canlı Compose akışında kayıt `202`, Mailpit teslimi, doğrulama `204`, login/session `200`, logout `204` ve logout sonrası session `401` doğrulandı.
@@ -33,7 +38,7 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Check/group API ve UI CRUD'u, pause/resume ve manuel çalıştırma
+- Check API ve group/check UI CRUD'u, pause/resume ve manuel çalıştırma
 - Scheduler, gerçek HTTP probe motoru ve check overlap engeli
 - Incident/state geçişleri, maintenance reconciliation ve incident e-posta politikaları
 - Rollup/retention background işleri, history sorguları ve grafikler
@@ -53,9 +58,10 @@
 - Local restore provası production RPO/RTO/PITR garantisi değildir.
 - Soğuk Docker image build'i registry bağlantı hızına bağlı olarak birkaç dakika sürebilir; warm build ve normal `up` akışı daha hızlıdır. Build cache mount/prune optimizasyonu Aşama 17 operasyonel sertleştirme kapsamındadır.
 - Host `5432` ve `3000` başka projeler tarafından kullanıldığından PostgreSQL `15432`, API `13000`, web `15173` portundadır.
-- Check/group HTTP route'ları, authenticated idempotency service'i, cursor/quota uygulaması ve React yönetim ekranları henüz uygulanmadı.
-- Revision 12 temiz test veritabanında doğrulandı; çalışan ana Compose veritabanı/rebuild bu uygulama dilimi henüz tamamlanmadığı için güncellenmedi.
+- Group API tamamlandı; check route'ları, check mutation orchestration'ı ve React yönetim ekranları henüz uygulanmadı.
+- Group cursor şu anda tek aktif HMAC anahtarı kullanır; kesintisiz anahtar rotasyonu için önceki doğrulama anahtarını kabul eden key-ring Aşama 17 sertleştirmesinde eklenmelidir.
+- Revision 12 ve group servisi temiz test veritabanında doğrulandı; çalışan Compose API imajı bu dilimde henüz rebuild edilmediği için yeni route'ları taşımıyor.
 
 ## Sıradaki İş
 
-Aşama 6'nın sonraki dikey diliminde authenticated command/idempotency/cursor altyapısını ve owner-scoped group/check API route'larını uygulamak.
+Aşama 6'nın sonraki dikey diliminde owner-scoped check create/get/list/update, pause/resume/delete ve manuel run orchestration'ını uygulamak.
