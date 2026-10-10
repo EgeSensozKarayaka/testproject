@@ -5,6 +5,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { App } from './App.js';
 
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  return input instanceof URL ? input.href : input.url;
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
   window.history.replaceState(null, '', '/');
@@ -27,8 +32,16 @@ describe('App authentication shell', () => {
   it('renders the authenticated workspace returned by the session endpoint', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(() =>
-        Promise.resolve(
+      vi.fn((input: RequestInfo | URL) => {
+        if (!requestUrl(input).includes('/auth/session')) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({ data: [], page: { has_more: false, next_cursor: null } }),
+              { status: 200 },
+            ),
+          );
+        }
+        return Promise.resolve(
           new Response(
             JSON.stringify({
               csrf_token: 'v1.csrf',
@@ -44,8 +57,8 @@ describe('App authentication shell', () => {
             }),
             { status: 200 },
           ),
-        ),
-      ),
+        );
+      }),
     );
     render(<App />);
 

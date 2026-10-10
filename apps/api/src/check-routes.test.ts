@@ -1,4 +1,7 @@
+import { PassThrough } from 'node:stream';
+
 import { createLogger } from '@site-monitor/observability';
+import pino, { type Logger } from 'pino';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { buildApiApplication } from './app.js';
@@ -97,13 +100,17 @@ function checkService(overrides: Partial<CheckServicePort> = {}): CheckServicePo
   };
 }
 
-function application(auth: AuthServicePort, checks: CheckServicePort) {
+function application(
+  auth: AuthServicePort,
+  checks: CheckServicePort,
+  logger: Logger = createLogger({ environment: 'test', service: 'api-test', version: '0.1.0' }),
+) {
   const app = buildApiApplication({
     allowedOrigin: 'http://localhost:15173',
     authService: auth,
     checkService: checks,
     cookieSecure: false,
-    logger: createLogger({ environment: 'test', service: 'api-test', version: '0.1.0' }),
+    logger,
     readiness: () => Promise.resolve(true),
     serviceName: 'api',
     version: '0.1.0',
@@ -161,6 +168,40 @@ describe('check HTTP boundary', () => {
       'check-create-001',
       expect.any(String),
     );
+  });
+
+  it('does not write target URLs or expected body text to request logs', async () => {
+    const output = new PassThrough();
+    let logs = '';
+    output.on('data', (chunk: Buffer) => {
+      logs += chunk.toString('utf8');
+    });
+    const logger = pino({ level: 'info' }, output);
+    const target = 'https://sensitive.example.test/health?credential=never-log-this';
+    const expectedText = 'private-response-marker-never-log-this';
+    const response = await application(authService(), checkService(), logger).inject({
+      headers: {
+        ...browserHeaders,
+        'content-type': 'application/json',
+        'idempotency-key': 'check-log-redaction-001',
+      },
+      method: 'POST',
+      payload: {
+        expected_body_substring: expectedText,
+        expected_status_code: 200,
+        interval_seconds: 30,
+        name: 'Sensitive target',
+        timeout_ms: 5000,
+        url: target,
+      },
+      url: '/api/v1/checks',
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(logs).toContain('/api/v1/checks');
+    expect(logs).not.toContain(target);
+    expect(logs).not.toContain('credential=never-log-this');
+    expect(logs).not.toContain(expectedText);
   });
 
   it('passes query filters to the signed-cursor list service', async () => {

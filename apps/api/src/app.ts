@@ -56,6 +56,7 @@ export function buildApiApplication(options: ApiApplicationOptions) {
   void app.register(cookie);
   void app.register(cors, {
     credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     origin: options.allowedOrigin,
   });
 

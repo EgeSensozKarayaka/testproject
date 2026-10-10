@@ -60,6 +60,28 @@ describe('API health contract', () => {
     );
   });
 
+  it('allows the API mutation methods and concurrency headers in CORS preflight', async () => {
+    const app = createApplication(() => Promise.resolve(true));
+    const response = await app.inject({
+      headers: {
+        origin: 'http://localhost:5173',
+        'access-control-request-headers': 'content-type,if-match,x-csrf-token',
+        'access-control-request-method': 'PATCH',
+      },
+      method: 'OPTIONS',
+      url: '/api/v1/checks/check-id',
+    });
+
+    expect(response.statusCode).toBe(204);
+    expect(response.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+    expect(response.headers['access-control-allow-credentials']).toBe('true');
+    expect(response.headers['access-control-allow-methods']).toContain('PATCH');
+    expect(response.headers['access-control-allow-methods']).toContain('DELETE');
+    expect(response.headers['access-control-allow-headers']).toBe(
+      'content-type,if-match,x-csrf-token',
+    );
+  });
+
   it('returns the central problem contract for unknown routes', async () => {
     const app = createApplication(() => Promise.resolve(true));
     const response = await app.inject({ method: 'GET', url: '/api/v1/missing?secret=nope' });

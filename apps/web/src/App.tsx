@@ -1,34 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 
-const apiBaseUrl = import.meta.env.VITE_PUBLIC_API_BASE_URL ?? 'http://localhost:13000';
-
-interface UserView {
-  display_name: string;
-  email: string;
-  id: string;
-}
-
-interface SessionView {
-  csrf_token: string;
-  expires_at: string;
-  user: UserView;
-}
-
-async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...init,
-    credentials: 'include',
-    headers: {
-      ...(init.body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...init.headers,
-    },
-  });
-  if (!response.ok) {
-    const problem = (await response.json().catch(() => ({}))) as { detail?: string };
-    throw new Error(problem.detail ?? 'İstek tamamlanamadı.');
-  }
-  return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
-}
+import { apiRequest, type SessionView } from './api-client.js';
+import { MonitoringDashboard } from './monitoring-ui.js';
 
 function takeFragmentToken(): string | null {
   const token = new URLSearchParams(window.location.hash.slice(1)).get('token');
@@ -259,32 +232,6 @@ function TokenAction({ kind }: { kind: 'reset' | 'verify' }) {
   );
 }
 
-function Dashboard({ session, onLogout }: { session: SessionView; onLogout: () => void }) {
-  return (
-    <section className="dashboard-card" aria-labelledby="dashboard-title">
-      <p className="eyebrow">Güvenli çalışma alanı</p>
-      <h1 id="dashboard-title">Hoş geldiniz, {session.user.display_name}</h1>
-      <p>
-        {session.user.email} hesabıyla giriş yaptınız. İzleme paneli sonraki uygulama aşamasında bu
-        alana bağlanacak.
-      </p>
-      <dl className="status-grid">
-        <div>
-          <dt>Oturum</dt>
-          <dd className="status-ok">Etkin</dd>
-        </div>
-        <div>
-          <dt>Sahiplik</dt>
-          <dd>İzole kullanıcı alanı</dd>
-        </div>
-      </dl>
-      <button className="secondary" onClick={onLogout} type="button">
-        Çıkış yap
-      </button>
-    </section>
-  );
-}
-
 export function App() {
   const [session, setSession] = useState<SessionView | null>(null);
   const path = window.location.pathname;
@@ -314,7 +261,7 @@ export function App() {
       {path === '/reset-password' && <TokenAction kind="reset" />}
       {path === '/' && checking && <p role="status">Oturum kontrol ediliyor…</p>}
       {path === '/' && !checking && session && (
-        <Dashboard onLogout={() => void logout()} session={session} />
+        <MonitoringDashboard onLogout={() => void logout()} session={session} />
       )}
       {path === '/' && !checking && !session && <AuthCard onLogin={setSession} />}
     </main>

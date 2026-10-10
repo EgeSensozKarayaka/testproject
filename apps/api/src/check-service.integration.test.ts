@@ -82,7 +82,13 @@ databaseSuite('check service PostgreSQL boundary', () => {
   }
 
   it('serializes create retries into one complete aggregate and canonical receipt', async () => {
-    const input = createInput('Primary Site');
+    const sensitiveUrl = 'https://primary-site.example.com/path?credential=never-emit-this';
+    const sensitiveExpectedText = 'private-response-marker-never-emit-this';
+    const input = {
+      ...createInput('Primary Site'),
+      expected_body_substring: sensitiveExpectedText,
+      url: sensitiveUrl,
+    };
     const [first, second] = await Promise.all([
       service.create(
         ownerA,
@@ -105,7 +111,7 @@ databaseSuite('check service PostgreSQL boundary', () => {
       probe_generation: '1',
       resource_version: '1',
       schedule_generation: '1',
-      url: 'https://primary-site.example.com/path',
+      url: sensitiveUrl,
     });
     const persisted = await schemaPool.query<{
       audits: string;
@@ -132,6 +138,18 @@ databaseSuite('check service PostgreSQL boundary', () => {
       receipts: '1',
       states: '1',
     });
+    const emitted = await schemaPool.query<{ audits: unknown; events: unknown }>(
+      `SELECT
+         (SELECT jsonb_agg(metadata ORDER BY occurred_at, id)
+            FROM audit.events WHERE owner_id = $1) AS audits,
+         (SELECT jsonb_agg(payload ORDER BY occurred_at, id)
+            FROM infra.outbox_events WHERE owner_id = $1) AS events`,
+      [ownerA],
+    );
+    const serializedEmissions = JSON.stringify(emitted.rows[0]);
+    expect(serializedEmissions).not.toContain(sensitiveUrl);
+    expect(serializedEmissions).not.toContain('credential=never-emit-this');
+    expect(serializedEmissions).not.toContain(sensitiveExpectedText);
   });
 
   it('isolates owners and applies combined changes with one increment per version axis', async () => {
@@ -478,4 +496,53 @@ databaseSuite('check service PostgreSQL boundary', () => {
       service.list(ownerA, { cursor: first.page.next_cursor!, health: 'UP', limit: 1 }),
     ).rejects.toMatchObject({ code: 'invalid_cursor', status: 400 });
   });
+
+  it.each([
+    ['small', '00000000-0000-4000-8000-000000000003', 20],
+    ['medium', '00000000-0000-4000-8000-000000000004', 200],
+    ['large', '00000000-0000-4000-8000-000000000005', 500],
+  ] as const)(
+    'paginates the %s capacity fixture without unbounded responses',
+    async (_, ownerId, count) => {
+      await schemaPool.query(
+        `INSERT INTO auth.users
+         (id, email_normalized, email_display, display_name, status, email_verified_at)
+       VALUES ($1, $2, $2, $3, 'ACTIVE', statement_timestamp())`,
+        [ownerId, `capacity-${count}@example.test`, `Capacity ${count}`],
+      );
+      await schemaPool.query(
+        `WITH inserted AS (
+         INSERT INTO app.checks
+           (id, owner_id, name, url, interval_seconds, timeout_ms,
+            expected_status_code, cadence_anchor_at, next_run_at, created_at, updated_at)
+         SELECT uuidv7(), $1::uuid, format('Capacity %s', item),
+                format('https://capacity-%s.example.test/', item), 30, 5000, 200,
+                statement_timestamp(), statement_timestamp(),
+                statement_timestamp() - (item * interval '1 millisecond'),
+                statement_timestamp() - (item * interval '1 millisecond')
+         FROM generate_series(1, $2::integer) AS item
+         RETURNING owner_id, id
+       )
+       INSERT INTO monitoring.check_current_states (owner_id, check_id)
+       SELECT owner_id, id FROM inserted`,
+        [ownerId, count],
+      );
+
+      const ids = new Set<string>();
+      const pageDurations: number[] = [];
+      let cursor: string | undefined;
+      do {
+        const startedAt = performance.now();
+        const page = await service.list(ownerId, { ...(cursor ? { cursor } : {}), limit: 100 });
+        pageDurations.push(performance.now() - startedAt);
+        expect(page.data.length).toBeLessThanOrEqual(100);
+        for (const item of page.data) ids.add(item.check.id);
+        cursor = page.page.next_cursor ?? undefined;
+      } while (cursor);
+
+      expect(ids.size).toBe(count);
+      expect(pageDurations).toHaveLength(Math.ceil(count / 100));
+      expect(Math.max(...pageDurations)).toBeLessThan(5_000);
+    },
+  );
 });
