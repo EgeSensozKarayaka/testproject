@@ -1,11 +1,13 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 20:22 +06:00
+**Son güncelleme:** 2026-10-10 20:37 +06:00
 
-**Genel durum:** Aşama 0–13 tamamlandı; sıradaki çalışma Aşama 14 authenticated frontend mimarisi
+**Genel durum:** Aşama 0–13 tamamlandı; Aşama 14 authenticated frontend doğrudan uygulaması başladı
 
 ## Tamamlanan
 
+- Aşama 14 Dilim 1: realtime snapshot ile beslenen responsive canlı durum dashboard'u; aktif/operasyonel/incident/bakım/dikkat özetleri, erişilebilir durum filtreleri, freshness ve bakım işaretleri, son yanıt/son kontrol bilgisi ve saniyede güncellenen aktif kesinti süresi
+- Durum ekranı yüksek öncelikli sorunları önce sıralar, yönetim kartına klavye ile izlenebilir bağlantı verir ve dar ekranlarda bilgi hiyerarşisini korur. Süre biçimleme ve dashboard filtre/özet davranışları bileşen testleriyle, temel görünürlük ise Playwright kabul akışıyla korunur
 - Aşama 13 Dilim 3: bağımlılıksız credentialed fetch-stream parser, UTF-8/chunk/CRLF güvenliği, heartbeat tabanlı 45 saniye stale abort, bounded full-jitter reconnect, 401/403 terminal auth kaybı, `Retry-After`, stream-before-snapshot buffering, 60 saniye reconciliation ve üç kararsız çevrim sonrası polling fallback
 - React yapılandırma ekranında canlı bağlantı/polling durumu sağlık state'inden ayrı gösterilir; iki bağımsız browser session'ında ikinci istemcinin check mutation'ı ilk ekrana reload olmadan yansıdı. İlk kabul koşusunda bulunan raw SSE CORS başlık eksikliği exact-origin/credentials/Vary response ve regresyon testiyle kapatıldı; Playwright **4/4** geçti
 - Forward-only Revision 28 `REALTIME` destination'ını migration-owned biçimde aktive eder. Yerel migration head 28 ve ikinci koşu idempotenttir; migrate/API/realtime-worker/web production-benzeri imajları healthy, listener connected ve relay dispatch tüketir
@@ -184,14 +186,14 @@
 
 - Notification recipient/policy yönetim arayüzü (backend ve worker tamam; yönetim frontend'i Aşama 14 kapsamındadır)
 - History grafikleri ve incident journal yönetim arayüzü (private backend API tamam)
-- Nihai durum/freshness/bakım monitoring dashboard'u ve public durum sayfası; authenticated SSE altyapısı tamamdır
+- History/availability grafikleri, incident günlüğü ve public durum sayfası; authenticated canlı durum dashboard'u ve SSE altyapısı tamamdır
 - Predictor analiz algoritması/model lifecycle'ı
 - MFA/passkey, OAuth/OIDC, organizasyon/üyelik/rol modeli ve kullanıcıya açık session/device yönetimi
 - Production deployment, servis başına ayrı login secret'ları, managed backup/PITR ve production restore drill'i
 
 ## Bilinen Sınırlamalar
 
-- Authenticated ekran group/check yapılandırmasını yönetir; probe ve sağlık motorları kalıcılık seviyesinde bağlanmış olsa da canlı monitoring projection/UI henüz uygulanmadığından nihai durum paneli değildir.
+- Authenticated ekran group/check yapılandırması ile canlı current-status projection'ını gösterir. History/incident/maintenance/notification yönetim ekranları tamamlanana kadar Aşama 14'ün bütünü bitmiş sayılmaz.
 - Production worker loop'u, 20/200/500 runtime throughput/queue-lag, SIGKILL sonrası doğal lease reclaim/stale-result fencing ve iki gerçek worker yükü altında API latency doğrulanmıştır. Ölçümler yerel regresyon baseline'ıdır; production SLO veya çok-node PostgreSQL/network partition garantisi değildir.
 - Auth rate limit PostgreSQL fixed-window yaklaşımıdır. V1 ve yatay API replica'ları için tutarlıdır; yüksek hacimli internet trafiğinde edge WAF/CDN katmanı gerekir.
 - Yerel Compose kolaylığı için tek PostgreSQL bootstrap login'i dar `NOLOGIN` rollere geçer. Production'da servis başına ayrı login wrapper/secret gerekir.
@@ -206,4 +208,4 @@
 
 ## Sıradaki İş
 
-Aşama 14 authenticated frontend nihai mimarisi hazırlanacaktır: güncel durum/freshness/bakım dashboard'u, history grafikleri, incident günlüğü, maintenance ve notification yönetimi, responsive/erişilebilir durum matrisi ve iki-client kabul planı. Public production stream Aşama 15'e bağlı kalacaktır.
+Ayrı bir frontend mimari belgesi hazırlanmadan Aşama 14 uygulamasına devam edilecektir. Sıradaki dilim private history API'sini kullanan response-time/availability görünümü ve incident günlüğüdür; ardından maintenance ile notification yönetimi tamamlanacaktır. Her dilimde responsive/erişilebilir durumlar ve kritik Playwright akışları birlikte geliştirilecek; public production stream Aşama 15'e bağlı kalacaktır.

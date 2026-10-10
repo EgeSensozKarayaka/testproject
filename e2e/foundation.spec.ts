@@ -229,6 +229,10 @@ test('registers, verifies through Mailpit, logs in, and logs out', async ({ page
   await page.getByRole('button', { name: 'Kontrol ekle', exact: true }).last().click();
   let checkCard = page.locator('.check-card').filter({ hasText: 'E2E Homepage' });
   await expect(checkCard.getByRole('heading', { name: 'E2E Homepage' })).toBeVisible();
+  const statusOverview = page.getByRole('region', { name: 'Sistem durumu' });
+  await expect(statusOverview).toBeVisible();
+  await expect(statusOverview.getByText('1 kontrol yüklendi')).toBeVisible();
+  await expect(statusOverview.getByText('E2E Homepage')).toBeVisible();
 
   await checkCard.getByRole('button', { name: 'Şimdi çalıştır' }).click();
   await expect(page.getByRole('status')).toContainText('Manuel kontrol kuyruğa alındı');

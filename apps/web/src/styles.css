@@ -282,6 +282,172 @@ dd {
   background: rgb(10 24 41 / 94%);
   box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 24%);
 }
+.overview-panel {
+  overflow: hidden;
+  background: linear-gradient(135deg, rgb(13 148 136 / 9%), transparent 42%), rgb(10 24 41 / 96%);
+}
+.overview-heading {
+  margin-bottom: 1rem;
+}
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+.metric-card {
+  min-width: 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid #2d435b;
+  border-radius: 0.8rem;
+  background: #0d1d30;
+}
+.metric-card dd {
+  margin-top: 0.15rem;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  line-height: 1;
+}
+.metric-up {
+  border-color: rgb(45 212 191 / 45%);
+}
+.metric-up dd {
+  color: #5eead4;
+}
+.metric-down {
+  border-color: rgb(248 113 113 / 45%);
+}
+.metric-down dd,
+.incident-duration {
+  color: #fca5a5;
+}
+.metric-maintenance {
+  border-color: rgb(96 165 250 / 45%);
+}
+.metric-maintenance dd {
+  color: #93c5fd;
+}
+.metric-warning {
+  border-color: rgb(251 191 36 / 45%);
+}
+.metric-warning dd {
+  color: #fde68a;
+}
+.dashboard-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+}
+.filter-button {
+  border: 1px solid #344b64;
+  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  color: #b8c7da;
+  background: #102238;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+.filter-button:hover,
+.filter-button[aria-pressed='true'] {
+  border-color: #2dd4bf;
+  color: #ccfbf1;
+  background: rgb(15 118 110 / 32%);
+}
+.status-list {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.status-row {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1.35fr) minmax(10rem, auto) minmax(21rem, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #294058;
+  border-radius: 0.75rem;
+  background: rgb(8 23 39 / 82%);
+}
+.status-row.has-problem {
+  border-color: rgb(251 191 36 / 42%);
+  background: rgb(69 41 13 / 18%);
+}
+.status-primary {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.75rem;
+}
+.status-primary div {
+  min-width: 0;
+}
+.status-primary strong,
+.status-primary span {
+  display: block;
+}
+.status-primary span {
+  overflow: hidden;
+  margin-top: 0.15rem;
+  color: #8296ad;
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.health-indicator {
+  width: 0.7rem;
+  height: 0.7rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #64748b;
+}
+.health-up {
+  background: #2dd4bf;
+  box-shadow: 0 0 0 0.23rem rgb(45 212 191 / 12%);
+}
+.health-down {
+  background: #f87171;
+  box-shadow: 0 0 0 0.23rem rgb(248 113 113 / 12%);
+}
+.health-suspect {
+  background: #fbbf24;
+}
+.status-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.maintenance-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.4rem 0.62rem;
+  color: #bfdbfe;
+  background: rgb(30 64 175 / 42%);
+  font-size: 0.73rem;
+  font-weight: 850;
+}
+.status-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0;
+}
+.status-facts dd {
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+}
+.detail-link {
+  color: #67e8f9;
+  font-size: 0.78rem;
+  font-weight: 750;
+  white-space: nowrap;
+  text-underline-offset: 0.2rem;
+}
+.compact-empty {
+  padding: 1.2rem;
+}
 .loading-panel {
   min-height: 12rem;
   display: grid;
@@ -422,7 +588,7 @@ dd {
 .compact-stats,
 .check-details {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.6rem;
   margin: 1rem 0;
 }
@@ -530,5 +696,33 @@ dd {
   }
   .status-stack {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 1000px) {
+  .overview-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .status-row {
+    grid-template-columns: 1fr auto;
+  }
+  .status-facts {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 620px) {
+  .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .status-row {
+    grid-template-columns: 1fr;
+  }
+  .status-signals {
+    justify-content: flex-start;
+  }
+  .status-facts {
+    grid-column: auto;
+    grid-template-columns: 1fr;
   }
 }

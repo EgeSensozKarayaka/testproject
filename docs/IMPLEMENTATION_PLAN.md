@@ -417,10 +417,11 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 **Amaç:** Ana yönetim deneyimini tamamlamak.
 
-**Tasarım çıktıları:**
+**Uygulama yaklaşımı:**
 
-- `docs/FRONTEND_ARCHITECTURE.md`
-- Ana ekran wireframe ve durum matrisi
+- 2026-10-10 tarihli kullanıcı yönlendirmesi gereği ayrı bir frontend mimari dosyası oluşturulmaz.
+- Mevcut OpenAPI, domain mimarileri ve realtime sözleşmesi kaynak kabul edilerek arayüz küçük, çalışan ve test edilen dilimlerle doğrudan geliştirilir.
+- UI kararları gerekli olduğu ölçüde karar/geliştirme günlüklarında; davranış sözleşmesi ise bileşen ve Playwright testlerinde korunur.
 
 **Uygulama kapsamı:**
 
@@ -649,4 +650,4 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 13 Dilim 3 — Browser client, cutover ve kapanış** tamamlanmıştır. Credentialed fetch-stream parser, 45 saniye stale algısı, full-jitter reconnect, stream-before-snapshot koordinasyonu, 60 saniye reconciliation ve üç kararsız çevrim sonrası polling fallback uygulanmıştır. Revision 28 `REALTIME` hedefini aktive eder; iki tarayıcı reload olmadan yakınsamış, 20/200/500 iki-replica kapasite profili ve slow-client izolasyonu geçmiştir.
 
-**Sıradaki çalışma Aşama 14 — Authenticated Frontend nihai mimarisidir.** Mevcut canlı güncellenen yapılandırma ekranı; durum dashboard'u, freshness/bakım görünümü, history grafikleri, incident günlüğü ve notification/maintenance yönetimiyle tamamlanacaktır.
+**Aşama 14 — Authenticated Frontend doğrudan uygulaması başlamıştır.** Ayrı frontend mimari belgesi üretilmeden mevcut canlı yapılandırma ekranı; durum dashboard'u, freshness/bakım görünümü, history grafikleri, incident günlüğü ve notification/maintenance yönetimiyle küçük doğrulanabilir dilimlerde tamamlanacaktır. İlk dilim canlı durum özeti, operasyonel filtreler ve aktif kesinti süresidir.

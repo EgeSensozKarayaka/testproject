@@ -1,20 +1,20 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 20:22 +06:00
+**Son güncelleme:** 2026-10-10 20:37 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–13 tamamlandı
+**Mevcut kilometre taşı:** Aşama 14 doğrudan uygulama başladı; canlı durum dashboard'u tamamlanıyor
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
-## 1. Sıradaki Çalışma — Aşama 14 Authenticated Frontend Mimarisi
+## 1. Sıradaki Çalışma — Aşama 14 Authenticated Frontend
 
-Önce [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) kapsamıyla uyumlu nihai frontend mimarisi ve durum matrisi hazırlanacaktır:
+Kullanıcı yönlendirmesiyle ayrı bir frontend mimari dosyası hazırlanmayacaktır. Mevcut API/OpenAPI, domain belgeleri ve çalışan realtime katmanı kaynak kabul edilerek arayüz küçük, test edilen ve ayrı ayrı commit edilen dilimlerle doğrudan geliştirilecektir:
 
-- Güncel durum/freshness/bakım dashboard'u ve responsive bilgi hiyerarşisi
-- History response-time grafikleri, availability ve incident günlüğü
+- Güncel durum/freshness/bakım dashboard'u, operasyonel filtreler ve aktif kesinti sayacı uygulandı; final kalite kapısı tamamlanacaktır
+- Sıradaki dilimde history response-time grafikleri, availability ve incident günlüğü uygulanacaktır
 - Maintenance window ile notification recipient/policy yönetimi
-- Loading, empty, stale, partial-error ve erişilebilirlik matrisi
-- Mevcut snapshot/realtime katmanının query sınırları ve iki-client Playwright kabul planı
+- Loading, empty, stale, partial-error, responsive ve erişilebilir durumlar her dilimin testlerinde korunacaktır
+- Mevcut snapshot/realtime katmanının query sınırları ve iki-client Playwright kabulü uygulama içinde doğrulanacaktır
 
 Aşama 13 kapanış ölçümleri [realtime kapasite raporunda](./REALTIME_CAPACITY_REPORT.md), Aşama 12 ölçümleri [history kapasite raporunda](./HISTORY_CAPACITY_REPORT.md) saklanır.
 

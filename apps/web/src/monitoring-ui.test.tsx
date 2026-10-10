@@ -1,10 +1,16 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { Check, CheckListItem, GroupListItem, SessionView } from './api-client.js';
-import { MonitoringDashboard } from './monitoring-ui.js';
+import type {
+  Check,
+  CheckListItem,
+  CurrentStatus,
+  GroupListItem,
+  SessionView,
+} from './api-client.js';
+import { formatDuration, MonitoringDashboard } from './monitoring-ui.js';
 
 const session: SessionView = {
   csrf_token: 'v1.csrf-token',
@@ -19,7 +25,10 @@ const session: SessionView = {
   },
 };
 
-function checkFixture(overrides: Partial<Check> = {}): CheckListItem {
+function checkFixture(
+  overrides: Partial<Check> = {},
+  statusOverrides: Partial<CurrentStatus> = {},
+): CheckListItem {
   const check: Check = {
     created_at: '2026-10-10T00:00:00.000Z',
     execution_state: 'ACTIVE',
@@ -49,6 +58,7 @@ function checkFixture(overrides: Partial<Check> = {}): CheckListItem {
       last_response_time_ms: null,
       maintenance: { active: false, until: null },
       state_version: '1',
+      ...statusOverrides,
     },
   };
 }
@@ -74,6 +84,65 @@ afterEach(() => {
 });
 
 describe('MonitoringDashboard', () => {
+  it('formats current incident durations without negative values', () => {
+    expect(formatDuration(-1)).toBe('0 sn');
+    expect(formatDuration(125_000)).toBe('2 dk 5 sn');
+    expect(formatDuration(7_380_000)).toBe('2 sa 3 dk');
+    expect(formatDuration(93_600_000)).toBe('1 gün 2 sa');
+  });
+
+  it('summarizes live health and filters the status dashboard', async () => {
+    const startedAt = new Date(Date.now() - 125_000).toISOString();
+    const items = [
+      checkFixture(
+        { id: '00000000-0000-4000-8000-000000000211', name: 'Healthy service' },
+        {
+          freshness_state: 'FRESH',
+          health_state: 'UP',
+          last_checked_at: new Date().toISOString(),
+          last_response_time_ms: 42,
+        },
+      ),
+      checkFixture(
+        { id: '00000000-0000-4000-8000-000000000212', name: 'Down service' },
+        {
+          current_incident: {
+            confirmed_at: startedAt,
+            id: '00000000-0000-4000-8000-000000000301',
+            observation_mode: 'OBSERVED',
+            observed_duration_ms: '120000',
+            started_at: startedAt,
+          },
+          freshness_state: 'FRESH',
+          health_state: 'DOWN',
+          last_checked_at: new Date().toISOString(),
+          last_response_time_ms: 900,
+          maintenance: { active: true, until: new Date(Date.now() + 3_600_000).toISOString() },
+        },
+      ),
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = requestUrl(input);
+        if (url.includes('/api/v1/groups')) return Promise.resolve(pageResponse([]));
+        return Promise.resolve(pageResponse(items));
+      }),
+    );
+
+    render(<MonitoringDashboard onLogout={() => undefined} session={session} />);
+    const overview = await screen.findByRole('region', { name: 'Sistem durumu' });
+    expect(within(overview).getByText('Healthy service')).toBeDefined();
+    expect(within(overview).getByText('Down service')).toBeDefined();
+    expect(within(overview).getByText(/2 dk/u)).toBeDefined();
+    expect(within(overview).getByText('Aktif olay').parentElement).toHaveTextContent('1');
+    expect(within(overview).getByText('Operasyonel').parentElement).toHaveTextContent('1');
+
+    fireEvent.click(within(overview).getByRole('button', { name: 'Aktif olaylar' }));
+    expect(within(overview).queryByText('Healthy service')).toBeNull();
+    expect(within(overview).getByText('Down service')).toBeDefined();
+  });
+
   it('creates a group with CSRF and idempotency headers and refreshes the empty state', async () => {
     let groups: GroupListItem[] = [];
     let createHeaders: Headers | undefined;

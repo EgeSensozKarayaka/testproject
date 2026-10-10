@@ -910,3 +910,13 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Aşama 13'te yarım public route; public status domain'ini erkene çekmek; route'u snapshot ile birlikte Aşama 15'e bırakmak.
 - **Gerekçe:** Geçici, doğrulanamayan ve potansiyel veri sızıntısı taşıyan public API oluşturmamak.
 - **Sonuçlar:** Aşama 13 kapanışı private iki-client/replica kabulünü kapsar; public uçtan uca kabul açıkça Aşama 15'e aittir.
+
+## D-097 — Authenticated frontend ayrı mimari belgesi yerine çalışan dilimlerle geliştirilir
+
+- **Tarih:** 2026-10-10 20:37 +06:00
+- **Durum:** Accepted — kullanıcı yönlendirmesi
+- **Bağlam:** Backend, veri ve realtime sınırları mevcut OpenAPI ile alan belgelerinde ayrıntılı olarak tanımlandı. Aşama 14 öncesi ayrıca bir `FRONTEND_ARCHITECTURE.md` üretmek uygulamayı geciktirecek ve büyük ölçüde mevcut sözleşmeleri tekrar edecektir.
+- **Karar:** Ayrı frontend mimari belgesi oluşturulmaz. Authenticated arayüz; current status, history/incident, maintenance ve notification yönetimi sırasıyla küçük, doğrudan çalışan dilimler halinde geliştirilir. Önemli kararlar bu günlükte, kullanıcı davranışı bileşen/Playwright testlerinde ve güncel kapsam `PROJECT_STATUS.md` içinde korunur.
+- **Alternatifler:** Uygulamadan önce tam frontend mimari belgesi ve wireframe hazırlamak; bütün Aşama 14'ü tek büyük değişiklik olarak geliştirmek.
+- **Gerekçe:** Kullanıcının hız tercihini izlerken izlenebilirlik, erişilebilirlik ve regresyon kanıtını kaybetmemek; mevcut backend sözleşmesini tek doğruluk kaynağı olarak korumak.
+- **Sonuçlar:** Yeni bir frontend mimari dosyası teslim eseri değildir. Her dilim kendi test/CI/E2E kanıtı ve küçük commit'iyle tamamlanır; kapsam veya backend sözleşmesi değişirse ilgili mevcut mimari/karar belgeleri ayrıca güncellenir.

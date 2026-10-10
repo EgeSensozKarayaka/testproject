@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useEffect, useState } from 'react';
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   ApiError,
@@ -24,6 +24,38 @@ function formatInstant(value: string | null): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+export function formatDuration(milliseconds: number): string {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1_000));
+  const days = Math.floor(totalSeconds / 86_400);
+  const hours = Math.floor((totalSeconds % 86_400) / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  const seconds = totalSeconds % 60;
+  if (days > 0) return `${days} gün ${hours} sa`;
+  if (hours > 0) return `${hours} sa ${minutes} dk`;
+  if (minutes > 0) return `${minutes} dk ${seconds} sn`;
+  return `${seconds} sn`;
+}
+
+const stateLabels: Record<string, string> = {
+  ACTIVE: 'Aktif',
+  DOWN: 'Erişilemiyor',
+  FRESH: 'Güncel',
+  PAUSED: 'Duraklatıldı',
+  STALE: 'Gecikmiş veri',
+  SUSPECT: 'Doğrulanıyor',
+  UNKNOWN: 'Bilinmiyor',
+  UP: 'Çalışıyor',
+};
+
+function needsAttention({ check, status }: CheckListItem): boolean {
+  if (check.execution_state === 'PAUSED') return false;
+  return (
+    status.current_incident !== null ||
+    status.freshness_state === 'STALE' ||
+    ['DOWN', 'SUSPECT', 'UNKNOWN'].includes(status.health_state)
+  );
 }
 
 function GroupForm({
@@ -189,8 +221,14 @@ function CheckForm({
 }
 
 function StatusBadge({ state }: { state: string }) {
-  return <span className={`status-badge status-${state.toLowerCase()}`}>{state}</span>;
+  return (
+    <span className={`status-badge status-${state.toLowerCase()}`}>
+      {stateLabels[state] ?? state}
+    </span>
+  );
 }
+
+type DashboardFilter = 'all' | 'attention' | 'incident' | 'maintenance' | 'paused';
 
 export function MonitoringDashboard({
   onLogout,
@@ -215,6 +253,40 @@ export function MonitoringDashboard({
   const [editingCheck, setEditingCheck] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [realtimeState, setRealtimeState] = useState<RealtimeConnectionState>('connecting');
+  const [dashboardFilter, setDashboardFilter] = useState<DashboardFilter>('all');
+  const [now, setNow] = useState(Date.now);
+
+  const dashboard = useMemo(() => {
+    const active = checks.filter(({ check }) => check.execution_state === 'ACTIVE');
+    const operational = active.filter(
+      ({ status }) => status.health_state === 'UP' && status.freshness_state === 'FRESH',
+    ).length;
+    const incidents = checks.filter(({ status }) => status.current_incident !== null).length;
+    const maintenance = checks.filter(({ status }) => status.maintenance.active).length;
+    const attention = checks.filter(needsAttention).length;
+    const visible = checks
+      .filter((item) => {
+        if (dashboardFilter === 'attention') return needsAttention(item);
+        if (dashboardFilter === 'incident') return item.status.current_incident !== null;
+        if (dashboardFilter === 'maintenance') return item.status.maintenance.active;
+        if (dashboardFilter === 'paused') return item.check.execution_state === 'PAUSED';
+        return true;
+      })
+      .sort((left, right) => {
+        const score = (item: CheckListItem) =>
+          item.status.current_incident !== null
+            ? 0
+            : needsAttention(item)
+              ? 1
+              : item.status.maintenance.active
+                ? 2
+                : item.check.execution_state === 'PAUSED'
+                  ? 3
+                  : 4;
+        return score(left) - score(right) || left.check.name.localeCompare(right.check.name, 'tr');
+      });
+    return { active: active.length, attention, incidents, maintenance, operational, visible };
+  }, [checks, dashboardFilter]);
 
   const reload = useCallback(async (showLoading = true, propagateError = false) => {
     if (showLoading) setLoading(true);
@@ -255,6 +327,12 @@ export function MonitoringDashboard({
     realtime.start();
     return () => realtime.stop();
   }, [onSessionExpired, reload]);
+
+  useEffect(() => {
+    if (!checks.some(({ status }) => status.current_incident !== null)) return;
+    const timer = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(timer);
+  }, [checks]);
 
   async function perform(
     key: string,
@@ -362,6 +440,123 @@ export function MonitoringDashboard({
         </section>
       ) : (
         <>
+          <section className="panel overview-panel" aria-labelledby="overview-title">
+            <div className="section-heading overview-heading">
+              <div>
+                <p className="eyebrow">Canlı görünüm</p>
+                <h2 id="overview-title">Sistem durumu</h2>
+                <p>Yüklenen kontrollerin güncel sağlık, olay ve bakım özeti.</p>
+              </div>
+              <span className="count-pill">{checks.length} kontrol yüklendi</span>
+            </div>
+
+            <dl className="overview-grid" aria-label="Sistem durum özeti">
+              <div className="metric-card metric-neutral">
+                <dt>Aktif izleme</dt>
+                <dd>{dashboard.active}</dd>
+              </div>
+              <div className="metric-card metric-up">
+                <dt>Operasyonel</dt>
+                <dd>{dashboard.operational}</dd>
+              </div>
+              <div className="metric-card metric-down">
+                <dt>Aktif olay</dt>
+                <dd>{dashboard.incidents}</dd>
+              </div>
+              <div className="metric-card metric-maintenance">
+                <dt>Bakımda</dt>
+                <dd>{dashboard.maintenance}</dd>
+              </div>
+              <div className="metric-card metric-warning">
+                <dt>Dikkat gerekli</dt>
+                <dd>{dashboard.attention}</dd>
+              </div>
+            </dl>
+
+            <div className="dashboard-filters" aria-label="Durum görünümü filtresi" role="group">
+              {(
+                [
+                  ['all', 'Tümü'],
+                  ['attention', 'Dikkat gerekli'],
+                  ['incident', 'Aktif olaylar'],
+                  ['maintenance', 'Bakımda'],
+                  ['paused', 'Duraklatılmış'],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  aria-pressed={dashboardFilter === value}
+                  className="filter-button"
+                  key={value}
+                  onClick={() => setDashboardFilter(value)}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {dashboard.visible.length === 0 ? (
+              <div className="empty-state compact-empty">
+                <h3>Bu görünümde kontrol yok</h3>
+                <p>Başka bir durum filtresi seçebilir veya yeni bir kontrol ekleyebilirsiniz.</p>
+              </div>
+            ) : (
+              <ul className="status-list">
+                {dashboard.visible.map(({ check, status }) => (
+                  <li
+                    className={
+                      needsAttention({ check, status }) ? 'status-row has-problem' : 'status-row'
+                    }
+                    key={check.id}
+                  >
+                    <div className="status-primary">
+                      <span
+                        aria-hidden="true"
+                        className={`health-indicator health-${status.health_state.toLowerCase()}`}
+                      />
+                      <div>
+                        <strong>{check.name}</strong>
+                        <span>{check.url}</span>
+                      </div>
+                    </div>
+                    <div className="status-signals">
+                      <StatusBadge state={status.health_state} />
+                      {status.freshness_state === 'STALE' && <StatusBadge state="STALE" />}
+                      {status.maintenance.active && (
+                        <span className="maintenance-badge">Bakımda</span>
+                      )}
+                    </div>
+                    <dl className="status-facts">
+                      <div>
+                        <dt>Yanıt</dt>
+                        <dd>
+                          {status.last_response_time_ms === null
+                            ? '—'
+                            : `${status.last_response_time_ms} ms`}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Son kontrol</dt>
+                        <dd>{formatInstant(status.last_checked_at)}</dd>
+                      </div>
+                      <div>
+                        <dt>Mevcut kesinti</dt>
+                        <dd className={status.current_incident ? 'incident-duration' : undefined}>
+                          {status.current_incident
+                            ? formatDuration(now - Date.parse(status.current_incident.started_at))
+                            : 'Yok'}
+                        </dd>
+                      </div>
+                    </dl>
+                    <a className="detail-link" href={`#check-${check.id}`}>
+                      Ayrıntı ve yönetim
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           <section className="panel" aria-labelledby="groups-title">
             <div className="section-heading">
               <div>
@@ -544,7 +739,7 @@ export function MonitoringDashboard({
             ) : (
               <ul className="resource-grid check-grid">
                 {checks.map(({ check, status }) => (
-                  <li className="resource-card check-card" key={check.id}>
+                  <li className="resource-card check-card" id={`check-${check.id}`} key={check.id}>
                     {editingCheck === check.id ? (
                       <CheckForm
                         busy={busyKey === `check:update:${check.id}`}
@@ -575,7 +770,11 @@ export function MonitoringDashboard({
                           </div>
                           <div className="status-stack">
                             <StatusBadge state={status.health_state} />
+                            <StatusBadge state={status.freshness_state} />
                             <StatusBadge state={check.execution_state} />
+                            {status.maintenance.active && (
+                              <span className="maintenance-badge">Bakımda</span>
+                            )}
                           </div>
                         </div>
                         <dl className="check-details">
@@ -600,6 +799,26 @@ export function MonitoringDashboard({
                           <div>
                             <dt>Beklenen kod</dt>
                             <dd>{check.expected_status_code}</dd>
+                          </div>
+                          <div>
+                            <dt>Mevcut kesinti</dt>
+                            <dd
+                              className={status.current_incident ? 'incident-duration' : undefined}
+                            >
+                              {status.current_incident
+                                ? formatDuration(
+                                    now - Date.parse(status.current_incident.started_at),
+                                  )
+                                : 'Yok'}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Bakım bitişi</dt>
+                            <dd>
+                              {status.maintenance.active
+                                ? formatInstant(status.maintenance.until)
+                                : 'Bakımda değil'}
+                            </dd>
                           </div>
                         </dl>
                         <div className="card-actions check-actions">
