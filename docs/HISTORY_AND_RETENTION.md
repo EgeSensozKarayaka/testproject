@@ -394,11 +394,11 @@ Referans dataset en az 500 check × 30 saniye × 35 gün eşdeğer dağılım ta
 ## 14. Uygulama Dilimleri
 
 1. **Revision 21 + saf aggregation — tamamlandı (17:44):** run evidence ve FK/retention düzeltmesi, checkpoint/range/manifest şeması, duration/bucket domain fonksiyonları ve migration güvenlik testleri.
-2. **Housekeeping runtime:** source discovery, bounded minute/hour recompute, partition/default guard, retention/purge loop'ları, readiness ve restart/iki-replica testleri.
+2. **Housekeeping runtime — tamamlandı (17:52):** source discovery, bounded minute/hour recompute, partition/default guard, retention/purge loop'ları, readiness ve restart/iki-replica testleri.
 3. **Private API:** canonical OpenAPI history/incident düzeltmeleri, owner-scoped service/routes, cursor, projection-lag davranışı ve contract testleri.
 4. **Kapanış kanıtı:** correctness matrisi, 20/200/500 rollup profili, 35 günlük history capacity/plan raporu, full CI ve durum belgeleri.
 
-Her dilim ayrı küçük commit olur. Revision 21 mevcut migration dosyalarını değiştirmeden uygulandı. İlk production retention drop'u, evidence migration/backfill ve restore testi geçmeden aktive edilmez.
+Her dilim ayrı küçük commit olur. Revision 21–24 mevcut migration dosyalarını değiştirmeden forward-only uygulandı. Source cursor gecikmesi veya pending rebuild backlog'u varken retention fail-closed ertelenir. Retention, önce detach+manifest kaydı oluşturur; fiziksel drop ancak 24 saatlik geri dönüş grace süresi dolduğunda ayrı bir turda gerçekleşir.
 
 ## 15. Bilinçli Olarak Kapsam Dışında
 

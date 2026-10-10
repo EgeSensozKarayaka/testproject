@@ -50,7 +50,12 @@ databaseSuite('history and retention foundation migration', () => {
     const temporaryRoot = await mkdtemp(path.join(tmpdir(), 'site-monitor-history-migrations-'));
     legacyMigrations = path.join(temporaryRoot, 'migrations');
     await cp(path.resolve('database/migrations'), legacyMigrations, { recursive: true });
-    await rm(path.join(legacyMigrations, '000021_history_retention_foundation.sql'));
+    await Promise.all([
+      rm(path.join(legacyMigrations, '000021_history_retention_foundation.sql')),
+      rm(path.join(legacyMigrations, '000022_housekeeping_runtime.sql')),
+      rm(path.join(legacyMigrations, '000023_rollup_replica_serialization.sql')),
+      rm(path.join(legacyMigrations, '000024_retention_projection_gate.sql')),
+    ]);
     const legacy = await runMigrations(pool, {
       appBuild: 'history-foundation-v20',
       directory: legacyMigrations,
@@ -176,7 +181,10 @@ databaseSuite('history and retention foundation migration', () => {
 
   it('backfills every durable run reference before rewiring foreign keys', async () => {
     const migration = await runMigrations(pool, { appBuild: 'history-foundation-v21' });
-    expect(migration).toEqual({ applied: [21], currentRevision: TARGET_SCHEMA_REVISION });
+    expect(migration).toEqual({
+      applied: [21, 22, 23, 24],
+      currentRevision: TARGET_SCHEMA_REVISION,
+    });
 
     const evidence = await pool.query<{
       evidence_count: string;

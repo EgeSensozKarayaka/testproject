@@ -9,7 +9,7 @@ const TRANSACTION_DIRECTIVE = /^--\s*migrate:transaction\s+(?<value>true|false)\
 const MIGRATION_LOCK_NAME = 'site-availability-monitor:migrations:v1';
 const SCHEMA_OWNER_ROLE = 'site_monitor_schema_owner';
 
-export const TARGET_SCHEMA_REVISION = 21;
+export const TARGET_SCHEMA_REVISION = 24;
 
 interface MigrationFile {
   checksum: Buffer;

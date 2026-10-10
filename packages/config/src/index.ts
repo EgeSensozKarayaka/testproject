@@ -385,3 +385,60 @@ export function loadMonitorRuntimeConfig(
     shutdownGraceMs: parsed.MONITOR_SHUTDOWN_GRACE_MS,
   };
 }
+
+export interface HousekeepingRuntimeConfig {
+  databasePoolSize: number;
+  discoveryBatchSize: number;
+  discoveryPollMs: number;
+  partitionPollMs: number;
+  purgeBatchSize: number;
+  retentionPollMs: number;
+  rollupBucketBatchSize: number;
+  rollupPollMs: number;
+  shutdownGraceMs: number;
+}
+
+export function loadHousekeepingRuntimeConfig(
+  environment: NodeJS.ProcessEnv = process.env,
+): HousekeepingRuntimeConfig {
+  const parsed = z
+    .object({
+      HOUSEKEEPING_DB_POOL_SIZE: z.coerce.number().int().min(2).max(16).default(4),
+      HOUSEKEEPING_DISCOVERY_BATCH_SIZE: z.coerce.number().int().min(1).max(5_000).default(500),
+      HOUSEKEEPING_DISCOVERY_POLL_MS: z.coerce.number().int().min(50).max(300_000).default(1_000),
+      HOUSEKEEPING_PARTITION_POLL_MS: z.coerce
+        .number()
+        .int()
+        .min(1_000)
+        .max(86_400_000)
+        .default(60_000),
+      HOUSEKEEPING_PURGE_BATCH_SIZE: z.coerce.number().int().min(1).max(5_000).default(250),
+      HOUSEKEEPING_RETENTION_POLL_MS: z.coerce
+        .number()
+        .int()
+        .min(1_000)
+        .max(86_400_000)
+        .default(30_000),
+      HOUSEKEEPING_ROLLUP_BUCKET_BATCH_SIZE: z.coerce.number().int().min(1).max(1_440).default(60),
+      HOUSEKEEPING_ROLLUP_POLL_MS: z.coerce.number().int().min(25).max(60_000).default(250),
+      HOUSEKEEPING_SHUTDOWN_GRACE_MS: z.coerce
+        .number()
+        .int()
+        .min(1_000)
+        .max(600_000)
+        .default(30_000),
+    })
+    .parse(environment);
+
+  return {
+    databasePoolSize: parsed.HOUSEKEEPING_DB_POOL_SIZE,
+    discoveryBatchSize: parsed.HOUSEKEEPING_DISCOVERY_BATCH_SIZE,
+    discoveryPollMs: parsed.HOUSEKEEPING_DISCOVERY_POLL_MS,
+    partitionPollMs: parsed.HOUSEKEEPING_PARTITION_POLL_MS,
+    purgeBatchSize: parsed.HOUSEKEEPING_PURGE_BATCH_SIZE,
+    retentionPollMs: parsed.HOUSEKEEPING_RETENTION_POLL_MS,
+    rollupBucketBatchSize: parsed.HOUSEKEEPING_ROLLUP_BUCKET_BATCH_SIZE,
+    rollupPollMs: parsed.HOUSEKEEPING_ROLLUP_POLL_MS,
+    shutdownGraceMs: parsed.HOUSEKEEPING_SHUTDOWN_GRACE_MS,
+  };
+}

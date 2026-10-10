@@ -2,7 +2,7 @@
 
 Çok kullanıcılı ve kullanıcı bazlı sahiplik izolasyonuna sahip site erişilebilirlik izleme ürünü. Repository; React web uygulaması, Node.js API ve worker süreçleri, PostgreSQL, Mailpit, deterministik hedef simülatörü ve ana sistemden bağımsız opsiyonel Python predictor için çalışır bir geliştirme temeli içerir.
 
-Aşama 0–10 tamamlanmıştır. Güvenli hesap ve owner-scoped group/check ile bakım penceresi yönetimi, gerçek HTTP kontrol motoru, sağlık/incident reducer'ı ve kalıcı monitor runtime'ı uygulanmıştır. Monitor worker; owner-fair materialization/claim, lease/heartbeat/fencing, bounded dispatcher, retry/crash recovery, atomik observation persistence ve deadline freshness reconciliation işlerini dört bağımsız production loop'unda yürütür. Bakım pencereleri check'leri durdurmaz; direct check ve güncel group kapsamı ortak PostgreSQL projection'ıyla birleştirilir ve bildirim kararı health/incident akışından ayrı tutulur. Readiness loop sağlığı ile mevcut/sonraki ay partition preflight'ini, shutdown ise bounded drain ve gerektiğinde probe abort davranışını içerir.
+Aşama 0–11 ile Aşama 12'nin kalıcılık ve housekeeping dilimleri tamamlanmıştır. Güvenli hesap ve owner-scoped group/check/bakım/bildirim yönetimi, gerçek HTTP kontrol motoru, sağlık/incident reducer'ı ve kalıcı worker runtime'ları uygulanmıştır. Monitor worker probe akışını; notification worker e-posta akışını; housekeeping worker ise source discovery, minute/hour rollup, partition guard ve retention işlerini ayrı process/pool'larda bounded döngülerle yürütür. History/incident private API ve grafik arayüzü sonraki dilimlerdir.
 
 ## Ön koşullar
 
@@ -68,7 +68,7 @@ pnpm db:migrate
 pnpm db:seed
 ```
 
-Ardından web, API ve iki zorunlu worker'ı hot reload ile çalıştırın:
+Ardından web, API ve üç zorunlu worker'ı hot reload ile çalıştırın:
 
 ```sh
 pnpm dev
@@ -173,7 +173,7 @@ Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ile
 
 ## Repository yapısı
 
-- `apps/` — web, API, monitor worker, notification worker ve target simulator
+- `apps/` — web, API, monitor worker, notification worker, housekeeping worker ve target simulator
 - `packages/` — auth, domain, contract, config, database, observability ve ortak adapter sınırları
 - `database/` — immutable SQL migration'lar ve development seed'i
 - `services/predictor/` — bağımsız Python ortamı
@@ -183,8 +183,8 @@ Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ile
 
 ## Dürüst durum
 
-Aşama 0–10 tamamlanmıştır. On beş immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları, group/check ve bakım penceresi API'leri, React yapılandırma yönetimi, güvenli HTTP kontrol motoru, deterministik sağlık/incident reducer'ı ve production monitor runtime uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
+Aşama 0–11 ile Aşama 12'nin ilk iki uygulama dilimi tamamlanmıştır. Yirmi dört immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları, group/check/bakım/bildirim API'leri, React yapılandırma yönetimi, güvenli HTTP kontrol motoru, deterministik sağlık/incident reducer'ı ve üç production worker runtime'ı uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
 
-Monitor worker owner-fair scheduler, bounded dispatcher, lease recovery ve freshness döngülerini production entrypoint'inde çalıştırır; loop hata durumu readiness'e yansır, graceful shutdown yeni claim'i durdurup aktif işleri bounded sürede drain eder. Compose smoke'unda gerçek 30 saniyelik cadence, `PASS/200`, `UP/FRESH`, restart sonrası run devamlılığı ve duplicate aktif job oluşmaması doğrulanmıştır. 20/200/500 gerçek PostgreSQL runtime profili 500-check burst'ünü 8.74 saniyede, 57.25 check/s uçtan uca throughput ile tamamlamıştır. Gerçek process kill sonrası doğal lease reclaim/stale-result fencing ve iki production worker 200 check'i işlerken ayrı API prosesinin list/readiness yanıtları ayrıca doğrulanmıştır. Bakım kapsamı, notification gate ve owner-scoped recipient/default-group policy API'si uygulanmıştır; kalıcı notification-intent consumer'ı, incident e-posta teslimi, recipient yönetim UI'ı, history sorguları, SSE, canlı monitoring dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran güvenli yapılandırma yönetimini sağlar; henüz canlı durum paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
+Monitor worker owner-fair scheduler, bounded dispatcher, lease recovery ve freshness döngülerini production entrypoint'inde çalıştırır; loop hata durumu readiness'e yansır, graceful shutdown yeni claim'i durdurup aktif işleri bounded sürede drain eder. Compose smoke'unda gerçek 30 saniyelik cadence, `PASS/200`, `UP/FRESH`, restart sonrası run devamlılığı ve duplicate aktif job oluşmaması doğrulanmıştır. 20/200/500 gerçek PostgreSQL runtime profili 500-check burst'ünü 8.74 saniyede, 57.25 check/s uçtan uca throughput ile tamamlamıştır. Gerçek process kill sonrası doğal lease reclaim/stale-result fencing ve iki production worker 200 check'i işlerken ayrı API prosesinin list/readiness yanıtları ayrıca doğrulanmıştır. Bakım kapsamı, notification gate, kalıcı notification consumer/SMTP teslimi ve owner-scoped recipient/default-group policy API'si uygulanmıştır. Housekeeping runtime iki replica ve restart altında exact minute/hour yakınsaması, DEFAULT guard ve retention grace ile doğrulanmıştır; recipient yönetim UI'ı, history sorguları, SSE, canlı monitoring dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran güvenli yapılandırma yönetimini sağlar; henüz canlı durum paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
 
 Güncel kapsam ve kanıtlar için [proje durumu](docs/PROJECT_STATUS.md), ayrıntılı araç zinciri için [geliştirme ortamı mimarisi](docs/DEVELOPMENT_ENVIRONMENT.md) belgelerine bakın.

@@ -1,18 +1,19 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 16:46 +06:00
+**Son güncelleme:** 2026-10-10 17:52 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–10 ve Aşama 11 recipient/policy API dilimi tamamlandı; incident worker/cutover sırada
+**Mevcut kilometre taşı:** Aşama 0–11 ve Aşama 12 housekeeping runtime tamamlandı; private history/incident API sırada
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
-## 1. Sıradaki Çalışma — Aşama 11 Uygulaması
+## 1. Sıradaki Çalışma — Aşama 12 Private API
 
-`docs/NOTIFICATIONS.md` tasarımını inceleme/onay sonrasında üç kısa dilimde uygula:
+`docs/HISTORY_AND_RETENTION.md` sözleşmesine göre:
 
-- [x] Revision 16 schema/backfill/trigger, saf policy kuralları ve recipient/policy API'si
-- Outbox/intent/delivery worker runtime'ı, SMTP adapter/templates ve güvenli destination cutover
-- İki-replica/restart/maintenance/SMTP failure/Mailpit kabul paketi ve tam CI
+- Canonical history/incident OpenAPI şemalarını projection gerçekliğiyle eşleştir
+- Owner-scoped day/week/month history ve incident journal service/routes katmanını ekle
+- Signed/filter-bound cursor, tombstone erişimi ve projection-lag fail-closed davranışını test et
+- Ardından 20/200/500 rollup profili ve 35 günlük sorgu planı ile Aşama 12'yi kapat
 
 ## 2. Aşama 10 Kapanış Kanıtları
 

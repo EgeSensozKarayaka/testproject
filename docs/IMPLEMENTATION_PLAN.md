@@ -635,4 +635,6 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 12 uygulama dilimi 1** tamamlanmıştır. Forward-only Revision 21; kompakt run evidence ve FK rewiring, write-time queue lineage doğrulaması, incident group-at-open snapshot'ı, typed rollup cursor/rebuild range, retention manifest ve source-discovery indekslerini ekler. Saf domain katmanı source-aligned sabit pencereleri, exact duration muhasebesini, availability/coverage sınıflandırmasını ve sum/count response aggregation'ını uygular. Revision 20→21 yükseltmesi, raw-run/queue retention bağımsızlığı, least privilege ve mevcut PostgreSQL akışları doğrulanmıştır.
 
-**Sıradaki çalışma Aşama 12 uygulama dilimi 2'dir:** ayrı `housekeeping-worker` runtime'ı, source discovery, bounded minute/hour recompute, partition/default guard ve retention/purge loop'ları.
+**Aşama 12 uygulama dilimi 2** tamamlanmıştır. Revision 22–24; ayrı `housekeeping-worker`, atomik full-tuple source discovery, bounded minute/hour recompute, iki-replica çözünürlük lane'i, partition/default guard, projection-backlog retention kapısı ve bounded detach/grace/drop + row purge akışını uygular. Restart, iki replica, DEFAULT visibility, least privilege ve retention manifest'i gerçek PostgreSQL üzerinde doğrulanmıştır.
+
+**Sıradaki çalışma Aşama 12 uygulama dilimi 3'tür:** private history/incident OpenAPI düzeltmeleri, owner-scoped service/routes, signed cursor ve projection-lag fail-closed davranışı.

@@ -784,7 +784,7 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 ## D-084 — Geçmiş çıktısı sabit bütçeli, rollup düzeltmesi kaynak-temelli ve bounded'dır
 
 - **Tarih:** 2026-10-10 17:27 +06:00
-- **Durum:** Accepted — Revision 21 şema temeli uygulandı; runtime dilimi sırada
+- **Durum:** Accepted — Revision 21–24 şema ve housekeeping runtime ile doğrulandı
 - **Bağlam:** 30 saniyelik run'ları ay görünümünde doğrudan taramak büyümeyle doğrusal maliyet yaratır. Geç finalize edilen uzun interval'lar geçmiş bucket'ları düzeltebildiği için yalnız monoton zaman watermark'ı yeterli değildir.
 - **Karar:** Day/week/month sırasıyla en fazla 288/336/360 bucket döndürür; minute ve hour rollup'lar source-of-truth'tan deterministik yeniden hesaplanır. Source cursor değişen aralığı bounded, ilerlemeli rebuild range olarak kuyruğa alır. Minute düzeltmesi hour düzeltmesini tetikler; average-of-average yasaktır.
 - **Alternatifler:** İstek anında raw tarama; yalnız append-only watermark; her interval finalize olduğunda bütün bucket'ları tek transaction'da yazmak; yaklaşık availability.
@@ -820,3 +820,23 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Arbitrary `to` ile bütün dönem raw interval taraması; kısmi source row'ları yaklaşık orantılamak; gelecekteki kısmı UNKNOWN olan ceil-aligned pencere.
 - **Gerekçe:** En fazla 59 dakikalık month data edge'i karşılığında bounded aggregate üzerinden exact, tekrarlanabilir ve cache edilebilir hesap sağlamak; yaklaşık availability üretmemek.
 - **Sonuçlar:** API `generated_at`, aligned `to` ve `data_through` alanlarını ayrı taşır. UI güncellik farkını gizlemez; day/week gecikmesi bir dakikadan, month kaynak kenarı bir saatten küçüktür.
+
+## D-088 — Örtüşen rollup range'leri replica başına değil çözünürlük lane'i başına serileştirilir
+
+- **Tarih:** 2026-10-10 17:52 +06:00
+- **Durum:** Accepted — Revision 23 iki-replica yarışıyla doğrulandı
+- **Bağlam:** `SKIP LOCKED` aynı range'in çift sahiplenilmesini engeller; farklı source fingerprint'lerinden gelen iki range aynı check/bucket'ı örtebilir. İki worker bu range'leri eşzamanlı delete+recompute edince hour primary key yarışına girebilir.
+- **Karar:** Minute ve hour birbirinden bağımsız iki advisory-lock lane'idir. Her `housekeeping_process_rollup_range` çağrısı kendi çözünürlük lock'unu transaction süresince alır, ardından bounded `SKIP LOCKED` işlemcisini çağırır. Revision 22 değiştirilmedi; wrapper forward-only Revision 23 ile eklendi.
+- **Alternatifler:** Yalnız range row lock'una güvenmek; tablo trigger'larıyla yarış sonrası düzeltme; check/bucket başına yüksek kardinaliteli lock; duplicate hatasını retry etmek.
+- **Gerekçe:** Bounded batch ve iki bağımsız lane ile basit, kanıtlanabilir doğruluk sağlamak; overlapping correction'ın sessiz kaybını veya unique yarışını önlemek.
+- **Sonuçlar:** İki replica arıza devri ve güvenli paralel claim sağlar fakat aynı çözünürlükte throughput yatay replica sayısıyla doğrusal artmaz. 20/200/500 kapasite kapanışında bu bilinçli taviz ölçülecek; gerekirse lock kapsamı check shard'ına daraltılacaktır.
+
+## D-089 — Retention projection backlog'unu geçemez
+
+- **Tarih:** 2026-10-10 18:01 +06:00
+- **Durum:** Accepted — Revision 24 ve gerçek PostgreSQL backlog testiyle doğrulandı
+- **Bağlam:** Worker uzun süre kapalı kaldığında source cursor retention sınırından ilerliyor olabilir. Aynı anda raw veya minute partition detach edilirse henüz rollup'a yansımamış kaynak geri dönüşsüz kaybedilebilir.
+- **Karar:** Her iki source cursor son beş dakika içine gelmeden veya herhangi bir pending rebuild range varken partition retention ve reference purge fail-closed `DEFERRED_PROJECTION_BACKLOG` döner. Mevcut Revision 22 işlemi değiştirilmedi; Revision 24 güvenlik wrapper'ı yalnız güvenli durumda bounded adıma delege eder.
+- **Alternatifler:** Retention'ı wall-clock cutoff'a göre koşulsuz çalıştırmak; yalnız pending range sayısına bakmak; silme sonrası backup'tan rollup onarmayı normal akış saymak.
+- **Gerekçe:** Saklama süresini birkaç tur uzatmak, doğru history üretmek için gerekli kaynağı silmekten daha güvenlidir.
+- **Sonuçlar:** Büyük backlog sırasında partition ve row purge gecikir ve metric/logda görünür. Backlog boşalıp cursor'lar güncel olduğunda otomatik devam eder; API/monitor/notification readiness bundan etkilenmez.

@@ -400,7 +400,7 @@ coverage = bilinen gözlem süresi / seçilen toplam süre
 
 `SUSPECT` aralığı bir sonraki sonuç gelene kadar provisional'dır. Sonraki başarısızlık incident'ı doğrularsa ilk başarısız gözlemden itibaren DOWN olarak; sonraki başarı eşik geçilmeden gelirse doğrulanmış downtime olmadığı için UP olarak finalize edilir. Başarısız run her iki durumda da response/error geçmişinde görünmeye devam eder. UNKNOWN/no-data hiçbir koşulda DOWN sayılmaz ve availability paydasına girmez. Monitor servisinin çalışmadığı aralık `null`/veri yok olarak dönülür ve grafikte boşluk şeklinde gösterilir. Availability ile coverage birlikte sunulur.
 
-Rollup üretimi, geç gelen sonuç düzeltmesi, gelecek partition'ların oluşturulması, retention, stale lease/outbox/session temizliği ve bakım bitiş reconciliation'ı PostgreSQL advisory lock ile tekil çalışan idempotent housekeeping görevleridir. Yeni bir mikroservis zorunlu değildir; ilgili worker runtime'ı bu görevleri koordine edebilir.
+Rollup üretimi, geç finalize edilen interval düzeltmesi, gelecek partition'ların oluşturulması ve retention; aynı repository/domain içindeki ayrı `housekeeping-worker` deployment process'inde çalışır. Bu process public API veya bağımsız veri sahipliği olan bir mikroservis değildir; ağır aggregate/DDL/purge işlerini API ve probe pool'undan izole eder. Durable range'ler `SKIP LOCKED`, minute/hour lane'leri bounded advisory lock, partition DDL'i ayrı advisory lock kullanır. Queue lease recovery ve notification/maintenance reconciliation ise verinin sahibi olan worker runtime'larında kalır.
 
 ## 13. Canlı Güncelleme
 

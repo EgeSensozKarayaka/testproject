@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   loadDatabaseUrl,
+  loadHousekeepingRuntimeConfig,
   loadMonitorRuntimeConfig,
   loadProbeRuntimeConfig,
   loadResourceRuntimeConfig,
@@ -66,6 +67,31 @@ describe('monitor worker configuration', () => {
         MONITOR_PER_OWNER_CONCURRENCY: '8',
       }),
     ).toThrow('MONITOR_CANDIDATE_BATCH_SIZE cannot be lower than concurrency');
+  });
+});
+
+describe('housekeeping worker configuration', () => {
+  it('uses bounded defaults for every independent loop', () => {
+    expect(loadHousekeepingRuntimeConfig({})).toEqual({
+      databasePoolSize: 4,
+      discoveryBatchSize: 500,
+      discoveryPollMs: 1_000,
+      partitionPollMs: 60_000,
+      purgeBatchSize: 250,
+      retentionPollMs: 30_000,
+      rollupBucketBatchSize: 60,
+      rollupPollMs: 250,
+      shutdownGraceMs: 30_000,
+    });
+  });
+
+  it('rejects unbounded batches and hot DDL loops', () => {
+    expect(() =>
+      loadHousekeepingRuntimeConfig({ HOUSEKEEPING_ROLLUP_BUCKET_BATCH_SIZE: '1441' }),
+    ).toThrow();
+    expect(() =>
+      loadHousekeepingRuntimeConfig({ HOUSEKEEPING_PARTITION_POLL_MS: '999' }),
+    ).toThrow();
   });
 });
 

@@ -224,6 +224,48 @@ services:
     networks:
       - backend
 
+  housekeeping-worker:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: infra/docker/node.Dockerfile
+      args:
+        APP: housekeeping-worker
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-site_monitor}:${POSTGRES_PASSWORD:-local_dev_only_change_me}@postgres:5432/${POSTGRES_DB:-site_monitor}
+      HOUSEKEEPING_DB_POOL_SIZE: ${HOUSEKEEPING_DB_POOL_SIZE:-4}
+      HOUSEKEEPING_DISCOVERY_BATCH_SIZE: ${HOUSEKEEPING_DISCOVERY_BATCH_SIZE:-500}
+      HOUSEKEEPING_DISCOVERY_POLL_MS: ${HOUSEKEEPING_DISCOVERY_POLL_MS:-1000}
+      HOUSEKEEPING_PARTITION_POLL_MS: ${HOUSEKEEPING_PARTITION_POLL_MS:-60000}
+      HOUSEKEEPING_PURGE_BATCH_SIZE: ${HOUSEKEEPING_PURGE_BATCH_SIZE:-250}
+      HOUSEKEEPING_RETENTION_POLL_MS: ${HOUSEKEEPING_RETENTION_POLL_MS:-30000}
+      HOUSEKEEPING_ROLLUP_BUCKET_BATCH_SIZE: ${HOUSEKEEPING_ROLLUP_BUCKET_BATCH_SIZE:-60}
+      HOUSEKEEPING_ROLLUP_POLL_MS: ${HOUSEKEEPING_ROLLUP_POLL_MS:-250}
+      HOUSEKEEPING_SHUTDOWN_GRACE_MS: ${HOUSEKEEPING_SHUTDOWN_GRACE_MS:-30000}
+      NODE_ENV: development
+      PORT: 3013
+      SERVICE_NAME: housekeeping-worker
+      SERVICE_VERSION: 0.1.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://localhost:3013/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    init: true
+    restart: unless-stopped
+    networks:
+      - backend
+
   web:
     profiles: [app]
     build:
