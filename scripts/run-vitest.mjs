@@ -26,6 +26,7 @@ const vitestArgs =
         'vitest',
         'run',
         '--passWithNoTests',
+        '--no-file-parallelism',
         ...integrationTestFiles('apps'),
         ...integrationTestFiles('packages'),
       ]
