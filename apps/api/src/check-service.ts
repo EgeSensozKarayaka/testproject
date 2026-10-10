@@ -508,13 +508,9 @@ async function closeIncident(
     new Date(result.closedAt).getTime() - new Date(result.startedAt).getTime(),
   );
   const maintenance = await client.query<{ active: boolean }>(
-    `SELECT EXISTS (
-       SELECT 1 FROM app.maintenance_windows w
-       JOIN app.checks c ON c.owner_id = w.owner_id AND c.id = $2
-       WHERE w.owner_id = $1 AND w.state = 'SCHEDULED' AND w.cancelled_at IS NULL
-         AND w.starts_at <= statement_timestamp() AND w.ends_at > statement_timestamp()
-         AND (w.check_id = $2 OR (w.group_id IS NOT NULL AND w.group_id = c.group_id))
-     ) AS active`,
+    `SELECT app.effective_maintenance_until(
+       $1, $2, statement_timestamp()
+     ) IS NOT NULL AS active`,
     [input.ownerId, input.checkId],
   );
   await writeEvent(client, {
@@ -805,11 +801,9 @@ export class CheckService implements CheckServicePort {
          LEFT JOIN monitoring.incident_segments seg
            ON seg.owner_id = i.owner_id AND seg.incident_id = i.id AND seg.ended_at IS NULL
          LEFT JOIN LATERAL (
-           SELECT max(w.ends_at) AS ends_at
-           FROM app.maintenance_windows w
-           WHERE w.owner_id = c.owner_id AND w.state = 'SCHEDULED' AND w.cancelled_at IS NULL
-             AND w.starts_at <= statement_timestamp() AND w.ends_at > statement_timestamp()
-             AND (w.check_id = c.id OR (w.group_id IS NOT NULL AND w.group_id = c.group_id))
+           SELECT app.effective_maintenance_until(
+             c.owner_id, c.id, statement_timestamp()
+           ) AS ends_at
          ) maintenance ON true
          WHERE c.owner_id = $1 AND c.lifecycle_state = 'LIVE'
            AND ($2::timestamptz IS NULL OR (c.created_at, c.id) < ($2::timestamptz, $3::uuid))

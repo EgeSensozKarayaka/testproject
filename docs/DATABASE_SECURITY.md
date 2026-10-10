@@ -121,7 +121,7 @@ Bir rolün RLS policy'si olması tablo privilege'ı olmadığı sürece erişim 
 | User profili           | R/U (RLS)                  | –                        | –                        | –                        | –      | purge X             |
 | Password/session/token | X + sınırlı RLS            | –                        | –                        | –                        | –      | cleanup X           |
 | Check/group            | R/I/U/D (RLS)              | R + schedule U           | sınırlı R view           | feature view             | –      | purge X             |
-| Maintenance            | R/I/U/D (RLS)              | R                        | R                        | –                        | –      | cleanup X           |
+| Maintenance            | R/I/dar U + projection X   | R + projection X         | R + projection X         | –                        | –      | cleanup X           |
 | Job/attempt            | gerektiğinde R (RLS)       | R/I/U                    | –                        | –                        | –      | cleanup X           |
 | Run/current/interval   | R (RLS)                    | R/I/U                    | sınırlı R view           | feature view             | –      | partition/rebuild X |
 | Incident/segment       | R (RLS)                    | R/I/U                    | sınırlı R                | feature view             | –      | cleanup X           |

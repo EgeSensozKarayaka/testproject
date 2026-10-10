@@ -1436,23 +1436,9 @@ export class PostgresObservationStore implements JobExecutionSink {
 
   async #maintenanceActive(client: PoolClient, claimed: ClaimedJob): Promise<boolean> {
     const result = await client.query<{ active: boolean }>(
-      `SELECT EXISTS (
-         SELECT 1 FROM app.maintenance_windows AS maintenance_window
-         JOIN app.checks AS check_row
-           ON check_row.owner_id = maintenance_window.owner_id AND check_row.id = $2
-         WHERE maintenance_window.owner_id = $1
-           AND maintenance_window.state = 'SCHEDULED'
-           AND maintenance_window.cancelled_at IS NULL
-           AND maintenance_window.starts_at <= transaction_timestamp()
-           AND maintenance_window.ends_at > transaction_timestamp()
-           AND (
-             maintenance_window.check_id = $2
-             OR (
-               maintenance_window.group_id IS NOT NULL
-               AND maintenance_window.group_id = check_row.group_id
-             )
-           )
-       ) AS active`,
+      `SELECT app.effective_maintenance_until(
+         $1, $2, transaction_timestamp()
+       ) IS NOT NULL AS active`,
       [claimed.ownerId, claimed.checkId],
     );
     return result.rows[0]?.active ?? false;

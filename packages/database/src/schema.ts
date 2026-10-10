@@ -138,7 +138,7 @@ export interface MaintenanceWindowTable extends CreatedUpdatedRow, OwnedRow {
   ends_at: Timestamp;
   group_id: string | null;
   id: GeneratedUuid;
-  name: string;
+  note: string | null;
   resource_version: GeneratedBigInt;
   starts_at: Timestamp;
   state: 'CANCELLED' | 'SCHEDULED';

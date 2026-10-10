@@ -82,6 +82,7 @@ async function withRoleCommit<T extends QueryResultRow>(
 databaseSuite('PostgreSQL persistence architecture', () => {
   const databaseName = `site_monitor_phase3_test_${process.pid}_${randomUUID().replaceAll('-', '')}`;
   const ownerA = '00000000-0000-4000-8000-000000000001';
+  const groupA = '00000000-0000-4000-8000-000000000101';
   const checkA = '00000000-0000-4000-8000-000000000201';
   const ownerB = '00000000-0000-4000-8000-000000000002';
   const checkB = '00000000-0000-4000-8000-000000000203';
@@ -107,7 +108,7 @@ databaseSuite('PostgreSQL persistence architecture', () => {
   it('migrates from zero, records checksums, and is idempotent', async () => {
     const first = await runMigrations(pool, { appBuild: 'integration-test' });
     expect(first.currentRevision).toBe(TARGET_SCHEMA_REVISION);
-    expect(first.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+    expect(first.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
 
     const second = await runMigrations(pool, { appBuild: 'integration-test' });
     expect(second).toEqual({ applied: [], currentRevision: TARGET_SCHEMA_REVISION });
@@ -340,6 +341,77 @@ databaseSuite('PostgreSQL persistence architecture', () => {
     ).rejects.toMatchObject({ code: '42501' });
   });
 
+  it('applies the maintenance foundation contract and least-privilege boundary', async () => {
+    const maintenanceId = '00000000-0000-7000-8000-000000000915';
+    const groupMaintenanceId = '00000000-0000-7000-8000-000000000916';
+    const created = await withRoleCommit(
+      pool,
+      'site_monitor_api',
+      async (client) => {
+        await client.query(
+          `INSERT INTO app.maintenance_windows
+             (id, owner_id, check_id, note, starts_at, ends_at)
+           VALUES ($1, $2, $3, NULL, transaction_timestamp(),
+                   transaction_timestamp() + interval '1 hour')`,
+          [maintenanceId, ownerA, checkA],
+        );
+        const groupWindow = await client.query<{ ends_at: Date }>(
+          `INSERT INTO app.maintenance_windows
+             (id, owner_id, group_id, note, starts_at, ends_at)
+           VALUES ($1, $2, $3, 'group overlap', transaction_timestamp(),
+                   transaction_timestamp() + interval '2 hours')
+           RETURNING ends_at`,
+          [groupMaintenanceId, ownerA, groupA],
+        );
+        return { groupUntil: groupWindow.rows[0]!.ends_at };
+      },
+      ownerA,
+    );
+
+    const projected = await withRole(pool, 'site_monitor_api', ownerA, async (client) => {
+      const result = await client.query<{ until: Date | null }>(
+        `SELECT app.effective_maintenance_until($1, $2, transaction_timestamp()) AS until`,
+        [ownerA, checkA],
+      );
+      return { until: result.rows[0]?.until ?? null };
+    });
+    expect(projected.until?.toISOString()).toBe(created.groupUntil.toISOString());
+
+    const hidden = await withRole(pool, 'site_monitor_api', ownerB, async (client) => {
+      const result = await client.query<{ until: Date | null }>(
+        `SELECT app.effective_maintenance_until($1, $2, transaction_timestamp()) AS until`,
+        [ownerA, checkA],
+      );
+      return { until: result.rows[0]?.until ?? null };
+    });
+    expect(hidden.until).toBeNull();
+
+    await expect(
+      withRole(pool, 'site_monitor_api', ownerA, async (client) => {
+        await client.query('DELETE FROM app.maintenance_windows WHERE id = $1', [maintenanceId]);
+        return {};
+      }),
+    ).rejects.toMatchObject({ code: '42501' });
+    await expect(
+      withRole(pool, 'site_monitor_api', ownerA, async (client) => {
+        await client.query('UPDATE app.maintenance_windows SET check_id = $1 WHERE id = $2', [
+          checkB,
+          maintenanceId,
+        ]);
+        return {};
+      }),
+    ).rejects.toMatchObject({ code: '42501' });
+
+    const columns = await pool.query<{ column_name: string; is_nullable: string }>(
+      `SELECT column_name, is_nullable
+       FROM information_schema.columns
+       WHERE table_schema = 'app' AND table_name = 'maintenance_windows'
+         AND column_name IN ('name', 'note')
+       ORDER BY column_name`,
+    );
+    expect(columns.rows).toEqual([{ column_name: 'note', is_nullable: 'YES' }]);
+  });
+
   it('executes the least-privilege account, session, throttle, and email lifecycle', async () => {
     const tokenDigest = Buffer.alloc(32, 41);
     const sessionDigest = Buffer.alloc(32, 42);
@@ -459,7 +531,7 @@ databaseSuite('PostgreSQL persistence architecture', () => {
       pool.query(
         `
           INSERT INTO app.maintenance_windows
-            (owner_id, check_id, name, starts_at, ends_at)
+            (owner_id, check_id, note, starts_at, ends_at)
           VALUES ($1, $2, 'Invalid owner link', statement_timestamp(), statement_timestamp() + interval '1 hour')
         `,
         [ownerA, checkB],
@@ -673,7 +745,7 @@ databaseSuite('PostgreSQL persistence architecture', () => {
       NODE_ENV: 'test',
     });
     expect(result.currentRevision).toBe(TARGET_SCHEMA_REVISION);
-    expect(result.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+    expect(result.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
     expect((await pool.query('SELECT id FROM auth.users')).rowCount).toBe(0);
   });
 });

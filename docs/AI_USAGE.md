@@ -1,6 +1,6 @@
 # AI Kullanımı
 
-**Son güncelleme:** 2026-10-10 15:42 +06:00
+**Son güncelleme:** 2026-10-10 15:54 +06:00
 
 ## Araç ve model
 
@@ -35,6 +35,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 17. Aşama 9'un sekizinci uygulama diliminde AI 20/200/500 due check'i production queue/dispatcher/persistence kod yolundan geçiren gerçek PostgreSQL kapasite fixture'ı hazırladı. Dış ağ değişkenliği deterministik 5/50 ms probe portuyla ayrıldı; Aşama 7'nin 50 gerçek socket concurrency testi tamamlayıcı kanıt olarak korundu. CPU, RSS, DB connection, active probe, scheduler/dispatch süreleri, p95 claim/execution lag ve throughput makine-okunur kaydedildi; observed baseline ile gevşek CI regresyon bütçesi ayrı belgelendi.
 18. Aşama 9'un dokuzuncu uygulama diliminde AI production monitor entrypoint'ini gerçek hanging HTTP probe sırasında child process olarak force-kill etti. Lease elle değiştirilmeden doğal doldu, replacement daha yüksek fence ile tamamladı ve eski immutable claim'in gecikmiş FAIL sonucu state/incident'ı değiştirmeden rejected history oldu. Gerçek crash ile zombie delivery'nin farklı failure mode'ları olduğu açıkça belgelendi.
 19. Aşama 9 kapanışında AI iki production monitor-worker ve ayrı production API entrypoint'ini üç child process'te aynı izole PostgreSQL üzerinde çalıştırdı. 200 check'in exact job/attempt/run/hedef-request eşitliği ve iki worker katılımı kanıtlanırken gerçek session'lı API list/readiness latency'si 40 kez ölçüldü; process/pool izolasyonu ile replica başına hostname limitinin birleşik etkisi dürüstçe raporlandı.
+20. Aşama 10'un ilk uygulama diliminde AI OpenAPI `note` ile eski DB `name` uyumsuzluğunu forward-only revision 15 ile giderdi; fiziksel maintenance delete ve hedef update yetkilerini kapattı. API, monitor ve ileride notifier'ın aynı half-open check+current-group kuralını kullanması için security-invoker DB projection'ı oluşturuldu; exact sınırlar ve overlap saf domain testleriyle, RLS/grant/fonksiyon davranışı gerçek PostgreSQL ile doğrulandı.
 
 ## Güvenlik ve gizlilik
 

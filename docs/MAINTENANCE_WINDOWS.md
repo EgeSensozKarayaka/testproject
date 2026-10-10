@@ -1,6 +1,6 @@
 # Bakım Pencereleri Mimarisi
 
-**Durum:** Aşama 10 uygulaması için onay bekleyen nihai tasarım  
+**Durum:** Onaylandı; revision 15/domain temeli uygulandı, API dilimi sırada
 **Tarih:** 2026-10-10 15:46 +06:00  
 **Bağımlılıklar:** Aşama 6 check/group yönetimi, Aşama 8 health/incident modeli, Aşama 9 kalıcı worker ve outbox altyapısı  
 **Sonraki aşama sınırı:** E-posta alıcıları, policy çözümleme ve SMTP delivery state machine'i Aşama 11'e aittir.

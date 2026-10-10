@@ -420,3 +420,11 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - OpenAPI `note` alanı ile şemadaki eski `name` kolonu arasındaki uyumsuzluk tespit edildi. Revision 15 için veriyi koruyan `name → note varchar(1000) NULL` dönüşümü, liste indeksi ve fiziksel delete yetkisinin kaldırılması planlandı.
 - Ayrı maintenance-job tablosu yerine mevcut `notification.intents` içindeki `DEFERRED_MAINTENANCE + maintenance_until` modelinin restart-safe reconciliation kuyruğu olması kararlaştırıldı. Erken bitiş ve scope değişikliği transactional outbox wake-up'larıyla, doğal bitiş deadline sorgusuyla ele alınacak.
 - Uygulama dört kısa dilime ayrıldı: domain/migration, API, çapraz check/group davranışı ve kapanış kabul kanıtı. Bu turda production kodu veya migration değiştirilmedi; test çalıştırılması gerekmedi.
+
+### 15:54 — Aşama 10 revision 15 ve domain temeli
+
+- Forward-only revision 15, mevcut maintenance `name` kolonunu veriyi koruyarak canonical `note varchar(1000) NULL` alanına dönüştürdü; owner liste indeksini ekledi, API fiziksel delete yetkisini kaldırdı ve update'i yalnız zaman/note/cancel/version kolonlarına daralttı.
+- `app.effective_maintenance_until` security-invoker fonksiyonu direct-check ile check'in güncel group pencerelerini UTC half-open semantiğiyle birleştiren tek DB projection kaynağı oldu. Check API list/incident tanısı ve monitor observation adapter'ındaki tekrarlı SQL bu fonksiyona geçirildi.
+- Domain paketine note normalizasyonu, exact upcoming/active/ended/cancelled türetimi, create range doğrulaması, upcoming/active patch matrisi ve direct+group overlap projection'ı eklendi. Odaklı unit paket **5/5**, dört ilgili workspace strict typecheck'i geçti.
+- İlk gerçek PostgreSQL koşusu eski cross-owner fixture'ının artık bulunmayan `name` kolonunu kullanmasını `42703` ile yakaladı; fixture `note` sözleşmesine geçirildi. Sonraki database paketi **15/15**, ortak projection'ı kullanan check API ve observation-store paketleri **20/20** geçti.
+- Revision 15 yerel geliştirme veritabanına `Database revision 15; applied 15` sonucu ile uygulandı. Migration sonrasında çalışan API ve monitor-worker readiness endpoint'leri doğru iç portlar üzerinden ayrı ayrı `200` döndürdü; ilk monitor smoke denemesinde yanlışlıkla kullanılan `3001` yerine Compose'daki gerçek `3011` portuyla kontrol tekrarlandı.

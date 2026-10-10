@@ -1,11 +1,14 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 15:46 +06:00
+**Son güncelleme:** 2026-10-10 15:54 +06:00
 
-**Genel durum:** Aşama 0–9 tamamlandı ve doğrulandı; Aşama 10 bakım pencereleri nihai mimarisi hazır, uygulama henüz başlamadı
+**Genel durum:** Aşama 0–9 tamamlandı ve doğrulandı; Aşama 10 revision 15/domain temeli tamamlandı, CRUD API dilimi sırada
 
 ## Tamamlanan
 
+- Revision 15 ile maintenance `name → note varchar(1000) NULL` sözleşme düzeltmesi, owner-list indeksi, fiziksel delete/hedef update yasağı ve API/monitor/notifier'ın paylaştığı security-invoker etkin bakım projection fonksiyonu
+- Saf maintenance domain politikası: exact `[start,end)` sınırları, note normalizasyonu, create/edit range doğrulaması, aktif/bitmiş/cancelled mutation kuralları ve direct+current-group overlap union projection'ı
+- Revision 15 için sıfırdan migration, RLS cross-owner gizleme, least-privilege ve projection testi dahil gerçek PostgreSQL paketi **15/15**; ortak projection'ı kullanan check API/monitor observation paketleri **20/20** geçti
 - Aşama 10 için check/group scope, `[start,end)`, overlap, mutation, group membership, incident/notification ayrımı ve restart-safe reconciliation kararlarını içeren `docs/MAINTENANCE_WINDOWS.md`
 - Ayrı job tablosu eklemeden `notification.intents.maintenance_until` deadline'ını doğal bakım bitişi, transactional outbox wake-up'larını erken bitiş/kapsam değişikliği için kullanan D-078 kararı
 - İki gerçek production monitor-worker ve ayrı production API prosesinin aynı PostgreSQL üzerinde eşzamanlı çalıştığı 200-check kabul profili; 200 job/attempt/run/accepted result ve 200 hedef isteği tam eşleşirken iki worker da iş aldı
@@ -44,7 +47,7 @@
 - DNS çağrısı yapmayan kısa ömürlü direct TCP/TLS connector; hostname/SNI sertifika doğrulaması, proxy bypass'ı, operator port allowlist'i ve production'da reddedilen exact-origin local simulator istisnası
 - Başarı/body/status, streaming, gecikme/hang, büyük/sıkıştırılmış body, redirect/loop, flaky ve erken bağlantı kapanması fixture'larıyla genişletilmiş hedef simülatörü
 - Aşama 0 gereksinim/kabul kriterleri, Aşama 1 domain/durum makineleri, Aşama 2 monorepo/runtime/CI temeli, Aşama 3 kalıcılık ve Aşama 4 API/event/hata sözleşmeleri
-- PostgreSQL 18.6 üzerinde on dört checksum'lı, immutable ve forward-only migration; schema-aware readiness, ayrı migration container'ı ve idempotent development seed'i
+- PostgreSQL 18.6 üzerinde on beş checksum'lı, immutable ve forward-only migration; schema-aware readiness, ayrı migration container'ı ve idempotent development seed'i
 - Private tablolar için composite sahiplik kısıtları, `FORCE RLS`, transaction-local owner context'i ve dar service rolleri
 - Canonical OpenAPI 3.1'den deterministik TypeScript tipleri ile Fastify runtime şemaları; merkezi RFC 9457 problem yanıtı ve UUIDv7 request korelasyonu
 - 15–128 code-point parola politikası, zxcvbn güç kontrolü, bounded async Argon2id hash/verify ve parametre yükseltme yolu

@@ -43,6 +43,7 @@
 | Incident segmentleri          | `incident_segments`        | `(owner_id,incident_id,started_at,id)`                                                                |
 | Aktif maintenance             | `maintenance_windows`      | partial `(owner_id,check_id,starts_at,ends_at)` ve group eşleniği WHERE SCHEDULED                     |
 | Maintenance sona erme         | `maintenance_windows`      | partial `(ends_at,id)` WHERE SCHEDULED                                                                |
+| Maintenance owner listesi     | `maintenance_windows`      | `(owner_id,starts_at DESC,id DESC)`                                                                   |
 | Recipient lookup              | `recipients`               | unique `(owner_id,email_normalized)`                                                                  |
 | Policy scope                  | `policies`                 | unique NULLS NOT DISTINCT `(owner_id,group_id)`                                                       |
 | Intent evaluation             | `notification.intents`     | partial `(maintenance_until,created_at,id)` WHERE pending/deferred                                    |

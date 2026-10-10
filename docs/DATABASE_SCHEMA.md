@@ -227,20 +227,22 @@ Aynı kullanıcı/purpose için birden fazla açık token üretildiğinde eskile
 
 ### 4.3 `app.maintenance_windows`
 
-| Kolon                      | Tip                | Kural/anlam                        |
-| -------------------------- | ------------------ | ---------------------------------- |
-| `id`                       | `uuid`             | PK                                 |
-| `owner_id`                 | `uuid`             | User composite FK                  |
-| `check_id`                 | `uuid NULL`        | Check hedefi                       |
-| `group_id`                 | `uuid NULL`        | Group hedefi                       |
-| `name`                     | `varchar(160)`     | Kullanıcı etiketi                  |
-| `starts_at`, `ends_at`     | `timestamptz`      | `[starts_at,ends_at)`, start < end |
-| `state`                    | `text`             | `SCHEDULED`, `CANCELLED`           |
-| `cancelled_at`             | `timestamptz NULL` | State ile tutarlı                  |
-| `resource_version`         | `bigint`           | Optimistic concurrency             |
-| `created_at`, `updated_at` | `timestamptz`      | Audit zamanları                    |
+| Kolon                      | Tip                  | Kural/anlam                                             |
+| -------------------------- | -------------------- | ------------------------------------------------------- |
+| `id`                       | `uuid`               | PK                                                      |
+| `owner_id`                 | `uuid`               | User composite FK                                       |
+| `check_id`                 | `uuid NULL`          | Check hedefi                                            |
+| `group_id`                 | `uuid NULL`          | Group hedefi                                            |
+| `note`                     | `varchar(1000) NULL` | İsteğe bağlı kullanıcı açıklaması; event/log'a taşınmaz |
+| `starts_at`, `ends_at`     | `timestamptz`        | `[starts_at,ends_at)`, start < end                      |
+| `state`                    | `text`               | `SCHEDULED`, `CANCELLED`                                |
+| `cancelled_at`             | `timestamptz NULL`   | State ile tutarlı                                       |
+| `resource_version`         | `bigint`             | Optimistic concurrency                                  |
+| `created_at`, `updated_at` | `timestamptz`        | Audit zamanları                                         |
 
 `num_nonnulls(check_id,group_id)=1`. Her iki olası hedef composite owner FK ile korunur. `ACTIVE`/`ENDED` saklanmaz, DB zamanı ve aralıktan türetilir. Örtüşen maintenance pencerelerine izin verilir; etkinlik union semantiğidir.
+
+`app.effective_maintenance_until(owner_id,check_id,evaluated_at)` security-invoker fonksiyonu direct-check ve check'in güncel group kapsamındaki etkin pencerelerin en büyük `ends_at` değerini döndürür. API, monitor ve notifier aynı half-open semantiği bu fonksiyondan kullanır. Owner liste yolu `(owner_id,starts_at DESC,id DESC)` indeksiyle desteklenir.
 
 ## 5. `monitoring` Şeması
 
