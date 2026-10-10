@@ -16,7 +16,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 
 ## Önemli istem ve karar özeti
 
-1. Projenin enterprise seviyede fakat gereksiz mikroservisleşmeden kurulması istendi; modüler monolit ve ayrı, arıza izolasyonlu Python predictor seçildi.
+1. Projenin enterprise seviyede fakat gereksiz mikroservisleşmeden kurulması istendi; modüler monolit ve başlangıçta ayrı, arıza izolasyonlu bir Python predictor taslağı seçildi. Predictor daha sonra kullanıcı kararıyla teslim kapsamından çıkarıldı.
 2. Gerçek çok kullanıcılı kullanıcı sahipliği istendi; organizasyon üyeliği bilinçli olarak v1 dışında bırakıldı.
 3. Kalıcı veri, API sözleşmesi ve kimlik doğrulama her biri önce nihai mimari belgesi, sonra uygulama ve kanıt kapılarıyla ayrı aşamalara bölündü.
 4. Aşama 5'te opaque session, Argon2id, CSRF/origin savunması, PostgreSQL rate limit, encrypted durable auth e-postası ve Mailpit doğrulaması uygulandı.
@@ -53,6 +53,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 35. Aşama 13 Dilim 2'de AI private SSE'yi API request havuzundan ayrı dedicated PostgreSQL listener, bounded owner/session/IP hub ve RLS-scoped projection olarak uyguladı. İlk gerçek PostgreSQL koşusu SQL'de rezerve `check` alias'ını yakaladı; açık `check_row` alias'ıyla düzeltildi. İki replica broadcast'i, cross-owner sıfır sonuç/sıfır frame, listener reconnect, slow-consumer izolasyonu ve logout stream kapatma otomatik testlerle kanıtlandı; browser client hazır olmadığı için `REALTIME` aktivasyonu kapalı tutuldu.
 36. Aşama 13 Dilim 3'te AI bağımlılıksız fetch-stream parser, stale/reconnect/polling state machine'i ve stream-before-snapshot reconciliation'ı React istemciye bağladı; Revision 28 ile `REALTIME` cutover'ını yaptı. İlk gerçek Playwright koşusunda ham `reply.hijack()` SSE cevabının Fastify CORS başlıklarını taşımadığı ve tarayıcının polling'e düştüğü görüldü; exact-origin başlıklar ham response'a eklenip API regresyon testiyle sabitlendi. Migration-owned aktivasyon sonrası eski test fixture'larının duplicate key üretmesi ayrıca temizlendi. İki browser 4/4, unit 247/247, gerçek PostgreSQL/socket/process integration 92/92 ve 20/200/500 realtime kapasite profili geçti.
 37. Aşama 14 başlangıcında kullanıcı ayrı frontend mimari dosyası yerine doğrudan uygulama istedi. AI mevcut current-status/realtime sözleşmesini kullanarak canlı özet, operasyonel filtre, freshness/bakım görünümü ve aktif kesinti sayacını responsive React arayüzüne ekledi; davranışı bileşen ve Playwright testleriyle korudu. Registry kesintili olduğu için tamamlanamayan temiz image build'i başarı olarak sunulmadı; host production build, full CI 249/249 unit + 92/92 integration ve full-stack 4/4 kabul sonucu ayrı kaydedildi.
+38. Teslim odaklı Aşama 14 kapanışında AI history/incident, maintenance, notification ve public-page backend sözleşmelerini doğrudan React arayüze bağladı. Gerçek Playwright akışı public projection'da iki fiziksel/sözleşme kolon uyumsuzluğunu yakaladı; uygulanmış SQL değiştirilmeden forward-only Revision 32/33 eklendi. Public token log redaction'ı doğrulandı; 249/249 unit, 92/92 gerçek PostgreSQL integration, bütün build'ler ve iki-client/public-page dahil 4/4 E2E geçti. Kullanıcı kararıyla predictor özellik kapsamından çıkarıldı ve bu durum dürüstçe belgelendi.
 
 ## Güvenlik ve gizlilik
 

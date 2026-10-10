@@ -234,8 +234,27 @@ test('registers, verifies through Mailpit, logs in, and logs out', async ({ page
   await expect(statusOverview.getByText('1 kontrol yüklendi')).toBeVisible();
   await expect(statusOverview.getByText('E2E Homepage')).toBeVisible();
 
+  const publicPanel = page.getByRole('region', { name: 'Operasyon merkezi' });
+  await expect(publicPanel.getByRole('heading', { name: 'Performans geçmişi' })).toBeVisible();
+  await publicPanel.getByLabel('Sayfa başlığı').fill('E2E Service Status');
+  await publicPanel.getByLabel('Sayfa açıklaması').fill('Public acceptance status');
+  await publicPanel.getByRole('button', { name: 'Tüm kontrollerle yayınla' }).click();
+  const publicLink = publicPanel
+    .getByText('Tek sefer gösterilen bağlantı')
+    .locator('..')
+    .getByRole('link');
+  await expect(publicLink).toBeVisible();
+  const publicUrl = await publicLink.getAttribute('href');
+  expect(publicUrl).toBeTruthy();
+  const publicPage = await page.context().newPage();
+  await publicPage.goto(publicUrl!);
+  await expect(publicPage.getByRole('heading', { name: 'E2E Service Status' })).toBeVisible();
+  await expect(publicPage.getByText('E2E Homepage')).toBeVisible();
+  await expect(publicPage.getByText('Public acceptance status')).toBeVisible();
+  await publicPage.close();
+
   await checkCard.getByRole('button', { name: 'Şimdi çalıştır' }).click();
-  await expect(page.getByRole('status')).toContainText('Manuel kontrol kuyruğa alındı');
+  await expect(page.getByText('Manuel kontrol kuyruğa alındı.', { exact: true })).toBeVisible();
   await checkCard.getByRole('button', { name: 'Duraklat' }).click();
   checkCard = page.locator('.check-card').filter({ hasText: 'E2E Homepage' });
   await expect(checkCard.getByRole('button', { name: 'Devam ettir' })).toBeVisible();

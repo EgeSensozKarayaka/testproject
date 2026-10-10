@@ -18,6 +18,8 @@ import { registerMaintenanceRoutes } from './maintenance-routes.js';
 import type { MaintenanceServicePort } from './maintenance-service.js';
 import { registerNotificationRoutes } from './notification-routes.js';
 import type { NotificationServicePort } from './notification-service.js';
+import { registerPublicPageRoutes } from './public-page-routes.js';
+import type { PublicPageServicePort } from './public-page-service.js';
 import type { RealtimeHub } from './realtime-hub.js';
 import { registerRealtimeRoutes } from './realtime-routes.js';
 
@@ -31,6 +33,7 @@ export interface ApiApplicationOptions {
   logger: Logger;
   maintenanceService?: MaintenanceServicePort;
   notificationService?: NotificationServicePort;
+  publicPageService?: PublicPageServicePort;
   realtimeHub?: RealtimeHub;
   readiness: () => Promise<boolean>;
   serviceName: string;
@@ -118,6 +121,14 @@ export function buildApiApplication(options: ApiApplicationOptions) {
         authService: options.authService,
         cookieSecure: options.cookieSecure ?? false,
         notificationService: options.notificationService,
+      });
+    }
+    if (options.publicPageService) {
+      void app.register(registerPublicPageRoutes, {
+        allowedOrigin: options.allowedOrigin,
+        authService: options.authService,
+        cookieSecure: options.cookieSecure ?? false,
+        publicPageService: options.publicPageService,
       });
     }
     if (options.realtimeHub) {

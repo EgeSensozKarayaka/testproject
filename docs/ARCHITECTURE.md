@@ -6,9 +6,9 @@
 
 ## 1. Mimari Özeti
 
-Ürün; birbirinden ayrı bir React frontend, Node.js backend süreçleri, PostgreSQL veritabanı ve opsiyonel bir Python erken uyarı worker'ından oluşan modüler bir monolit olarak geliştirilecektir.
+Ürün; birbirinden ayrı bir React frontend, Node.js backend süreçleri ve PostgreSQL veritabanından oluşan modüler bir monolittir. Önceki araştırma turundaki izole Python predictor taslağı teslim kapsamına dahil değildir ve ana runtime'ın hiçbir bağımlılığı değildir.
 
-Ana ürünün çalışması yalnızca Node.js ve PostgreSQL bileşenlerine bağlıdır. Python tahmin sistemi sökülebilir bir yan özelliktir; durması, yavaşlaması veya hatalı sonuç üretmesi kontrolleri, incident yönetimini, normal e-postaları, API'yi, public durum sayfasını veya frontend'i durduramaz.
+Ana ürünün çalışması yalnızca Node.js ve PostgreSQL bileşenlerine bağlıdır. Python tahmin sistemi teslim kapsamından çıkarılmıştır; bu belgedeki prediction bölümleri yalnız önceki araştırma yönünü kaydeder ve tamamlanmış ürün davranışı sayılmaz.
 
 Sistem gerçek çok kullanıcılıdır. Her kullanıcı yalnızca kendi kaynaklarına erişebilir. Organizasyon, ekip üyeliği, davet ve rol yönetimi ilk sürümün kapsamında değildir.
 
@@ -41,7 +41,7 @@ Kontrol sayısı için 50 gibi sabit bir ürün limiti bulunmaz. Scheduler ve wo
 | Scheduler doğruluğu | Sabit cadence, heartbeat, fencing token ve stale-result reddi |
 | E-posta | Node.js notification worker + transactional outbox + SMTP adapter |
 | Yerel e-posta | Mailpit |
-| Tahmin | Bağımsız ve opsiyonel Python analysis worker |
+| Tahmin | Teslim kapsamı dışında; izole araştırma taslağı |
 | Kullanıcı modeli | E-posta/parola hesabı ve kullanıcı bazlı sahiplik |
 | Oturum | Güvenli HTTP-only cookie session |
 | Availability | Zaman ağırlıklı durum süresi + ayrı data coverage |
@@ -60,7 +60,7 @@ flowchart LR
     API[Node.js API]
     Monitor[Node.js Monitor Worker]
     Notify[Node.js Notification Worker]
-    Predictor[Python Prediction Worker\nOptional]
+    Predictor[Python Prediction Draft\nOut of delivery scope]
     DB[(PostgreSQL)]
     SMTP[SMTP Provider / Mailpit]
     Targets[Monitored Websites]

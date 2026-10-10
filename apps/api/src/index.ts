@@ -16,6 +16,7 @@ import { GroupService } from './group-service.js';
 import { HistoryService } from './history-service.js';
 import { MaintenanceService } from './maintenance-service.js';
 import { NotificationService } from './notification-service.js';
+import { PublicPageService } from './public-page-service.js';
 import { RealtimeHub } from './realtime-hub.js';
 import { PostgresRealtimeListener } from './realtime-listener.js';
 import { RealtimeProjectionCoordinator, RealtimeProjectionService } from './realtime-projection.js';
@@ -66,6 +67,17 @@ const notificationService = new NotificationService(database, {
   },
   securityKey: authConfig.rateLimitKey,
 });
+const publicDatabase = createDatabasePool({
+  applicationName: `${config.serviceName}-public`,
+  connectionString: loadDatabaseUrl(),
+  databaseRole: 'site_monitor_public',
+  maxConnections: 2,
+});
+const publicPageService = new PublicPageService(
+  database,
+  publicDatabase,
+  process.env.PUBLIC_WEB_URL ?? 'http://localhost:15173',
+);
 const realtimeListenerDatabase = createDatabasePool({
   applicationName: `${config.serviceName}-realtime-listener`,
   connectionString: loadDatabaseUrl(),
@@ -100,6 +112,7 @@ const app = buildApiApplication({
   logger,
   maintenanceService,
   notificationService,
+  publicPageService,
   realtimeHub,
   readiness: async () => (await isDatabaseReady(database)) && realtimeListener.ready,
   serviceName: config.serviceName,
@@ -115,6 +128,7 @@ async function stop(signal: string): Promise<void> {
   await realtimeHub.shutdown();
   await app.close();
   await realtimeListenerDatabase.end();
+  await publicDatabase.end();
   await database.end();
 }
 

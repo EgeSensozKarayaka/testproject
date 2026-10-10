@@ -2,6 +2,7 @@ import { type FormEvent, useCallback, useEffect, useState } from 'react';
 
 import { apiRequest, type SessionView } from './api-client.js';
 import { MonitoringDashboard } from './monitoring-ui.js';
+import { PublicStatusPage } from './public-status-ui.js';
 
 function takeFragmentToken(): string | null {
   const token = new URLSearchParams(window.location.hash.slice(1)).get('token');
@@ -235,6 +236,7 @@ function TokenAction({ kind }: { kind: 'reset' | 'verify' }) {
 export function App() {
   const [session, setSession] = useState<SessionView | null>(null);
   const path = window.location.pathname;
+  const publicToken = path.startsWith('/status/') ? decodeURIComponent(path.slice(8)) : null;
   const [checking, setChecking] = useState(path === '/');
   const sessionExpired = useCallback(() => setSession(null), []);
 
@@ -258,6 +260,7 @@ export function App() {
 
   return (
     <main className="shell">
+      {publicToken && <PublicStatusPage token={publicToken} />}
       {path === '/verify-email' && <TokenAction kind="verify" />}
       {path === '/reset-password' && <TokenAction kind="reset" />}
       {path === '/' && checking && <p role="status">Oturum kontrol ediliyor…</p>}

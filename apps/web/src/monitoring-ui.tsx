@@ -12,6 +12,7 @@ import {
   monitoringApi,
 } from './api-client.js';
 import { PrivateRealtimeSync, type RealtimeConnectionState } from './realtime-client.js';
+import { OperationsWorkspace } from './operations-ui.js';
 
 function formText(form: FormData, name: string): string {
   const value = form.get(name);
@@ -923,6 +924,12 @@ export function MonitoringDashboard({
               </button>
             )}
           </section>
+          <OperationsWorkspace
+            checks={checks}
+            groups={groups}
+            onSessionExpired={onSessionExpired}
+            session={session}
+          />
         </>
       )}
     </div>

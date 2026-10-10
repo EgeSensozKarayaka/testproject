@@ -1,20 +1,22 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 20:37 +06:00
+**Son güncelleme:** 2026-10-10 21:07 +06:00
 
-**Mevcut kilometre taşı:** Aşama 14 doğrudan uygulama başladı; canlı durum dashboard'u tamamlanıyor
+**Mevcut kilometre taşı:** Aşama 14 teslim kapsamı tamamlandı; teslim provası ve üretim sertleştirmesi sırada
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
-## 1. Sıradaki Çalışma — Aşama 14 Authenticated Frontend
+## 1. Sıradaki Çalışma — Teslim Provası
 
-Kullanıcı yönlendirmesiyle ayrı bir frontend mimari dosyası hazırlanmayacaktır. Mevcut API/OpenAPI, domain belgeleri ve çalışan realtime katmanı kaynak kabul edilerek arayüz küçük, test edilen ve ayrı ayrı commit edilen dilimlerle doğrudan geliştirilecektir:
+Kullanıcı yönlendirmesiyle ayrı bir frontend mimari dosyası hazırlanmadı. Teslim kapsamındaki arayüz artık doğrudan uygulanmıştır:
 
-- Güncel durum/freshness/bakım dashboard'u, operasyonel filtreler ve aktif kesinti sayacı uygulandı; final kalite kapısı tamamlanacaktır
-- Sıradaki dilimde history response-time grafikleri, availability ve incident günlüğü uygulanacaktır
-- Maintenance window ile notification recipient/policy yönetimi
-- Loading, empty, stale, partial-error, responsive ve erişilebilir durumlar her dilimin testlerinde korunacaktır
-- Mevcut snapshot/realtime katmanının query sınırları ve iki-client Playwright kabulü uygulama içinde doğrulanacaktır
+- Canlı durum/freshness/bakım dashboard'u, filtreler ve aktif kesinti sayacı
+- Günlük/haftalık/aylık response-time ve availability görünümü ile incident günlüğü
+- Maintenance window ve notification recipient/default-policy yönetimi
+- Opaque bağlantılı, allowlist tabanlı public durum sayfası
+- İki-client Playwright kabulü ve public anonim görüntüleme akışı
+
+Sonraki somut iş temiz ortamda `docker compose --profile app up --detach --build --wait` provası, demo verisi ve değerlendirici adımlarının son kez yürütülmesidir.
 
 Aşama 13 kapanış ölçümleri [realtime kapasite raporunda](./REALTIME_CAPACITY_REPORT.md), Aşama 12 ölçümleri [history kapasite raporunda](./HISTORY_CAPACITY_REPORT.md) saklanır.
 
@@ -43,5 +45,6 @@ Aşama 13 kapanış ölçümleri [realtime kapasite raporunda](./REALTIME_CAPACI
 ## 5. Bilinçli Olarak Öncelik Dışı
 
 - Organizasyon/üyelik/rol modeli v1 gereksinimi değildir; kullanıcı sahipliği modeli korunur.
+- Python erken uyarı/tahmin sistemi bu teslimin kapsamından çıkarılmıştır.
 - Predictor yardımcı ve arıza izolasyonlu bir özelliktir; temel monitoring yolunun doğruluğunu veya kullanılabilirliğini belirlemez.
 - Mikroservis ayrıştırması, ölçülmüş ölçek ya da izolasyon ihtiyacı olmadan yapılmaz.

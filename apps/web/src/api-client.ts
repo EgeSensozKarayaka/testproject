@@ -17,6 +17,18 @@ export type Group = Schemas['Group'];
 export type GroupListItem = Schemas['GroupListItem'];
 export type GroupPage = Schemas['GroupPage'];
 export type ManualRunReceipt = Schemas['ManualRunReceipt'];
+export type HistoryResponse = Schemas['HistoryResponse'];
+export type Incident = Schemas['Incident'];
+export type IncidentPage = Schemas['IncidentPage'];
+export type MaintenanceWindow = Schemas['MaintenanceWindow'];
+export type MaintenanceWindowPage = Schemas['MaintenanceWindowPage'];
+export type NotificationRecipient = Schemas['NotificationRecipient'];
+export type NotificationRecipientPage = Schemas['NotificationRecipientPage'];
+export type NotificationPolicy = Schemas['NotificationPolicy'];
+export type PublicPage = Schemas['PublicPage'];
+export type PublicPagePage = Schemas['PublicPagePage'];
+export type PublicLinkResult = Schemas['PublicLinkResult'];
+export type PublicStatusSnapshot = Schemas['PublicStatusSnapshot'];
 export type Problem = Schemas['Problem'];
 
 export interface CheckWriteInput {
@@ -32,6 +44,21 @@ export interface CheckWriteInput {
 export interface GroupWriteInput {
   description?: string | null;
   name: string;
+}
+
+export interface MaintenanceWriteInput {
+  ends_at: string;
+  note?: string | null;
+  starts_at: string;
+  target_id: string;
+  target_type: 'CHECK' | 'GROUP';
+}
+
+export interface NotificationPolicyWriteInput {
+  mode: 'ACTIVE' | 'DISABLED';
+  notify_down: boolean | null;
+  notify_recovery: boolean | null;
+  recipient_ids: string[];
 }
 
 export class ApiError extends Error {
@@ -83,6 +110,13 @@ function pagePath(path: string, cursor?: string): string {
 }
 
 export const monitoringApi = {
+  cancelMaintenanceWindow(session: SessionView, window: MaintenanceWindow): Promise<void> {
+    return apiRequest(`/api/v1/maintenance-windows/${window.id}`, {
+      headers: commandHeaders(session, { version: window.resource_version }),
+      method: 'DELETE',
+    });
+  },
+
   createCheck(session: SessionView, input: CheckWriteInput): Promise<Check> {
     return apiRequest('/api/v1/checks', {
       body: JSON.stringify(input),
@@ -93,6 +127,36 @@ export const monitoringApi = {
 
   createGroup(session: SessionView, input: GroupWriteInput): Promise<Group> {
     return apiRequest('/api/v1/groups', {
+      body: JSON.stringify(input),
+      headers: commandHeaders(session, { idempotent: true }),
+      method: 'POST',
+    });
+  },
+
+  createMaintenanceWindow(
+    session: SessionView,
+    input: MaintenanceWriteInput,
+  ): Promise<MaintenanceWindow> {
+    return apiRequest('/api/v1/maintenance-windows', {
+      body: JSON.stringify(input),
+      headers: commandHeaders(session, { idempotent: true }),
+      method: 'POST',
+    });
+  },
+
+  createNotificationRecipient(session: SessionView, email: string): Promise<NotificationRecipient> {
+    return apiRequest('/api/v1/notification-recipients', {
+      body: JSON.stringify({ email }),
+      headers: commandHeaders(session, { idempotent: true }),
+      method: 'POST',
+    });
+  },
+
+  createPublicPage(
+    session: SessionView,
+    input: { description?: string | null; title: string },
+  ): Promise<PublicPage> {
+    return apiRequest('/api/v1/public-pages', {
       body: JSON.stringify(input),
       headers: commandHeaders(session, { idempotent: true }),
       method: 'POST',
@@ -113,12 +177,46 @@ export const monitoringApi = {
     });
   },
 
+  deleteNotificationRecipient(
+    session: SessionView,
+    recipient: NotificationRecipient,
+  ): Promise<void> {
+    return apiRequest(`/api/v1/notification-recipients/${recipient.id}`, {
+      headers: commandHeaders(session, { version: recipient.resource_version }),
+      method: 'DELETE',
+    });
+  },
+
+  getDefaultNotificationPolicy(): Promise<NotificationPolicy> {
+    return apiRequest('/api/v1/notification-policies/default');
+  },
+
+  getHistory(checkId: string, period: 'day' | 'month' | 'week'): Promise<HistoryResponse> {
+    return apiRequest(`/api/v1/checks/${checkId}/history?period=${period}`);
+  },
+
   listChecks(cursor?: string): Promise<CheckPage> {
     return apiRequest(pagePath('/api/v1/checks', cursor));
   },
 
   listGroups(cursor?: string): Promise<GroupPage> {
     return apiRequest(pagePath('/api/v1/groups', cursor));
+  },
+
+  listIncidents(): Promise<IncidentPage> {
+    return apiRequest('/api/v1/incidents?limit=50');
+  },
+
+  listMaintenanceWindows(): Promise<MaintenanceWindowPage> {
+    return apiRequest('/api/v1/maintenance-windows?limit=100');
+  },
+
+  listNotificationRecipients(): Promise<NotificationRecipientPage> {
+    return apiRequest('/api/v1/notification-recipients?limit=100');
+  },
+
+  listPublicPages(): Promise<PublicPagePage> {
+    return apiRequest('/api/v1/public-pages?limit=100');
   },
 
   pauseCheck(session: SessionView, check: Check): Promise<Check> {
@@ -138,9 +236,72 @@ export const monitoringApi = {
     });
   },
 
+  resendNotificationVerification(
+    session: SessionView,
+    recipient: NotificationRecipient,
+  ): Promise<{ accepted: boolean }> {
+    return apiRequest(`/api/v1/notification-recipients/${recipient.id}/verification`, {
+      headers: commandHeaders(session, { idempotent: true }),
+      method: 'POST',
+    });
+  },
+
   resumeCheck(session: SessionView, check: Check): Promise<Check> {
     return apiRequest(`/api/v1/checks/${check.id}/resume`, {
       headers: commandHeaders(session, { version: check.resource_version }),
+      method: 'POST',
+    });
+  },
+
+  sendNotificationTest(
+    session: SessionView,
+    recipient: NotificationRecipient,
+  ): Promise<{ accepted: boolean }> {
+    return apiRequest(`/api/v1/notification-recipients/${recipient.id}/test-email`, {
+      headers: commandHeaders(session, { idempotent: true }),
+      method: 'POST',
+    });
+  },
+
+  disablePublicPage(session: SessionView, page: PublicPage): Promise<PublicPage> {
+    return apiRequest(`/api/v1/public-pages/${page.id}/disable`, {
+      headers: commandHeaders(session, { version: page.resource_version }),
+      method: 'POST',
+    });
+  },
+
+  publishPublicPage(session: SessionView, page: PublicPage): Promise<PublicLinkResult> {
+    return apiRequest(`/api/v1/public-pages/${page.id}/publish`, {
+      headers: commandHeaders(session, { idempotent: true, version: page.resource_version }),
+      method: 'POST',
+    });
+  },
+
+  replacePublicPageChecks(
+    session: SessionView,
+    page: PublicPage,
+    checks: CheckListItem[],
+  ): Promise<PublicPage> {
+    return apiRequest(`/api/v1/public-pages/${page.id}/components`, {
+      body: JSON.stringify({
+        items: checks.map(({ check }, position) => ({
+          display_name: check.name,
+          kind: 'CHECK',
+          position,
+          show_incident_history: true,
+          show_response_time: true,
+          show_url: false,
+          source_id: check.id,
+        })),
+      }),
+      headers: commandHeaders(session, { version: page.resource_version }),
+      method: 'PUT',
+    });
+  },
+
+  rotatePublicPageLink(session: SessionView, page: PublicPage): Promise<PublicLinkResult> {
+    return apiRequest(`/api/v1/public-pages/${page.id}/rotate-link`, {
+      headers: commandHeaders(session, { idempotent: true, version: page.resource_version }),
       method: 'POST',
     });
   },
@@ -158,6 +319,18 @@ export const monitoringApi = {
       body: JSON.stringify(input),
       headers: commandHeaders(session, { version: group.resource_version }),
       method: 'PATCH',
+    });
+  },
+
+  updateDefaultNotificationPolicy(
+    session: SessionView,
+    policy: NotificationPolicy,
+    input: NotificationPolicyWriteInput,
+  ): Promise<NotificationPolicy> {
+    return apiRequest('/api/v1/notification-policies/default', {
+      body: JSON.stringify(input),
+      headers: commandHeaders(session, { version: policy.resource_version }),
+      method: 'PUT',
     });
   },
 };

@@ -920,3 +920,23 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Uygulamadan önce tam frontend mimari belgesi ve wireframe hazırlamak; bütün Aşama 14'ü tek büyük değişiklik olarak geliştirmek.
 - **Gerekçe:** Kullanıcının hız tercihini izlerken izlenebilirlik, erişilebilirlik ve regresyon kanıtını kaybetmemek; mevcut backend sözleşmesini tek doğruluk kaynağı olarak korumak.
 - **Sonuçlar:** Yeni bir frontend mimari dosyası teslim eseri değildir. Her dilim kendi test/CI/E2E kanıtı ve küçük commit'iyle tamamlanır; kapsam veya backend sözleşmesi değişirse ilgili mevcut mimari/karar belgeleri ayrıca güncellenir.
+
+## D-098 — Public durum okuması ayrı rol ve allowlist projection'ı kullanır
+
+- **Tarih:** 2026-10-10 21:07 +06:00
+- **Durum:** Accepted — teslim uygulaması
+- **Bağlam:** Anonim bir bağlantının owner kimliği veya private check alanlarını sızdırmadan güncel durum göstermesi ve server restart sonrasında çalışması gerekir.
+- **Karar:** Yönetim API'si opaque token üretir, PostgreSQL yalnız SHA-256 digest saklar. Anonim okuma ayrı `site_monitor_public` pool'undan tek `SECURITY DEFINER` fonksiyonuna gider; fonksiyon yalnız public component flag'lerinin izin verdiği alanları canlı monitoring state'inden projekte eder. Browser 10 saniyelik REST polling kullanır.
+- **Alternatifler:** API rolüyle doğrudan tablo okuma; tam check DTO'sunu uygulama katmanında filtreleme; public SSE'yi aynı teslimde ekleme.
+- **Gerekçe:** Least privilege ve veri minimizasyonunu veritabanı sınırında kanıtlamak, public push altyapısını kritik teslim yoluna eklememek.
+- **Sonuçlar:** Public sayfa yenilemesiz güncellenir ve token loglarda maskelenir. Güncellemeler en fazla polling aralığı kadar gecikebilir; public SSE sonraki iyileştirmedir.
+
+## D-099 — Python erken uyarı sistemi teslim kapsamından çıkarılır
+
+- **Tarih:** 2026-10-10 21:07 +06:00
+- **Durum:** Accepted — kullanıcı kapsam kararı
+- **Bağlam:** Tahmin özelliği ana görev değildir ve teslim süresinde çekirdek monitoring, frontend ve çalıştırılabilirlik kanıtı önceliklidir.
+- **Karar:** Predictor analiz/model lifecycle'ı uygulanmaz ve teslim edilen özellikler arasında gösterilmez. Önceki izole taslak silinmeden, varsayılan `app` profilinin ve ana readiness zincirinin dışında tutulur.
+- **Alternatifler:** Son anda basit bir skor üretmek; taslağı ana sisteme bağlamak; repository'den geçmiş çalışmayı silmek.
+- **Gerekçe:** Doğrulanmamış bir AI özelliğini tamamlanmış gibi sunmamak ve çekirdek ürün riskini artırmamak.
+- **Sonuçlar:** Ana ürün yalnız Node.js/PostgreSQL runtime'ına dayanır. Taslak gelecekte bağımsız araştırma olarak ele alınabilir fakat mevcut proje durumunda kapsam dışıdır.

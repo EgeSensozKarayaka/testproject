@@ -1,17 +1,14 @@
 # Site Availability Monitor
 
-Çok kullanıcılı ve kullanıcı bazlı sahiplik izolasyonuna sahip site erişilebilirlik izleme ürünü. Repository; React web uygulaması, Node.js API ve worker süreçleri, PostgreSQL, Mailpit, deterministik hedef simülatörü ve ana sistemden bağımsız opsiyonel Python predictor için çalışır bir geliştirme temeli içerir.
+Çok kullanıcılı ve kullanıcı bazlı sahiplik izolasyonuna sahip site erişilebilirlik izleme ürünü. Repository; React web uygulaması, Node.js API ve worker süreçleri, PostgreSQL, Mailpit ve deterministik hedef simülatörü için çalışır bir geliştirme temeli içerir.
 
-Aşama 0–13 tamamlanmış, Aşama 14 frontend uygulaması başlamıştır. Güvenli hesap ve owner-scoped group/check/bakım/bildirim yönetimi, gerçek HTTP kontrol motoru, sağlık/incident reducer'ı ve kalıcı worker runtime'ları uygulanmıştır. Monitor worker probe akışını; notification worker e-posta akışını; housekeeping worker source discovery/rollup/retention işlerini; realtime worker ise aktif `REALTIME` hedefi için lease/fencing ve redacted PostgreSQL wake-up sınırını ayrı process/pool'larda yürütür. API dedicated PostgreSQL listener ve bounded owner hub üzerinden authenticated private SSE sunar; React istemci snapshot reconciliation, stale/reconnect ve polling fallback ile iki açık tarayıcıyı yenilemeden yakınsatır. Canlı durum dashboard'u uygulanmıştır; history/incident ile maintenance/notification yönetim ekranları kalan Aşama 14 kapsamıdır.
+Aşama 0–14'ün teslim kapsamı tamamlanmıştır. Güvenli hesap ve owner-scoped group/check/bakım/bildirim yönetimi, gerçek HTTP kontrol motoru, sağlık/incident reducer'ı ve kalıcı worker runtime'ları uygulanmıştır. Monitor worker probe akışını; notification worker e-posta akışını; housekeeping worker source discovery/rollup/retention işlerini; realtime worker ise aktif `REALTIME` hedefi için lease/fencing ve redacted PostgreSQL wake-up sınırını ayrı process/pool'larda yürütür. React arayüz; canlı dashboard, response-time/availability geçmişi, incident günlüğü, bakım pencereleri, e-posta alıcı/policy yönetimi ve allowlist tabanlı anonim public durum sayfasını içerir. Authenticated ekran SSE + snapshot reconciliation ile, public sayfa ise 10 saniyelik polling ile yenileme gerektirmeden güncellenir.
 
 ## Ön koşullar
 
 - Git 2.40+
 - Docker Desktop veya Docker Engine + Docker Compose v2
 - Host geliştirme için Node.js `24.19.0` ve pnpm `11.25.0`
-- Predictor üzerinde host'ta çalışılacaksa Python `3.14.x` ve uv `0.12.20`
-
-Python kurulumu yalnız container tabanlı akışta zorunlu değildir.
 
 ## Hızlı başlangıç — tam container stack
 
@@ -39,6 +36,8 @@ Başlangıçtan sonra:
 4. İsterseniz “Parolamı unuttum” akışıyla ikinci Mailpit bağlantısını doğrulayın.
 
 Girişten sonra grup ve HTTP kontrolü oluşturabilir; kontrolü düzenleyebilir, duraklatabilir, devam ettirebilir, manuel çalışma kuyruğuna alabilir ve silebilirsiniz. İkinci bir gizli pencere veya tarayıcı oturumuyla aynı hesaba giriş yapıldığında stale düzenleme, veri kaybı yerine açıklayıcı bir eşzamanlılık uyarısı ve güncel kaynağın yeniden yüklenmesiyle sonuçlanır.
+
+Operasyon alanından günlük/haftalık/aylık yanıt süresi ile availability verisini ve incident günlüğünü inceleyebilir; kontrol veya grup için bakım penceresi planlayabilir; doğrulamalı e-posta alıcılarını ve varsayılan bildirim politikasını yönetebilirsiniz. Public durum yöneticisi, hangi kontrollerin yayınlanacağını açıkça seçip URL'leri gizleyerek tek sefer gösterilen anonim bağlantıyı üretir.
 
 Kayıt ve reset istekleri hesap varlığını açıklamayan aynı genel yanıtı döndürür. Yerel geliştirmede cookie HTTPS olmadığı için `Secure=false`; production yapılandırması güvenli anahtarlar ve HTTPS/Secure cookie olmadan başlamaz.
 
@@ -80,17 +79,9 @@ Canlı kaynak kotası ürünün sabit 50 kontrol varsayımı değildir. `CHECKS_
 
 Probe egress portları, total deadline alt sınırları ve body/header/redirect limitleri `.env.example` içindeki `PROBE_*` değişkenleriyle yönetilir. Local hedef simülatörüne erişim yalnız exact-origin allowlist ile açılır; production ortamı bu geliştirme istisnası tanımlıysa fail-fast kapanır.
 
-## Opsiyonel predictor
+## Kapsam dışı predictor taslağı
 
-Predictor ana stack'in başlangıç veya sağlık bağımlılığı değildir:
-
-```sh
-docker compose --profile prediction up --detach --build --wait predictor
-```
-
-Readiness: <http://localhost:18000/health/ready>
-
-Predictor durdurulsa veya hata verse bile API, monitoring ve notification süreçleri çalışmaya devam edecek biçimde ayrılmıştır.
+Repository'de önceki araştırma turundan kalan izole bir Python predictor taslağı bulunur; teslim edilen ürünün parçası değildir, varsayılan `app` profili tarafından başlatılmaz ve tahmin algoritması/model lifecycle'ı uygulanmamıştır. Ana sistemin hiçbir çalışma veya sağlık bağımlılığı bu taslağa bağlı değildir.
 
 ## Kalite komutları
 
@@ -139,8 +130,6 @@ $env:PLAYWRIGHT_CHANNEL = 'msedge'
 pnpm test:e2e
 ```
 
-Predictor kalite kapıları CI'da pinli Python/uv ile Ruff, mypy, pytest ve coverage olarak çalışır.
-
 ## Veritabanı komutları
 
 ```sh
@@ -182,15 +171,15 @@ Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ile
 - `apps/` — web, API, monitor worker, notification worker, housekeeping worker, realtime worker ve target simulator
 - `packages/` — auth, domain, contract, config, database, observability ve ortak adapter sınırları
 - `database/` — immutable SQL migration'lar ve development seed'i
-- `services/predictor/` — bağımsız Python ortamı
+- `services/predictor/` — teslim kapsamı dışındaki izole araştırma taslağı
 - `infra/docker/` — production-benzeri multi-stage image tanımları
 - `docs/` — gereksinimler, mimari, kararlar, durum ve geliştirme günlüğü
 - `e2e/` — Playwright sistem smoke testleri
 
 ## Dürüst durum
 
-Aşama 0–13 tamamlanmıştır. Yirmi sekiz immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları, group/check/bakım/bildirim/history/incident API'leri, authenticated private SSE ve browser reconciliation, React yapılandırma yönetimi, güvenli HTTP kontrol motoru, deterministik sağlık/incident reducer'ı ve dört production worker runtime'ı uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
+Aşama 0–14 teslim kapsamı tamamlanmıştır. Otuz üç immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları, group/check/bakım/bildirim/history/incident/public-page API'leri, authenticated private SSE ve browser reconciliation, tam operasyon React arayüzü, güvenli HTTP kontrol motoru, deterministik sağlık/incident reducer'ı ve dört production worker runtime'ı uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
 
-Monitor worker owner-fair scheduler, bounded dispatcher, lease recovery ve freshness döngülerini production entrypoint'inde çalıştırır; loop hata durumu readiness'e yansır, graceful shutdown yeni claim'i durdurup aktif işleri bounded sürede drain eder. Compose smoke'unda gerçek 30 saniyelik cadence, `PASS/200`, `UP/FRESH`, restart sonrası run devamlılığı ve duplicate aktif job oluşmaması doğrulanmıştır. 20/200/500 gerçek PostgreSQL runtime profili sabit 50-check varsayımı olmadan doğrulanmıştır. Gerçek process kill sonrası doğal lease reclaim/stale-result fencing ve iki production worker yükünde ayrı API prosesinin list/readiness yanıtları ayrıca sınanmıştır. Bakım kapsamı, notification gate, kalıcı notification consumer/SMTP teslimi ve owner-scoped recipient/default-group policy API'si uygulanmıştır. Housekeeping runtime iki replica ve restart altında exact minute/hour yakınsaması, DEFAULT guard ve retention grace ile doğrulanmıştır. Private history API sabit 288/336/360 bucket, bounded raw tail ve projection-lag `503`; incident journal ise group-at-open filtresi, signed cursor ve observed/unobserved segment ayrımı sağlar. Authenticated SSE ve React fetch-stream istemcisi aktiftir; iki tarayıcı mutation'ları reload olmadan görür ve push kaybında polling/snapshot ile yakınsar. Recipient yönetim UI'ı, history grafikleri, nihai canlı monitoring dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran güvenli yapılandırma yönetimini canlı günceller; henüz görevde istenen tam durum paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
+Monitor worker owner-fair scheduler, bounded dispatcher, lease recovery ve freshness döngülerini production entrypoint'inde çalıştırır; loop hata durumu readiness'e yansır, graceful shutdown yeni claim'i durdurup aktif işleri bounded sürede drain eder. Compose smoke'unda gerçek 30 saniyelik cadence, `PASS/200`, `UP/FRESH`, restart sonrası run devamlılığı ve duplicate aktif job oluşmaması doğrulanmıştır. 20/200/500 gerçek PostgreSQL runtime profili sabit 50-check varsayımı olmadan doğrulanmıştır. Bakım kapsamı, notification gate, kalıcı notification consumer/SMTP teslimi ve owner-scoped recipient/default-group policy UI/API'si uygulanmıştır. Private history API sabit 288/336/360 bucket ve bounded raw tail; incident journal signed cursor ve observed/unobserved segment ayrımı sağlar. Authenticated SSE ile iki tarayıcı reload olmadan yakınsar. Public sayfa opaque token digest'i ve ayrı read-only DB rolü üzerinden yalnız sahibin yayınladığı alanları gösterir; public SSE yerine 10 saniyelik polling kullanır. Python tahmin özelliği bilinçli olarak teslim kapsamı dışındadır. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
 
 Güncel kapsam ve kanıtlar için [proje durumu](docs/PROJECT_STATUS.md), ayrıntılı araç zinciri için [geliştirme ortamı mimarisi](docs/DEVELOPMENT_ENVIRONMENT.md) belgelerine bakın.
