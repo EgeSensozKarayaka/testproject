@@ -31,6 +31,10 @@ databaseSuite('incident notification PostgreSQL runtime', () => {
   const recipientId = '00000000-0000-7000-8000-000000001107';
   const openedEventId = '00000000-0000-7000-8000-000000001108';
   const closedEventId = '00000000-0000-7000-8000-000000001109';
+  const downMaintenanceId = '00000000-0000-7000-8000-000000001110';
+  const downMaintenanceEventId = '00000000-0000-7000-8000-000000001111';
+  const recoveryMaintenanceId = '00000000-0000-7000-8000-000000001112';
+  const recoveryMaintenanceEventId = '00000000-0000-7000-8000-000000001113';
   let adminPool: Pool;
   let schemaPool: Pool;
   let notifierPool: Pool;
@@ -160,7 +164,7 @@ databaseSuite('incident notification PostgreSQL runtime', () => {
     }
   }, 30_000);
 
-  it('materializes one DOWN and only the matching SENT lineage recovery', async () => {
+  it('preserves one fenced DOWN/recovery lineage across maintenance and restart races', async () => {
     const first = new IncidentNotificationStore(notifierPool, 'notifier:first', 60, 5);
     const second = new IncidentNotificationStore(notifierPool, 'notifier:second', 60, 5);
     await expect(first.reconcileOpenIncidents()).resolves.toBe(1);
@@ -170,13 +174,63 @@ databaseSuite('incident notification PostgreSQL runtime', () => {
     await expect(first.evaluateIntent()).resolves.toBe(true);
     await expect(second.evaluateIntent()).resolves.toBe(false);
 
-    const down = await first.claimDelivery();
+    await schemaPool.query(
+      `INSERT INTO app.maintenance_windows
+         (id, owner_id, check_id, note, starts_at, ends_at)
+       VALUES ($1, $2, $3, 'delivery race', statement_timestamp() - interval '1 minute',
+               statement_timestamp() + interval '1 hour')`,
+      [downMaintenanceId, ownerId, checkId],
+    );
+    await expect(first.claimDelivery()).resolves.toBeUndefined();
+    await expect(
+      schemaPool.query<{ state: string }>(
+        `SELECT state FROM notification.deliveries
+         WHERE incident_id = $1 AND event_kind = 'INCIDENT_OPENED'`,
+        [incidentId],
+      ),
+    ).resolves.toMatchObject({ rows: [{ state: 'DEFERRED_MAINTENANCE' }] });
+
+    await schemaPool.query(
+      `UPDATE app.maintenance_windows
+       SET state = 'CANCELLED', cancelled_at = statement_timestamp(),
+           resource_version = resource_version + 1, updated_at = statement_timestamp()
+       WHERE id = $1`,
+      [downMaintenanceId],
+    );
+    await schemaPool.query(
+      `INSERT INTO infra.outbox_events
+         (id, owner_id, event_type, schema_version, aggregate_type, aggregate_id,
+          aggregate_version, correlation_id, occurred_at, payload)
+       VALUES ($1, $2, 'maintenance.cancelled', 1, 'maintenance_window', $3, 2, $4,
+               statement_timestamp(),
+               jsonb_build_object('check_id', $5::uuid, 'target_type', 'CHECK',
+                                  'target_id', $5::uuid))`,
+      [downMaintenanceEventId, ownerId, downMaintenanceId, jobId, checkId],
+    );
+    await schemaPool.query(
+      `INSERT INTO infra.outbox_dispatches (event_id, destination)
+       VALUES ($1, 'NOTIFICATION')`,
+      [downMaintenanceEventId],
+    );
+    await expect(second.consumeDispatch()).resolves.toBe(true);
+
+    const downClaims = await Promise.all([first.claimDelivery(), second.claimDelivery()]);
+    expect(downClaims.filter((claim) => claim !== undefined)).toHaveLength(1);
+    const down = downClaims[0] ?? downClaims[1];
     expect(down).toMatchObject({
       event_kind: 'INCIDENT_OPENED',
       recipient_address: 'alerts@example.test',
       template_key: 'INCIDENT_DOWN',
     });
-    await first.completeDelivery(down!, 'SENT', 'smtp_accepted', 'provider-digest', 30);
+    const staleCompletion = await notifierPool.query<{ completed: boolean }>(
+      `SELECT security_api.complete_incident_notification_delivery(
+         $1, 'notifier:stale', $2, 'SENT', 'smtp_accepted', 'stale-digest', 30
+       ) AS completed`,
+      [down!.delivery_id, down!.fencing_token],
+    );
+    expect(staleCompletion.rows[0]?.completed).toBe(false);
+    const downClaimingStore = downClaims[0] ? first : second;
+    await downClaimingStore.completeDelivery(down!, 'SENT', 'smtp_accepted', 'provider-digest', 30);
 
     await schemaPool.query(
       `UPDATE monitoring.incidents
@@ -200,14 +254,66 @@ databaseSuite('incident notification PostgreSQL runtime', () => {
       [closedEventId],
     );
 
+    await schemaPool.query(
+      `INSERT INTO app.maintenance_windows
+         (id, owner_id, check_id, note, starts_at, ends_at)
+       VALUES ($1, $2, $3, 'recovery restart', statement_timestamp() - interval '1 minute',
+               statement_timestamp() + interval '1 hour')`,
+      [recoveryMaintenanceId, ownerId, checkId],
+    );
+
     await expect(first.consumeDispatch()).resolves.toBe(true);
     await expect(first.evaluateIntent()).resolves.toBe(true);
-    const recovery = await second.claimDelivery();
+    const deferredRecovery = await schemaPool.query<{
+      maintenance_until: Date;
+      state: string;
+    }>(
+      `SELECT maintenance_until, state FROM notification.intents
+       WHERE incident_id = $1 AND event_kind = 'INCIDENT_RECOVERED'`,
+      [incidentId],
+    );
+    expect(deferredRecovery.rows[0]).toMatchObject({ state: 'DEFERRED_MAINTENANCE' });
+    expect(deferredRecovery.rows[0]!.maintenance_until.getTime()).toBeGreaterThan(Date.now());
+
+    const restarted = new IncidentNotificationStore(notifierPool, 'notifier:restarted', 60, 5);
+    await expect(restarted.claimDelivery()).resolves.toBeUndefined();
+    await schemaPool.query(
+      `UPDATE app.maintenance_windows
+       SET state = 'CANCELLED', cancelled_at = statement_timestamp(),
+           resource_version = resource_version + 1, updated_at = statement_timestamp()
+       WHERE id = $1`,
+      [recoveryMaintenanceId],
+    );
+    await schemaPool.query(
+      `INSERT INTO infra.outbox_events
+         (id, owner_id, event_type, schema_version, aggregate_type, aggregate_id,
+          aggregate_version, correlation_id, occurred_at, payload)
+       VALUES ($1, $2, 'maintenance.cancelled', 1, 'maintenance_window', $3, 2, $4,
+               statement_timestamp(),
+               jsonb_build_object('check_id', $5::uuid, 'target_type', 'CHECK',
+                                  'target_id', $5::uuid))`,
+      [recoveryMaintenanceEventId, ownerId, recoveryMaintenanceId, jobId, checkId],
+    );
+    await schemaPool.query(
+      `INSERT INTO infra.outbox_dispatches (event_id, destination)
+       VALUES ($1, 'NOTIFICATION')`,
+      [recoveryMaintenanceEventId],
+    );
+    await expect(restarted.consumeDispatch()).resolves.toBe(true);
+    await expect(restarted.evaluateIntent()).resolves.toBe(true);
+    const recovery = await restarted.claimDelivery();
     expect(recovery).toMatchObject({
       event_kind: 'INCIDENT_RECOVERED',
       recipient_address: 'alerts@example.test',
       template_key: 'INCIDENT_RECOVERED',
     });
+    await restarted.completeDelivery(
+      recovery!,
+      'SENT',
+      'smtp_accepted',
+      'recovery-provider-digest',
+      30,
+    );
 
     const evidence = await schemaPool.query<{
       attempts: string;
@@ -231,6 +337,89 @@ databaseSuite('incident notification PostgreSQL runtime', () => {
       down_deliveries: '1',
       reconciliation_events: '1',
       recovery_deliveries: '1',
+    });
+  });
+
+  it('persists retry, permanent, ambiguous and expired-lease SMTP outcomes', async () => {
+    const retryId = '00000000-0000-7000-8000-000000001121';
+    const failedId = '00000000-0000-7000-8000-000000001122';
+    const unknownId = '00000000-0000-7000-8000-000000001123';
+    const expiredId = '00000000-0000-7000-8000-000000001124';
+    await schemaPool.query(
+      `INSERT INTO notification.transactional_email_deliveries
+         (id, owner_id, purpose, recipient_address_snapshot, encrypted_payload,
+          encryption_iv, encryption_tag, encryption_key_version, available_at)
+       VALUES
+         ($1, $5, 'RESET_PASSWORD', 'retry@example.test', decode('01', 'hex'),
+          decode(repeat('01', 12), 'hex'), decode(repeat('01', 16), 'hex'), 'test-v1',
+          statement_timestamp() - interval '4 seconds'),
+         ($2, $5, 'RESET_PASSWORD', 'failed@example.test', decode('01', 'hex'),
+          decode(repeat('01', 12), 'hex'), decode(repeat('01', 16), 'hex'), 'test-v1',
+          statement_timestamp() - interval '3 seconds'),
+         ($3, $5, 'RESET_PASSWORD', 'unknown@example.test', decode('01', 'hex'),
+          decode(repeat('01', 12), 'hex'), decode(repeat('01', 16), 'hex'), 'test-v1',
+          statement_timestamp() - interval '2 seconds'),
+         ($4, $5, 'RESET_PASSWORD', 'expired@example.test', decode('01', 'hex'),
+          decode(repeat('01', 12), 'hex'), decode(repeat('01', 16), 'hex'), 'test-v1',
+          statement_timestamp() - interval '1 second')`,
+      [retryId, failedId, unknownId, expiredId, ownerId],
+    );
+
+    const claim = async (workerId: string) =>
+      notifierPool.query<{
+        delivery_id: string;
+        fencing_token: string;
+      }>('SELECT * FROM security_api.claim_transactional_email($1, 60)', [workerId]);
+    const complete = async (
+      deliveryId: string,
+      workerId: string,
+      fence: string,
+      result: 'DELIVERY_UNKNOWN' | 'FAILED' | 'RETRY',
+    ) =>
+      notifierPool.query(
+        `SELECT security_api.complete_transactional_email(
+           $1, $2, $3, $4, 'smtp_test', NULL, 30
+         )`,
+        [deliveryId, workerId, fence, result],
+      );
+
+    const retryClaim = (await claim('notifier:retry')).rows[0]!;
+    expect(retryClaim.delivery_id).toBe(retryId);
+    await complete(retryId, 'notifier:retry', retryClaim.fencing_token, 'RETRY');
+    const retryState = await schemaPool.query<{ available_at: Date; state: string }>(
+      `SELECT available_at, state FROM notification.transactional_email_deliveries WHERE id = $1`,
+      [retryId],
+    );
+    expect(retryState.rows[0]).toMatchObject({ state: 'RETRY_WAIT' });
+    expect(retryState.rows[0]!.available_at.getTime()).toBeGreaterThan(Date.now());
+
+    const failedClaim = (await claim('notifier:failed')).rows[0]!;
+    expect(failedClaim.delivery_id).toBe(failedId);
+    await complete(failedId, 'notifier:failed', failedClaim.fencing_token, 'FAILED');
+    const unknownClaim = (await claim('notifier:unknown')).rows[0]!;
+    expect(unknownClaim.delivery_id).toBe(unknownId);
+    await complete(unknownId, 'notifier:unknown', unknownClaim.fencing_token, 'DELIVERY_UNKNOWN');
+
+    const expiredClaim = (await claim('notifier:crashed')).rows[0]!;
+    expect(expiredClaim.delivery_id).toBe(expiredId);
+    await schemaPool.query(
+      `UPDATE notification.transactional_email_deliveries
+       SET lease_expires_at = statement_timestamp() - interval '1 second'
+       WHERE id = $1`,
+      [expiredId],
+    );
+    await expect(claim('notifier:after-restart')).resolves.toMatchObject({ rows: [] });
+
+    const outcomes = await schemaPool.query<{ id: string; state: string }>(
+      `SELECT id, state FROM notification.transactional_email_deliveries
+       WHERE id = ANY($1::uuid[]) ORDER BY id`,
+      [[retryId, failedId, unknownId, expiredId]],
+    );
+    expect(Object.fromEntries(outcomes.rows.map((row) => [row.id, row.state]))).toEqual({
+      [expiredId]: 'DELIVERY_UNKNOWN',
+      [failedId]: 'FAILED',
+      [retryId]: 'RETRY_WAIT',
+      [unknownId]: 'DELIVERY_UNKNOWN',
     });
   });
 });

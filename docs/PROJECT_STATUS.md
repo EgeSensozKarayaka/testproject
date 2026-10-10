@@ -1,16 +1,19 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 16:46 +06:00
+**Son güncelleme:** 2026-10-10 17:19 +06:00
 
-**Genel durum:** Aşama 0–10 tamamlandı; Aşama 11 revision/domain ve recipient/policy API dilimi tamamlandı, incident worker/cutover sırada
+**Genel durum:** Aşama 0–11 tamamlandı; sıradaki çalışma Aşama 12 geçmiş/rollup/availability mimarisi
 
 ## Tamamlanan
 
-- Revision 16 ile her hesap için güvenli default policy trigger/backfill'i, group policy reconciliation'ı, recipient transactional-email lineage'ı, public confirm/enqueue/cancel güvenlik fonksiyonları ve incident delivery/attempt genişletmesi; `NOTIFICATION` destination henüz aktive edilmedi
+- Revision 16–20 ile default/group policy reconciliation'ı, recipient transactional-email lineage'ı, public confirm/enqueue/cancel sınırları, incident delivery/attempt state machine'i, dar notifier claim/complete fonksiyonları, `NOTIFICATION` activation ve açık-incident source reconciliation'ı
 - Owner-scoped notification recipient list/create/disable, verification resend/confirm, test-email ve default/group policy get/replace API'si; ETag/If-Match, CSRF/origin/session/rate-limit, idempotency, signed cursor, VERIFIED recipient ve tam override inheritance kuralları
-- Transactional notification worker'da hesap doğrulama/reset akışından ayrı recipient-verification ve token içermeyen test-email şablonları; stale queued verification cancellation davranışı
-- 58-operation OpenAPI contract drift, notification HTTP/domain unit testleri ve transactional template testleri dahil unit kapısı **27 dosyada 194/194**; temiz PostgreSQL notification service **5/5**, revision/database/group odaklı regresyon **29/29** geçti
-- Yerel veritabanı revision 16, güncel API ve notification worker Compose imajları healthy; canlı readiness `ok` ve yeni recipient route auth sınırı `401` ile doğrulandı
+- Dört loop'lu notification worker'da outbox consume, current-source intent evaluation, recipient delivery ve transactional mail için bounded/fair SMTP gönderimi; loop-aware readiness, bounded shutdown, deterministic Message-ID ve sanitized retry/failed/unknown sonuçları
+- Başarılı DOWN delivery'sine bağlı RECOVERY/MONITORING_ENDED lineage'ı; incident kapanmadan önce gönderilmemiş DOWN iptali, claim-time recipient/incident/maintenance revalidation ve restart-safe deadline/fencing
+- Güvenli cutover yerel revision 20'de idempotenttir; üç eski açık incident default `DISABLED` policy nedeniyle doğru biçimde `CANCELLED` olmuş, gecikmiş e-posta üretmemiştir
+- Final kalite kapısı **27 dosyada 200/200 unit**, **12 dosyada 77/77 gerçek PostgreSQL/socket/process integration** ve bütün production build'leriyle geçti; Mailpit/tarayıcı kabul paketi **4/4** geçti
+- Mailpit kabulünde account verification, recipient verification ve test maili production API/worker yolundan; DOWN, RECOVERY ve MONITORING_ENDED şablonları gerçek SMTP/Mailpit üzerinden text+HTML olarak doğrulandı
+- Mailpit kapalıyken kayıt API'si `202`, API/monitor/notification worker healthy kaldı; SMTP sonucu terminal `DELIVERY_UNKNOWN:etimedout` olarak kalıcı ve duplicate üretmeyecek biçimde korundu. Mailpit test sonunda yeniden healthy duruma getirildi
 - Aşama 11 için recipient doğrulama, default/group policy, idempotent incident intent'i, recipient delivery lineage'ı, maintenance send-time recheck, SMTP retry/unknown politikası, cutover ve acceptance kapsamını kesinleştiren `docs/NOTIFICATIONS.md`
 - Revision 15 ile maintenance `name → note varchar(1000) NULL` sözleşme düzeltmesi, owner-list indeksi, fiziksel delete/hedef update yasağı ve API/monitor/notifier'ın paylaştığı security-invoker etkin bakım projection fonksiyonu
 - Saf maintenance domain politikası: exact `[start,end)` sınırları, note normalizasyonu, create/edit range doğrulaması, aktif/bitmiş/cancelled mutation kuralları ve direct+current-group overlap union projection'ı
@@ -145,7 +148,7 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Notification outbox consumer'ı, kalıcı intent reconciliation'ı, incident e-posta teslimi ve recipient/policy yönetim arayüzü
+- Notification recipient/policy yönetim arayüzü (backend ve worker tamam; yönetim frontend'i Aşama 14 kapsamındadır)
 - Rollup/retention background işleri, history sorguları ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
 - Predictor analiz algoritması/model lifecycle'ı
@@ -169,4 +172,4 @@
 
 ## Sıradaki İş
 
-Aşama 11'in ikinci uygulama diliminde outbox/intent/delivery worker runtime'ı, incident SMTP şablonları ve güvenli `NOTIFICATION` destination cutover'ı uygulanacaktır.
+Aşama 12 için geçmiş, response-time rollup, availability hesabı, incident journal sorguları, retention ve ay görünümünün hızlı açılma sözleşmesini içeren nihai mimari hazırlanacaktır.

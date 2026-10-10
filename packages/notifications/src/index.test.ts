@@ -152,6 +152,49 @@ describe('notification delivery rules', () => {
     expect(content.html).not.toContain('<Critical API>');
     expect(content.text).not.toContain('http');
   });
+
+  it.each([
+    {
+      marker: 'Primary API is unavailable.',
+      payload: {
+        check_name: 'Primary API',
+        confirmed_at: '2026-10-10T10:00:30.000Z',
+        failure_category: 'TIMEOUT',
+        started_at: '2026-10-10T10:00:00.000Z',
+      },
+      subject: 'DOWN: Primary API',
+      template: 'INCIDENT_DOWN' as const,
+    },
+    {
+      marker: 'Primary API is available again.',
+      payload: {
+        check_name: 'Primary API',
+        ended_at: '2026-10-10T10:02:00.000Z',
+        observed_duration_ms: '90000',
+        started_at: '2026-10-10T10:00:00.000Z',
+      },
+      subject: 'RECOVERED: Primary API',
+      template: 'INCIDENT_RECOVERED' as const,
+    },
+    {
+      marker: 'Monitoring for Primary API changed',
+      payload: {
+        check_name: 'Primary API',
+        closure_reason: 'CONFIG_CHANGED',
+        ended_at: '2026-10-10T10:02:00.000Z',
+      },
+      subject: 'MONITORING ENDED: Primary API',
+      template: 'MONITORING_ENDED' as const,
+    },
+  ])(
+    'renders text and HTML alternatives for $template',
+    ({ marker, payload, subject, template }) => {
+      const content = renderIncidentEmail(template, 1, payload);
+      expect(content.subject).toBe(subject);
+      expect(content.text).toContain(marker);
+      expect(content.html).toContain(`<p>${marker}`);
+    },
+  );
 });
 
 describe('maintenance notification gate', () => {

@@ -367,3 +367,17 @@ Shutdown yeni claim'i durdurur, in-flight SMTP çağrılarını configured timeo
 3. **Kapanış kanıtı:** maintenance yarışları, iki replica, restart, SMTP failure matrix, Mailpit kabulü, tam CI ve durum belgeleri.
 
 Her dilim ayrı anlamlı commit olur. İlk dilim migration geçmişini değiştirmez; ikinci dilimde cutover yapılmadan önce worker preflight ve source-of-truth reconciliation testi geçmelidir.
+
+## 15. Uygulama ve Kapanış Durumu
+
+Aşama 11 revision 16–20 ile tamamlanmıştır. İlk iki dilim ayrı commitlerde preflight ve cutover olarak tutulmuş; kapanış dilimi aşağıdaki birleşik kanıtları eklemiştir:
+
+- iki notifier aynı delivery'yi eşzamanlı claim ettiğinde tek fence kazanır ve stale completion reddedilir;
+- materialization sonrasında başlayan bakım claim'i durdurur, cancellation wake-up'ı işi yeniden değerlendirir;
+- recovery intent'i bakım boyunca PostgreSQL'de kalır ve yeni worker örneğiyle bakım sonrasında aynı lineage'dan devam eder;
+- transactional SMTP state machine kesin geçici sonucu `RETRY_WAIT`, kalıcı sonucu `FAILED`, belirsiz/expired-lease sonucunu `DELIVERY_UNKNOWN` olarak saklar;
+- gerçek Mailpit kabulünde account/recipient verification ile test e-postası API ve production worker yolundan, üç operational template ise aynı version'lı production renderer ile gerçek SMTP üzerinden text ve HTML olarak doğrulanır;
+- Mailpit durdurulduğunda kayıt API'si ve iki ana worker sağlıklı kalır; başarısız SMTP sonucu durable terminal kanıt olarak saklanır ve Mailpit test sonunda yeniden başlatılır;
+- tam yerel kalite kapısı 200 unit ve 77 gerçek PostgreSQL/socket/process integration testiyle, ayrı browser/Mailpit paketi 4 kabul testiyle geçmiştir.
+
+Bu kapanış standard SMTP için exactly-once iddiası eklemez. Yerel outage provasındaki socket timeout bilinçli olarak terminal `DELIVERY_UNKNOWN` olmuştur; otomatik retry ile olası duplicate üretilmemiştir.
