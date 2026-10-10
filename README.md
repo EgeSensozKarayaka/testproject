@@ -2,7 +2,7 @@
 
 Çok kullanıcılı ve kullanıcı bazlı sahiplik izolasyonuna sahip site erişilebilirlik izleme ürünü. Repository; React web uygulaması, Node.js API ve worker süreçleri, PostgreSQL, Mailpit, deterministik hedef simülatörü ve ana sistemden bağımsız opsiyonel Python predictor için çalışır bir geliştirme temeli içerir.
 
-Aşama 6 geliştirmesinde güvenli hesap akışlarına ek olarak owner-scoped group create/get/list/update/delete API'si çalışır durumdadır. Check yönetimi ve monitoring çalışma akışları sonraki dilimlerde uygulanacaktır.
+Aşama 6 geliştirmesinde güvenli hesap akışlarına ek olarak owner-scoped group/check API'si ve bu sözleşmeyi kullanan React yönetim ekranı çalışır durumdadır. Gerçek probe, scheduler ve canlı durum akışları sonraki aşamalarda uygulanacaktır.
 
 ## Ön koşullar
 
@@ -37,6 +37,8 @@ Başlangıçtan sonra:
 2. <http://localhost:8025> üzerindeki Mailpit mesajından doğrulama bağlantısını açın.
 3. Hesabınızla giriş yapın; güvenli çalışma alanını gördükten sonra çıkış yapın.
 4. İsterseniz “Parolamı unuttum” akışıyla ikinci Mailpit bağlantısını doğrulayın.
+
+Girişten sonra grup ve HTTP kontrolü oluşturabilir; kontrolü düzenleyebilir, duraklatabilir, devam ettirebilir, manuel çalışma kuyruğuna alabilir ve silebilirsiniz. İkinci bir gizli pencere veya tarayıcı oturumuyla aynı hesaba giriş yapıldığında stale düzenleme, veri kaybı yerine açıklayıcı bir eşzamanlılık uyarısı ve güncel kaynağın yeniden yüklenmesiyle sonuçlanır.
 
 Kayıt ve reset istekleri hesap varlığını açıklamayan aynı genel yanıtı döndürür. Yerel geliştirmede cookie HTTPS olmadığı için `Secure=false`; production yapılandırması güvenli anahtarlar ve HTTPS/Secure cookie olmadan başlamaz.
 
@@ -169,8 +171,8 @@ Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ile
 
 ## Dürüst durum
 
-Aşama 0–5 tamamlanmıştır; Aşama 6 sürmektedir. On iki immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları ve group API uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
+Aşama 0–5 tamamlanmıştır; Aşama 6 sürmektedir. On üç immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları, group/check API'si ve React yapılandırma yönetimi uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
 
-Check CRUD, group/check UI, scheduler, HTTP probe motoru, incident geçişleri, bakım reconciliation, incident bildirimleri, history sorguları, SSE, ürün dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran auth temelini kanıtlar; nihai monitoring paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
+Scheduler, HTTP probe motoru, sonuç kaynaklı incident geçişleri, bakım reconciliation, incident bildirimleri, history sorguları, SSE, canlı monitoring dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran güvenli yapılandırma yönetimini sağlar; henüz canlı durum paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
 
 Güncel kapsam ve kanıtlar için [proje durumu](docs/PROJECT_STATUS.md), ayrıntılı araç zinciri için [geliştirme ortamı mimarisi](docs/DEVELOPMENT_ENVIRONMENT.md) belgelerine bakın.

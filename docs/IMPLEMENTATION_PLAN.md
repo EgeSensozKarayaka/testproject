@@ -205,7 +205,7 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 ### Aşama 6 — Kontrol ve Grup Yönetimi
 
-**Durum:** Uygulama sürüyor — tasarım, domain, revision 12–13 ve authenticated group/check API doğrulandı; React yönetim UI'ı sırada
+**Durum:** Yerel uygulama ve doğrulama tamamlandı — push sonrası GitHub CI kanıtı bekleniyor
 
 **Amaç:** Monitoring çalıştırılmadan önce kontrol yapılandırmasının güvenilir CRUD modelini oluşturmak.
 
@@ -608,4 +608,4 @@ Bu sıra ana bağımlılık sırasıdır. Bir aşama uygulamaya geçmeden önce 
 
 **Aşama 5 — Kimlik Doğrulama ve Kullanıcı İzolasyonu** tamamlanmıştır. Opaque session, Argon2id/parola politikası, CSRF/origin, enumeration-safe token akışları, PostgreSQL rate limiting, encrypted durable auth e-postası, profil ETag'i ve RLS sahiplik sınırı revision 8–11 ile uygulanmıştır. Unit, PostgreSQL integration, Mailpit ve Playwright kabul akışları geçmiştir.
 
-**Sıradaki çalışma Aşama 6 — Kontrol ve Grup Yönetimi tasarımı**dır. Kodlamadan önce `docs/CHECKS_AND_GROUPS.md` içinde CRUD, validation, ETag/idempotency, quota ve sahiplik davranışları nihai hale getirilecektir.
+**Aktif çalışma Aşama 6 — Kontrol ve Grup Yönetimi**dir. Tasarım, domain, revision 12–13, owner-scoped API ve generated sözleşme tiplerini kullanan React yönetim ekranı uygulanmıştır. İki bağımsız tarayıcıda stale `If-Match` çatışması, CRUD, pause/resume ve manual-run kabul akışı; 20/200/500 PostgreSQL cursor profili; 500 kayıtlık bounded UI fixture'ı ve hassas alan log/audit/outbox redaction kanıtı geçmiştir. Yerel kapanış tamamdır; push sonrası GitHub CI sonucu kaydedildikten sonra Aşama 7 tasarımına geçilecektir.

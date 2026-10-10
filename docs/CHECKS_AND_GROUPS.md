@@ -1,7 +1,7 @@
 # Kontrol ve Grup Yönetimi Mimarisi
 
 **Aşama:** 6 — Kontrol ve Grup Yönetimi  
-**Durum:** Kullanıcı tarafından onaylandı; sözleşme/domain, revision 12–13 ve group/check API uygulandı, React yönetim UI'ı sürüyor
+**Durum:** Kullanıcı tarafından onaylandı; yerel uygulama ve bütün kapanış kanıtları tamamlandı, push sonrası GitHub CI sonucu bekleniyor
 **Son güncelleme:** 2026-10-10 08:22 +06:00
 **Bağlı belgeler:** [`REQUIREMENTS.md`](./REQUIREMENTS.md), [`ACCEPTANCE_CRITERIA.md`](./ACCEPTANCE_CRITERIA.md), [`DOMAIN_MODEL.md`](./DOMAIN_MODEL.md), [`STATE_MACHINES.md`](./STATE_MACHINES.md), [`DATABASE.md`](./DATABASE.md), [`API_DESIGN.md`](./API_DESIGN.md), [`API_ERRORS.md`](./API_ERRORS.md), [`EVENT_CATALOG.md`](./EVENT_CATALOG.md), [`openapi-v1.yaml`](./openapi-v1.yaml), [`AUTH_AND_OWNERSHIP.md`](./AUTH_AND_OWNERSHIP.md)
 
@@ -478,6 +478,8 @@ Structured log yalnız request/correlation ID, operation, HTTP status, duration 
 12. Compose smoke, tam CI, karar/geliştirme/proje durumu ve README güncellemesi
 
 Her dikey dilim küçük ve anlamlı commit olur. Revision 12 bir kez uygulanınca değiştirilmez; bulunan hata revision 13+ forward-fix ile giderilir.
+
+2026-10-10 uygulama durumu: 1–12 yerelde tamamlandı. İki-client E2E, 20/200/500 PostgreSQL cursor profili, 500 kayıtlık bounded UI fixture'ı, log/audit/outbox redaction, Compose smoke ve tam CI geçti. Yalnız push sonrası GitHub CI kanıtı açık kaldığı için aşama henüz tamamlandı sayılmaz.
 
 ## 23. Tamamlanma ölçütü
 

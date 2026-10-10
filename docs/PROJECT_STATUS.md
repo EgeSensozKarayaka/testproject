@@ -1,7 +1,7 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 08:48 +06:00
-**Genel durum:** Aşama 5 doğrulandı; Aşama 6 group ve check API dilimleri gerçek PostgreSQL ile doğrulandı, React yönetim UI'ı sürüyor
+**Son güncelleme:** 2026-10-10 09:50 +06:00
+**Genel durum:** Aşama 5 doğrulandı; Aşama 6 yerel uygulama ve kapanış kanıtları tamamlandı, push sonrası GitHub CI bekleniyor
 
 ## Tamamlanan
 
@@ -28,28 +28,33 @@
 - Tek aktif job partial unique invariant'ı altında concurrent manuel taleplerin durable `ENQUEUED` job veya tek `COALESCED` intent'e dönüşmesi; paused check için diagnostic mod
 - Revision 13 ile API state komutlarına yalnız gereken incident/segment ve health-interval mutation yüzeyinin açılması; worker lease/run/fencing yetkilerinin kapalı kalması
 - OpenAPI 3.1 composed write schema'larının Fastify draft-07 runtime doğrulamasına generator içinde eşdeğer kapalı obje olarak dönüştürülmesi
+- Generated OpenAPI tiplerini kullanan React group/check yönetim ekranı; loading/empty/error durumları, responsive formlar, create/edit/delete, pause/resume ve manual-run komutları
+- İki tarayıcıdaki eşzamanlı düzenlemede güçlü `If-Match` çatışmasını veri kaybı olmadan açıklayan, güncel kaynağı yeniden yükleyen `412` kurtarma akışı
+- API mutation sözleşmesindeki `PATCH` ve `DELETE` yöntemlerini credentialed CORS preflight allowlist'ine dahil eden ve özel header yansımasını doğrulayan regresyon testi
 
 ## Doğrulama Kanıtları
 
-- `pnpm test:unit`: **12 dosyada 79/79 test geçti**.
-- Gerçek PostgreSQL admin URL'siyle birleşik paket: **25/25 test geçti**; sıfırdan migration `1..13`, checksum drift, RLS/context temizliği, auth/group/check transaction sınırları doğrulandı.
+- `pnpm test:unit`: **13 dosyada 85/85 test geçti**.
+- Gerçek PostgreSQL admin URL'siyle birleşik paket: **28/28 test geçti**; sıfırdan migration `1..13`, checksum drift, RLS/context temizliği, auth/group/check transaction sınırları ve 20/200/500 cursor profili doğrulandı.
 - Aşama 6 domain/OpenAPI odaklı paket: **32/32 test geçti**; contract drift ve ilgili strict TypeScript kontrolleri geçti.
 - Group HTTP sınırı ve config odaklı paket dahil **18/18 test geçti**; gerçek PostgreSQL group service paketi **6/6** geçti. Concurrent idempotency, owner izolasyonu, stale ETag, cursor tamper, atomik detach ve quota doğrulandı.
 - Check HTTP sınırı **6/6**, gerçek PostgreSQL check service paketi **6/6** geçti. Concurrent create replay, üç version ekseni, cross-owner 404, no-op/stale ETag, manual coalescing, pause/resume/delete, observed incident suspension/closure ve filter-bound cursor doğrulandı.
-- Final `pnpm run ci`; format, generated-contract drift, lint, strict typecheck, **79/79 unit**, **25/25 gerçek PostgreSQL integration** ve bütün production build'leriyle geçti.
+- Final `pnpm run ci`; format, generated-contract drift, lint, strict typecheck, **85/85 unit**, **28/28 gerçek PostgreSQL integration** ve bütün production build'leriyle geçti.
 - Tüm PostgreSQL integration dosyaları cluster-global bootstrap rollerinin test fixture yarışını önlemek için seri çalışır; birleşik yerel koşu migration/auth/group/check paketlerinin tamamını kapsar.
 - Compose API ve migrate imajları temizden rebuild edildi; migration işi başarıyla kapandı, API healthy oldu. Canlı readiness `200`, oturumsuz group list ve parametrik group route'ları beklenen `401` ile auth sınırına ulaştı.
 - Check API sonrası tam Compose stack temizden rebuild edildi; migration logu revision 13'ün uygulandığını, schema compatibility head değerinin `13` olduğunu ve bütün uygulama servislerinin healthy olduğunu gösterdi. Canlı readiness `200`, oturumsuz check list/tekil yolları beklenen `401` döndürdü.
 - Aşama 6 group API GitHub Actions koşusu [`38015275133`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38015275133) başarıyla tamamlandı: Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin beşi de geçti.
 - Aşama 6 check API GitHub Actions koşusu [`38018138265`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38018138265) başarıyla tamamlandı: Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin beşi de geçti.
 - `pnpm typecheck`: ortak paketler, React, API, iki worker ve target simulator için strict TypeScript kontrolü geçti.
-- Playwright: auth frontend smoke, iki bağımsız browser context ve UI → Mailpit → verification → login → logout akışı **3/3 geçti**.
+- Playwright (sistem Edge): auth frontend smoke, iki bağımsız browser context ve UI → Mailpit → verification → login → group/check CRUD → manual run → pause/resume → ikinci oturum update → stale ilk oturum `412` recovery → delete → logout akışı **3/3 geçti**.
+- UI kabul testi API'nin varsayılan CORS method listesinin `PATCH` içermediğini gerçek browser preflight'ında yakaladı; explicit method allowlist ve API regresyon testi eklendikten sonra aynı senaryo geçti.
+- PostgreSQL kapasite paketi 20, 200 ve 500 check fixture'ını 100 kayıtlık keyset sayfalarıyla eksiksiz dolaştı; her sorgu için 5 saniyelik gevşek regresyon üst sınırı korundu. 500 kayıtlık frontend fixture'ı ilk ve sonraki yüklemeyi 100'er karta sınırladı.
+- Gerçek Fastify request logu ile PostgreSQL audit/outbox payload'ları, hedef URL sorgu değeri ve expected-body marker için negatif sızıntı testinden geçti.
 - Canlı Compose akışında kayıt `202`, Mailpit teslimi, doğrulama `204`, login/session `200`, logout `204` ve logout sonrası session `401` doğrulandı.
 - Aşama 5 GitHub Actions koşusu [`38002790366`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38002790366) başarıyla tamamlandı: Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin beşi de geçti.
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Group/check React yönetim UI'ı ve browser-level CRUD/pause/resume/manual-run kabul akışları
 - Scheduler, gerçek HTTP probe motoru ve check overlap engeli
 - Probe sonuçlarından incident/state geçişleri, maintenance reconciliation ve incident e-posta politikaları
 - Rollup/retention background işleri, history sorguları ve grafikler
@@ -60,7 +65,7 @@
 
 ## Bilinen Sınırlamalar
 
-- Authenticated ekran Aşama 5 güvenlik temelini kanıtlar; nihai monitoring dashboard'u değildir.
+- Authenticated ekran group/check yapılandırmasını yönetir; probe sonuçları ve SSE henüz uygulanmadığından nihai canlı monitoring dashboard'u değildir.
 - Auth rate limit PostgreSQL fixed-window yaklaşımıdır. V1 ve yatay API replica'ları için tutarlıdır; yüksek hacimli internet trafiğinde edge WAF/CDN katmanı gerekir.
 - Yerel Compose kolaylığı için tek PostgreSQL bootstrap login'i dar `NOLOGIN` rollere geçer. Production'da servis başına ayrı login wrapper/secret gerekir.
 - Yerel HTTP ortamında session cookie `Secure=false`; production config fail-fast secret ve HTTPS/Secure cookie gerektirir.
@@ -69,9 +74,9 @@
 - Local restore provası production RPO/RTO/PITR garantisi değildir.
 - Soğuk Docker image build'i registry bağlantı hızına bağlı olarak birkaç dakika sürebilir; warm build ve normal `up` akışı daha hızlıdır. Build cache mount/prune optimizasyonu Aşama 17 operasyonel sertleştirme kapsamındadır.
 - Host `5432` ve `3000` başka projeler tarafından kullanıldığından PostgreSQL `15432`, API `13000`, web `15173` portundadır.
-- Group ve check API tamamlandı; React yönetim ekranları henüz uygulanmadı.
+- Liste sayfası kullanıcı isteğiyle 100'er kayıt yükler. 20/200/500 API profili ve 500 kayıtlık bounded UI fixture'ı geçti; tarayıcıda bütün sayfaları elle açarak çok daha büyük DOM üretme senaryosu virtualization kullanmaz.
 - Group cursor şu anda tek aktif HMAC anahtarı kullanır; kesintisiz anahtar rotasyonu için önceki doğrulama anahtarını kabul eden key-ring Aşama 17 sertleştirmesinde eklenmelidir.
 
 ## Sıradaki İş
 
-Aşama 6'nın sonraki dikey diliminde generated sözleşme tiplerini kullanan group/check React yönetim ekranlarını ve iki istemcili browser kabul akışını uygulamak.
+Aşama 6 değişikliklerini anlamlı commit'lerle `origin/main` dalına göndermek, GitHub CI sonucunu kaydetmek ve ardından Aşama 7 güvenli HTTP kontrol motoru tasarım belgesine geçmek.

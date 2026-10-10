@@ -520,3 +520,13 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Fastify Ajv strict modunu kapatmak; unknown alanları kabul etmek; canonical şemada alanları kopyalamak; elle route schema yazmak; bütün runtime'ı farklı JSON Schema draft'ına geçirmek.
 - **Gerekçe:** Kapalı request gövdesi güvenliğini ve tek canonical sözleşme kaynağını korurken framework adaptasyonunu deterministik generator sınırında tutmak.
 - **Sonuçlar:** Unknown field doğrulaması çalışmaya devam eder; public OpenAPI/TypeScript anlamı değişmez. Generator testi flattened runtime şemasını, drift kapısı ise generated artifact'i korur.
+
+## D-058 — Yönetim UI'ı generated tipler ve açık server-state uzlaştırması kullanır
+
+- **Tarih:** 2026-10-10 09:42 +06:00
+- **Durum:** Accepted — unit ve iki-session Playwright akışıyla doğrulandı
+- **Bağlam:** Aşama 6 yönetim ekranı create/list/edit/delete ve komutları aynı cookie session üzerinden yürütür. İki sekme aynı resource version'ı okuyabilir; UI'ın stale mutation'ı sessizce ezmemesi ve API sözleşmesinden ayrı DTO üretmemesi gerekir.
+- **Karar:** UI, canonical OpenAPI'den üretilen TypeScript tiplerini kullanan küçük bir credentialed fetch adapter'ı üzerinden konuşacaktır. Yeni bir global state/query bağımlılığı eklenmeyecek; bu aşamanın sınırlı server-state'i component sınırında tutulacaktır. Her mutation CSRF ve gereken yerde idempotency/`If-Match` taşır. `412` durumunda yerel taslak otomatik merge edilmeyecek, güncel listeler yeniden alınacak ve kullanıcı çatışma konusunda bilgilendirilecektir.
+- **Alternatifler:** Elle çoğaltılmış frontend DTO'ları; last-write-wins; taslağı sessizce yeniden gönderme; bu dilim için Redux/React Query benzeri yeni state bağımlılığı eklemek.
+- **Gerekçe:** Contract drift ve sessiz veri kaybını önlemek; bağımlılık/yüzey alanını mevcut ekran karmaşıklığıyla orantılı tutmak; daha sonra SSE/polling eklendiğinde uzlaştırma sınırını görünür bırakmak.
+- **Sonuçlar:** Bir 412 sonrasında kullanıcı değişikliği otomatik korunmaz, bilinçli olarak yeniden uygulanır. Aşama 13 canlı veri ve cache ihtiyacı somutlaştığında query-cache seçimi yeniden değerlendirilecektir. Browser kabul testi CORS method allowlist'inin API mutation sözleşmesiyle explicit hizalanması gerektiğini de ortaya koymuştur.
