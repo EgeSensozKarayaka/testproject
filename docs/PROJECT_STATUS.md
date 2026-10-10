@@ -1,8 +1,8 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 13:10 +06:00
+**Son güncelleme:** 2026-10-10 13:20 +06:00
 
-**Genel durum:** Aşama 0–8 tamamlandı ve doğrulandı; Aşama 9 temel şema/config/outbox dilimi tamamlandı, scheduler runtime uygulaması devam ediyor
+**Genel durum:** Aşama 0–8 tamamlandı ve doğrulandı; Aşama 9 materialization ve lease/fencing adapter dilimi tamamlandı, dispatcher/result runtime uygulaması devam ediyor
 
 ## Tamamlanan
 
@@ -10,6 +10,9 @@
 - API pause/config/delete komutlarında PENDING job için terminal cancel, LEASED/RUNNING job için acknowledgement bekleyen cancellation request; pause sırasında bekleyen STATEFUL manual intent temizliği
 - API ve worker için ortak activation-aware outbox writer; inactive consumer için event/dispatch üretmeme, aktive destination sonrası durable dispatch davranışı ve gereksiz geniş `SELECT` yetkisi vermeyen least-privilege SQL sınırı
 - Monitor worker için global/owner/hostname concurrency, batch, poll, heartbeat, lease, shutdown ve DB pool değerlerini ilişki doğrulamasıyla yükleyen typed runtime config
+- Anchor-aligned sabit cadence ve restart'ta değişmeyen bounded exponential retry/jitter yardımcıları
+- Owner-fair due/manual candidate seçimi; check-first `SKIP LOCKED` materialization, tek catch-up job, no-backfill cadence ilerletme, stored manual mode tüketimi ve redacted `check.job_available` audit/outbox fact'i
+- Owner-fair pending-job seçimi; canonical check→job claim, check-scope monoton fence, attempt lineage, timeout+grace lease, conditional start ve attempt-guarded heartbeat/cancellation görünürlüğü
 - Aşama 8 saf state reducer'ı; immutable snapshot/invariant doğrulaması, canonical observation acceptance precedence, sabit iki-failure threshold, provisional timeline çözümleme, incident segment/duration effect'leri, deadline reconciliation ve bounded event fact'leri
 - Check ve group API sorgularında reconciler'dan bağımsız `fresh_until` read-time override'ı; effective UNKNOWN/UNOBSERVED görünümü, incident duration cap'i ve aynı semantiği kullanan set-based group aggregate
 - Scheduler/DB'den bağımsız güvenli HTTP probe motoru; versioned snapshot doğrulama, frozen DNS candidate pinning, public IPv4/IPv6 policy, redirect, total deadline/cancellation, bounded streaming/decompression ve typed hata taksonomisi
@@ -44,6 +47,9 @@
 
 ## Doğrulama Kanıtları
 
+- Aşama 9 ikinci diliminde saf cadence/backoff testleri **4/4**, gerçek PostgreSQL owner-fair materialization ve iki-worker claim/lease/fence testleri **3/3** geçti. Sahte attempt kimliği start alamadı; lease sahibi olmayan worker heartbeat yenileyemedi; cancellation request doğru worker'a görünür oldu.
+- Bütün unit paket **20 dosyada 155/155**, sıfırdan migration ve gerçek PostgreSQL/socket integration paketi **5 dosyada 39/39** geçti.
+- Aşama 9 ikinci dilim final `pnpm run ci` kapısı format, 57-operation contract drift, lint, bütün workspace strict typecheck'leri, **155/155 unit**, **39/39 integration** ve bütün production build'leriyle geçti.
 - Aşama 9 temel diliminde strict workspace typecheck geçti; unit paket **19 dosyada 151/151**, sıfırdan revision 1–14 migration ve gerçek PostgreSQL API/RLS/outbox sınırı **4 dosyada 36/36** geçti.
 - Aşama 9 final `pnpm run ci` kapısı format, 57-operation contract drift, lint, strict typecheck, **151/151 unit**, **36/36 integration** ve bütün production build'leriyle geçti. Güncel migration/API/monitor-worker imajları üretildi; migration revision 14'ü doğruladı, API ile monitor worker healthy oldu ve iki readiness endpoint'i de `200` döndürdü.
 - İlk activation-aware outbox entegrasyonu `INSERT ... RETURNING` nedeniyle API rolünden gereksiz `SELECT` istedi ve testte `42501` ile reddedildi. Yetki genişletilmeden SQL akışı düzeltildi; aynı paket sonraki koşuda tamamen geçti.
@@ -79,7 +85,7 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Scheduler/job claim, heartbeat/recovery, check overlap engeli, çalışan dispatcher ve probe sonucu kalıcılığı
+- Çalışan bounded dispatcher, process-local semaphore'lar, cancellation acknowledgement/lease recovery, probe orchestration ve probe sonucu kalıcılığı
 - Saf health/incident planlarının PostgreSQL observation transaction'ına bağlanması, maintenance reconciliation ve incident e-posta politikaları
 - Rollup/retention background işleri, history sorguları ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
@@ -103,4 +109,4 @@
 
 ## Sıradaki İş
 
-Aşama 9'un sıradaki dilimi: saf cadence/backoff/fairness yardımcıları, check-first due/manual materialization ve claim/lease/heartbeat/fencing adapter'ı. Ardından bounded dispatcher, cancellation acknowledgement, atomik observation adapter, freshness reconciler ve 20/200/500 dayanıklılık kanıtları gelecek.
+Aşama 9'un sıradaki dilimi: bounded dispatcher, global/owner/hostname semaphore'ları, active-task registry ve probe orchestration. Ardından cancellation acknowledgement/recovery, atomik observation adapter, freshness reconciler ve 20/200/500 dayanıklılık kanıtları gelecek.

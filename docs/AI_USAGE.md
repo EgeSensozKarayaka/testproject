@@ -26,6 +26,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 8. Aşama 8'de onaylanan sağlık/incident mimarisi saf TypeScript reducer'a dönüştürüldü. AI; acceptance precedence, iki-failure threshold, provisional interval çözümleme, incident gap süreleri ve read-time freshness için sequence/regresyon testleri üretti; sonuçlar strict typecheck ve gerçek PostgreSQL ile doğrulandı.
 9. Aşama 9 scheduler/worker mimarisi hazırlanırken AI mevcut migration, API komutları, probe motoru ve sağlık reducer'ı arasındaki kilit/cancellation sınırlarını birlikte inceledi. Bu inceleme sonucunda check-first kanonik kilit sırası, çalışan iş için durable cancellation acknowledgement ve coalesced manuel isteğin modunu koruyan kalıcı intent tasarımı seçildi; kodlama kullanıcı onayından sonraki tura bırakıldı.
 10. Aşama 9'un ilk uygulama diliminde AI revision 14, typed worker config ve ortak activation-aware outbox writer'ı hazırladı. Gerçek PostgreSQL testi helper'ın `INSERT ... RETURNING` nedeniyle API rolünden gereksiz `SELECT` istediğini gösterince rolü genişletmek yerine helper yalnız mevcut dar `INSERT` yetkisiyle çalışacak şekilde düzeltildi.
+11. Aşama 9'un ikinci uygulama diliminde AI sabit cadence/deterministik retry yardımcılarını ve check-first PostgreSQL job queue adapter'ını uyguladı. Owner-fair seçim pencere fonksiyonuyla global limitten önce hesaplandı; iki worker yarışı, attempt lineage, monoton fence, conditional start/heartbeat ve cancellation görünürlüğü gerçek PostgreSQL üzerinde doğrulandı.
 
 ## Güvenlik ve gizlilik
 

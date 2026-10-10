@@ -2,7 +2,7 @@
 
 **Aşama:** 9 — Kalıcı Scheduler ve Monitor Worker
 
-**Durum:** Uygulama devam ediyor — temel şema/config/outbox dilimi doğrulandı
+**Durum:** Uygulama devam ediyor — temel şema/config/outbox ile materialization/lease adapter dilimleri doğrulandı
 
 **Tarih:** 2026-10-10 12:33 +06:00
 
@@ -553,6 +553,7 @@ delay = min(max_delay, base_delay * 2^(attempt_count - 1) + deterministic_jitter
 ```
 
 Başlangıç policy'si üç attempt, 1 saniye base ve 30 saniye max'tır. Target FAIL retry edilmez; yeni cadence slot'u sonraki gözlemdir.
+Deterministik jitter v1'de `0..1000 ms` aralığındadır ve job kimliği + attempt numarasının SHA-256 özetiyle üretilir; aynı kalıcı attempt restart sonrasında farklı bir availability zamanı üretmez.
 
 ### 17.2 Lease recovery
 
