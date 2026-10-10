@@ -1,6 +1,6 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 07:58 +06:00
+**Son güncelleme:** 2026-10-10 08:02 +06:00
 **Genel durum:** Aşama 5 doğrulandı; Aşama 6 group API dilimi gerçek PostgreSQL ile doğrulandı, check API ve UI uygulaması sürüyor
 
 ## Tamamlanan
@@ -33,6 +33,7 @@
 - Final `pnpm run ci`; format, generated-contract drift, lint, strict typecheck, 73 unit test ve bütün production build'leriyle geçti. Admin URL ayrı verildiğinde group integration paketi de 6/6 geçti.
 - Tüm PostgreSQL integration dosyaları cluster-global bootstrap rollerinin test fixture yarışını önlemek için seri çalışır; birleşik yerel koşu **19/19** geçti.
 - Compose API ve migrate imajları temizden rebuild edildi; migration işi başarıyla kapandı, API healthy oldu. Canlı readiness `200`, oturumsuz group list ve parametrik group route'ları beklenen `401` ile auth sınırına ulaştı.
+- Aşama 6 group API GitHub Actions koşusu [`38015275133`](https://github.com/EgeSensozKarayaka/testproject/actions/runs/38015275133) başarıyla tamamlandı: Node kalite, PostgreSQL migration/izolasyon, Python predictor kalite, dependency audit ve full-stack container smoke işlerinin beşi de geçti.
 - `pnpm typecheck`: ortak paketler, React, API, iki worker ve target simulator için strict TypeScript kontrolü geçti.
 - Playwright: auth frontend smoke, iki bağımsız browser context ve UI → Mailpit → verification → login → logout akışı **3/3 geçti**.
 - Canlı Compose akışında kayıt `202`, Mailpit teslimi, doğrulama `204`, login/session `200`, logout `204` ve logout sonrası session `401` doğrulandı.
