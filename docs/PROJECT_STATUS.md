@@ -1,11 +1,19 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 14:30 +06:00
+**Son güncelleme:** 2026-10-10 15:00 +06:00
 
-**Genel durum:** Aşama 0–8 tamamlandı ve doğrulandı; Aşama 9 freshness reconciliation dilimi tamamlandı, runtime loop uygulaması devam ediyor
+**Genel durum:** Aşama 0–8 tamamlandı ve doğrulandı; Aşama 9 production runtime koordinasyonu ve graceful lifecycle dilimi tamamlandı, kapasite/failure kanıtları sırada
 
 ## Tamamlanan
 
+- Scheduler, dispatcher, expired-lease recovery ve freshness reconciler'ı birbirinden bağımsız, non-overlapping ve abort edilebilir polling loop'larında production worker entrypoint'ine bağlayan runtime coordinator
+- Bütün loop'lar ilk başarılı iteration'ı tamamlayana kadar ve herhangi bir loop hata durumundayken unavailable olan readiness; yalnız hata geçişini redacted kodla loglayan ve iyileşmeyi ayrı kaydeden log-storm koruması
+- Startup'ta schema compatibility ile mevcut/sonraki UTC ayın `check_runs` ve `health_intervals` partition'larını doğrulayan storage preflight
+- Yeni claim'i durduran, poll beklemelerini kesen, aktif probe'ları grace süresince bekleyen, süre aşımında abort eden ve takılı DB iteration'ında dahi bounded dönen graceful shutdown
+- Docker Compose üzerinde demo check'in gerçek 30 saniyelik cadence ile `PASS/200` üretmesi, `UP/FRESH` state'e gelmesi, SIGTERM'de `drained=true`, restart sonrasında run sayısının **10'dan 11'e** çıkması ve sıfır duplicate aktif job ile devam etmesi
+- Scheduler'ın PostgreSQL mikrosaniyeli `next_run_at` değerini Node `Date` milisaniyesiyle eşitlemeye çalışarak sıfır satır güncellemesi üretmesi canlı smoke'ta yakalandı; check lock'unun sağladığı yarış güvenliği korunarak kırılgan timestamp eşitliği kaldırıldı ve mikrosaniyeli fixture ile sabitlendi
+- Exact-origin development SSRF istisnasının private Docker IP'yi kabul etmesine rağmen tek etiketli allowlisted hostname'i erken reddetmesi smoke'ta yakalandı; yalnız production'da yasak olan exact allowlist için sıra düzeltildi, DNS/IP doğrulaması ve near-miss reddi korundu
+- Runtime dilimi final `pnpm run ci` kapısında format, 57-operation contract drift, lint, bütün workspace strict typecheck'leri, **22 dosyada 165/165 unit**, **6 dosyada 52/52 gerçek PostgreSQL/socket integration** ve bütün production build'leriyle geçti
 - Revision 14 scheduler temeli: request-time manual mode, durable cancellation request, eksiksiz job runtime-state constraint'i, partition-key result pointer'ı, rejection allowlist'i ve migration-owned destination activation/cutover kaydı
 - API pause/config/delete komutlarında PENDING job için terminal cancel, LEASED/RUNNING job için acknowledgement bekleyen cancellation request; pause sırasında bekleyen STATEFUL manual intent temizliği
 - API ve worker için ortak activation-aware outbox writer; inactive consumer için event/dispatch üretmeme, aktive destination sonrası durable dispatch davranışı ve gereksiz geniş `SELECT` yetkisi vermeyen least-privilege SQL sınırı
@@ -102,7 +110,7 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Dispatcher, scheduler, recovery ve freshness bileşenlerinin production polling loop'una bağlanması
+- Aşama 9 için tekrarlanabilir 20/200/500 runtime kapasite ve process-kill/lease-recovery kanıtları
 - Maintenance reconciliation ve incident e-posta politikaları
 - Rollup/retention background işleri, history sorguları ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
@@ -113,7 +121,7 @@
 ## Bilinen Sınırlamalar
 
 - Authenticated ekran group/check yapılandırmasını yönetir; probe ve sağlık motorları kalıcılık seviyesinde bağlanmış olsa da canlı monitoring projection/UI henüz uygulanmadığından nihai durum paneli değildir.
-- Bounded dispatcher, fault/result sink ve freshness reconciler test edilmiştir; runtime koordinasyonu ve shutdown/readiness sınırı tamamlanmadan production worker loop'u başlatılmaz. Mevcut monitor worker bu nedenle henüz hedeflere periyodik istek göndermez.
+- Production worker loop'u gerçek scheduled probe üretir; ancak 20/200/500 runtime throughput/queue-lag bütçeleri ve SIGKILL sonrası lease reclaim henüz ölçümlü kabul kanıtına dönüştürülmemiştir.
 - Auth rate limit PostgreSQL fixed-window yaklaşımıdır. V1 ve yatay API replica'ları için tutarlıdır; yüksek hacimli internet trafiğinde edge WAF/CDN katmanı gerekir.
 - Yerel Compose kolaylığı için tek PostgreSQL bootstrap login'i dar `NOLOGIN` rollere geçer. Production'da servis başına ayrı login wrapper/secret gerekir.
 - Yerel HTTP ortamında session cookie `Secure=false`; production config fail-fast secret ve HTTPS/Secure cookie gerektirir.
@@ -127,4 +135,4 @@
 
 ## Sıradaki İş
 
-Aşama 9'un sıradaki dilimi scheduler/dispatcher/recovery/freshness runtime koordinasyonu ve güvenli production loop aktivasyonudur. Ardından graceful shutdown/readiness ve 20/200/500 dayanıklılık kanıtları gelecek.
+Aşama 9'un sıradaki dilimi tekrarlanabilir 20/200/500 runtime kapasite, process-kill/lease-recovery, iki-worker fencing ve worker yükü altında API izolasyonu kanıtlarıdır.

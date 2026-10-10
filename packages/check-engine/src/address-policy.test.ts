@@ -89,8 +89,17 @@ describe('probe address policy', () => {
   it('limits the development exception to an exact origin and explicit port', () => {
     const policy = createProbeNetworkPolicy({
       allowedPorts: [80, 4010],
-      developmentAllowedOrigins: ['http://target.test:4010'],
+      developmentAllowedOrigins: ['http://target-simulator:4010', 'http://target.test:4010'],
     });
+    const composeTarget = validateTargetUrl('http://target-simulator:4010/ok', policy);
+    expect(
+      validateResolvedAddresses(composeTarget, [literalAddress('172.20.0.10')!], policy),
+    ).toHaveLength(1);
+    expectPolicyError(
+      () => validateTargetUrl('http://other-service:4010/ok', policy),
+      'HOSTNAME_NOT_ALLOWED',
+    );
+
     const allowed = validateTargetUrl('http://target.test:4010/ok', policy);
     expect(validateResolvedAddresses(allowed, [literalAddress('127.0.0.1')!], policy)).toHaveLength(
       1,

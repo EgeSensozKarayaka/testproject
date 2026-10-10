@@ -680,3 +680,13 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Host saati; yalnız `transaction_timestamp()` truncation; eşit zamanlı interval/segmentlere izin vermek; constraint hatasında keyfi sleep/retry; mikro saniyeyi bütün TypeScript domain modeline taşımak.
 - **Gerekçe:** Worker saatine güvenmeden kesin run sırası ve pozitif timeline aralıkları üretmek; lease currentness ile presentation/persistence zamanını birbirinden ayırmak; yapay bekleme eklememek.
 - **Sonuçlar:** Çok hızlı ardışık accepted transition'lar check başına en az bir milisaniye ilerler ve nadiren gerçek duvar saatinin birkaç milisaniye önünde logical zaman taşıyabilir. Bu bounded sapma check-scope ordering karşılığında kabul edilir; lease/cancellation kararı bundan etkilenmez.
+
+## D-074 — Production loop aktivasyonu sağlıklı başlangıç ve bounded drain ile birlikte yapılır
+
+- **Tarih:** 2026-10-10 15:00 +06:00
+- **Durum:** Accepted — unit, gerçek PostgreSQL, Compose restart smoke ve tam CI ile doğrulandı
+- **Bağlam:** Scheduler/dispatcher/recovery/freshness bileşenlerini yalnız timer'lara bağlamak worker'ı HTTP bakımından healthy gösterirken kalıcı loop hatasıyla hiç iş üretmeyen bir sürece dönüştürebilir. Ayrıca process kapanışında devam eden DB iteration veya probe, bağlantı havuzu kapatıldıktan sonra belirsiz sonuç bırakabilir.
+- **Karar:** Dört işlev bağımsız ve non-overlapping loop olarak aynı coordinator altında çalışır. Readiness yalnız dört loop da en az bir iteration başarıyla tamamladıysa, hiçbir loop güncel hata durumunda değilse, schema uyumluysa ve mevcut/sonraki UTC ayın run/interval partition'ları varsa `ok` olur. Aynı hata yalnız state geçişinde redacted kodla loglanır; başarı recovery kaydı üretir. Shutdown yeni claim'i durdurur, poll sleep'lerini abort eder, loop/probe settlement'ını bounded grace ile bekler ve kalan probe'ları abort eder.
+- **Alternatifler:** Process başladıysa ready saymak; loop hatalarını yalnız loglamak; bütün işleri tek sıralı timer'da çalıştırmak; sınırsız graceful wait; doğrudan process exit.
+- **Gerekçe:** Bir yavaş/hedef veya bozuk loop diğerlerini durdurmamalı, orchestrator iş üretmeyen worker'a trafik/kapasite vermemeli ve deployment/restart deterministik sona ermelidir.
+- **Sonuçlar:** Geçici loop hatası readiness'i bir sonraki başarılı iteration'a kadar düşürür fakat liveness'i kapatmaz. Grace sonunda tamamlanmayan işlem için `drained=false` dürüstçe loglanabilir; durable lease/fencing recovery sonraki process'in doğru devam etmesini sağlar. Queue lag readiness sebebi değil metric/alarm konusudur.

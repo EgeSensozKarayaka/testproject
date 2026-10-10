@@ -1,18 +1,18 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 14:30 +06:00
+**Son güncelleme:** 2026-10-10 15:00 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–8 tamamlandı; Aşama 9 freshness reconciliation dilimi doğrulandı
+**Mevcut kilometre taşı:** Aşama 0–8 tamamlandı; Aşama 9 production runtime koordinasyonu ve graceful lifecycle dilimi doğrulandı
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
 ## 1. Sıradaki Çalışma — Aşama 9
 
-[`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) mimarisinin revision 14, typed config, durable cancellation/manual intent, result pointer, activation-aware outbox, owner-fair materialization/claim, global-owner-host bounded probe dispatcher, cancellation acknowledgement, infrastructure retry/DEAD, expired-lease recovery, atomik observation persistence ve deadline freshness reconciliation dilimleri tamamlandı. Sıradaki küçük uygulama dilimleri:
+[`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) mimarisinin revision 14, typed config, durable cancellation/manual intent, result pointer, activation-aware outbox, owner-fair materialization/claim, global-owner-host bounded probe dispatcher, cancellation acknowledgement, infrastructure retry/DEAD, expired-lease recovery, atomik observation persistence, deadline freshness reconciliation, production runtime koordinasyonu, loop-aware readiness ve bounded graceful drain dilimleri tamamlandı. Sıradaki küçük uygulama dilimleri:
 
-1. Scheduler, dispatcher, recovery ve freshness döngülerinin güvenli runtime koordinasyonu
-2. Graceful shutdown ve loop-lag/readiness gözlemlenebilirliği
-3. Concurrent worker, stale lease, duplicate result, rollback ve 20/200/500 kapasite kanıtları
+1. Tekrarlanabilir 20/200/500 runtime kapasite fixture'ı ve queue/dispatch/persistence gecikme ölçümleri
+2. Process-kill, lease expiry/reclaim ve stale/zombie sonuç fencing kanıtı
+3. Worker yükü altında API izolasyonu, iki-worker davranışı ve Aşama 9 kapanış raporu
 
 ## 2. Aşama 9 Sonrasında
 

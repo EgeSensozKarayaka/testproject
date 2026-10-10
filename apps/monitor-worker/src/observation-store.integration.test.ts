@@ -7,6 +7,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { type ClaimedJob, PostgresJobQueue } from './job-queue.js';
 import { PostgresObservationStore } from './observation-store.js';
+import { isMonitorStorageReady } from './runtime-coordinator.js';
 
 const adminConnectionString = process.env.DATABASE_TEST_ADMIN_URL;
 const databaseSuite = adminConnectionString ? describe : describe.skip;
@@ -224,6 +225,10 @@ databaseSuite('monitor PostgreSQL observation store', () => {
     expect(state.rowCount).toBe(1);
     return state.rows[0]!.fresh_until;
   }
+
+  it('passes monitor storage preflight when current and next UTC partitions exist', async () => {
+    await expect(isMonitorStorageReady(monitorPool)).resolves.toBe(true);
+  });
 
   it('persists one concurrent result and materializes pending manual intent atomically', async () => {
     const checkId = '00000000-0000-4000-8000-000000010001';

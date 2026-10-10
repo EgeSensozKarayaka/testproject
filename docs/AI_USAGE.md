@@ -1,6 +1,6 @@
 # AI Kullanımı
 
-**Son güncelleme:** 2026-10-10 14:30 +06:00
+**Son güncelleme:** 2026-10-10 15:00 +06:00
 
 ## Araç ve model
 
@@ -31,6 +31,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 13. Aşama 9'un dördüncü uygulama diliminde AI cancellation acknowledgement, typed infrastructure retry/DEAD ve owner-fair expired-lease recovery'yi check→job→attempt kilit sırasıyla uyguladı. PostgreSQL testi gerçek request timestamp'inin sürücüde mikrosaniyeden milisaniyeye yuvarlanması nedeniyle eski manual-intent temizleme eşitliğinin hatalı olduğunu yakaladı; satır zaten kilitli olduğundan kırılgan timestamp karşılaştırması kaldırıldı ve coalesced intent'in terminal geçişle aynı transaction'da materialize edilmesi doğrulandı.
 14. Aşama 9'un beşinci uygulama diliminde AI probe sonucunu saf reducer'a bağlayan atomik observation adapter'ını uyguladı. Concurrent duplicate writer, manual-intent materialization, PASS/FAIL incident geçişleri, diagnostic/cancellation reddi, rollback ve payload redaction gerçek PostgreSQL üzerinde doğrulandı. Aynı milisaniyedeki hızlı run'ların zero-length segment/interval üretme riski incelemede bulununca canonical run zamanı DB saatinden ve kilitli lineage'dan check başına monoton üretildi; lease geçerliliği ayrı gerçek DB gözlem anıyla korundu.
 15. Aşama 9'un altıncı uygulama diliminde AI owner-fair deadline aday seçimi ve check-first freshness reconciler'ı mevcut observation effect uygulayıcısına bağladı. İki replica idempotency'si, exact-deadline incident suspension'ı ve yeni observation ile kilit sırası yarışı gerçek PostgreSQL üzerinde doğrulandı; iki farklı owner ile global limit öncesi fairness sabitlendi. Yeni migration veya dependency gerekmedi ve production loop erken aktive edilmedi.
+16. Aşama 9'un yedinci uygulama diliminde AI dört bağımsız runtime loop'unu production entrypoint'ine bağladı; loop-aware readiness, mevcut/sonraki ay partition preflight'i ve bounded graceful drain ekledi. Canlı Compose smoke, unit testlerin yakalayamadığı PostgreSQL mikrosaniye eşitliği ile exact-allowlist Docker hostname sıralama hatalarını ortaya çıkardı; iki sorun dar regresyon testleriyle düzeltildi. Restart sonrası gerçek run devamlılığı, `PASS/200`, `UP/FRESH`, sıfır duplicate aktif job ve SIGTERM drain kaydı doğrulandı.
 
 ## Güvenlik ve gizlilik
 

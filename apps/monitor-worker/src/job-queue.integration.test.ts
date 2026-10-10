@@ -93,8 +93,8 @@ databaseSuite('monitor PostgreSQL job queue', () => {
           expected_status_code, expected_body_substring, execution_state,
           cadence_anchor_at, next_run_at, manual_requested_at, manual_requested_mode)
        VALUES ($1, $2, 'Queue fixture', $3, 30, 5000, 200, 'healthy',
-               $4, '2026-01-01T00:00:05.250Z',
-               CASE WHEN $4 = 'ACTIVE' THEN '2026-01-01T00:00:05.250Z'::timestamptz ELSE NULL END,
+               $4, '2026-01-01T00:00:05.250123Z',
+               CASE WHEN $4 = 'ACTIVE' THEN '2026-01-01T00:00:05.250123Z'::timestamptz ELSE NULL END,
                CASE WHEN $5::text IS NOT NULL THEN '2026-10-10T01:00:00Z'::timestamptz ELSE NULL END,
                $5)`,
       [

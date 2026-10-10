@@ -403,8 +403,8 @@ export class PostgresJobQueue {
                  )
                END,
                updated_at = updated_at
-           WHERE owner_id = $1 AND id = $2 AND next_run_at = $3`,
-          [candidate.ownerId, candidate.checkId, scheduledFor],
+           WHERE owner_id = $1 AND id = $2`,
+          [candidate.ownerId, candidate.checkId],
         );
         if (advanced.rowCount !== 1) throw new Error('Scheduled cadence changed while locked.');
       }

@@ -2,9 +2,9 @@
 
 **Aşama:** 9 — Kalıcı Scheduler ve Monitor Worker
 
-**Durum:** Uygulama devam ediyor — temel şema, materialization/lease, bounded dispatcher, fault/recovery, atomik observation persistence ve freshness reconciliation dilimleri doğrulandı; production loop henüz aktif değil
+**Durum:** Uygulama devam ediyor — ilk dokuz dilim doğrulandı; production loop, storage preflight, loop-aware readiness ve bounded graceful drain aktif
 
-**Tarih:** 2026-10-10 12:33 +06:00
+**Tarih:** 2026-10-10 15:00 +06:00
 
 **Bağlı belgeler:** [`REQUIREMENTS.md`](./REQUIREMENTS.md), [`ACCEPTANCE_CRITERIA.md`](./ACCEPTANCE_CRITERIA.md), [`ARCHITECTURE.md`](./ARCHITECTURE.md), [`STATE_MACHINES.md`](./STATE_MACHINES.md), [`DATABASE.md`](./DATABASE.md), [`DATABASE_OPERATIONS.md`](./DATABASE_OPERATIONS.md), [`CHECKS_AND_GROUPS.md`](./CHECKS_AND_GROUPS.md), [`CHECK_ENGINE.md`](./CHECK_ENGINE.md), [`HEALTH_AND_INCIDENT_ENGINE.md`](./HEALTH_AND_INCIDENT_ENGINE.md), [`EVENT_CATALOG.md`](./EVENT_CATALOG.md)
 
@@ -150,7 +150,7 @@ Her döngü:
 - iş bulduğunda hemen devam eder, boşken bounded poll/backoff uygular;
 - beklenmeyen hatayı loglayıp process'i sessizce durdurmaz;
 - ortak shutdown sinyaline uyar;
-- son başarılı iteration zamanını readiness için process belleğinde tutar.
+- her loop'un en az bir başarılı iteration tamamlayıp tamamlamadığını ve halen hata durumunda olup olmadığını readiness için process belleğinde tutar.
 
 Bir döngünün geçici DB hatası diğer döngünün state'ini bozmaz. Tek DB outage durumunda hepsi bounded backoff'a geçer; liveness çalışmaya devam eder, readiness `unavailable` olur.
 
@@ -784,7 +784,7 @@ Retry attempt ve backoff loglanır fakat SQL metni/parametreleri veya hassas sna
 10. 20/200/500 kapasite, process-kill/restart ve API-isolation kanıtları
 11. Compose smoke, tam CI, karar/geliştirme/proje durumu güncellemeleri
 
-İlk sekiz dilim uygulanmış ve doğrulanmıştır. Her dilim küçük ve anlamlı commit olur. Migration revision uygulandıktan sonra değiştirilmez; bulunan sorun yeni forward migration ile düzeltilir.
+İlk dokuz dilim uygulanmış ve doğrulanmıştır. Dört loop production entrypoint'inde aktiftir; startup mevcut ve sonraki UTC ay için run/interval partition'larını doğrular, readiness bütün loop'ların ilk başarılarını ve güncel hata durumunu izler, shutdown poll sleep'lerini kesip yeni claim'i durdurur ve aktif probe'ları bounded grace sonunda abort eder. Her dilim küçük ve anlamlı commit olur. Migration revision uygulandıktan sonra değiştirilmez; bulunan sorun yeni forward migration ile düzeltilir.
 
 ## 26. Tamamlanma kapısı
 

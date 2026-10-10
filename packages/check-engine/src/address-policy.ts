@@ -112,12 +112,16 @@ export function validateTargetUrl(rawUrl: string, policy: ProbeNetworkPolicy): V
   url.hash = '';
 
   const hostname = normalizedHostname(url);
-  if (hostname === '' || hostname.includes('%') || isBlockedHostname(hostname)) {
+  const developmentException = policy.developmentAllowedOrigins.has(url.origin);
+  if (
+    hostname === '' ||
+    hostname.includes('%') ||
+    (isBlockedHostname(hostname) && !developmentException)
+  ) {
     throw new TargetPolicyError('HOSTNAME_NOT_ALLOWED');
   }
 
   const port = url.port === '' ? (url.protocol === 'https:' ? 443 : 80) : Number(url.port);
-  const developmentException = policy.developmentAllowedOrigins.has(url.origin);
   if (!policy.allowedPorts.has(port)) throw new TargetPolicyError('PORT_NOT_ALLOWED');
 
   return Object.freeze({ url, hostname, port, developmentException });
