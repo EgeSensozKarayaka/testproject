@@ -87,9 +87,15 @@ export interface TransactionalEmailDeliveryTable extends OwnedRow {
   lease_owner: string | null;
   max_attempts: number;
   provider_message_id: string | null;
-  purpose: 'RESET_PASSWORD' | 'VERIFY_ACCOUNT_EMAIL';
+  purpose:
+    | 'RESET_PASSWORD'
+    | 'TEST_NOTIFICATION'
+    | 'VERIFY_ACCOUNT_EMAIL'
+    | 'VERIFY_NOTIFICATION_RECIPIENT';
+  recipient_id: string | null;
   recipient_address_snapshot: string;
-  state: 'DELIVERY_UNKNOWN' | 'FAILED' | 'PENDING' | 'PROCESSING' | 'RETRY_WAIT' | 'SENT';
+  state:
+    'CANCELLED' | 'DELIVERY_UNKNOWN' | 'FAILED' | 'PENDING' | 'PROCESSING' | 'RETRY_WAIT' | 'SENT';
   updated_at: GeneratedTimestamp;
 }
 
@@ -413,12 +419,17 @@ export interface NotificationIntentTable extends OwnedRow {
   completed_at: Timestamp | null;
   created_at: GeneratedTimestamp;
   evaluated_at: Timestamp | null;
-  event_kind: 'INCIDENT_OPENED' | 'INCIDENT_RECOVERED';
+  decision_code: string | null;
+  event_kind: 'INCIDENT_CLOSED' | 'INCIDENT_OPENED' | 'INCIDENT_RECOVERED';
   id: GeneratedUuid;
   incident_id: string;
   maintenance_until: Timestamp | null;
   policy_version_snapshot: BigIntValue | null;
+  policy_id_snapshot: string | null;
   source_event_id: string;
+  template_key: string | null;
+  template_payload: JsonObject | null;
+  template_version: number | null;
   state:
     'CANCELLED' | 'DEFERRED_MAINTENANCE' | 'MATERIALIZED' | 'NO_RECIPIENTS' | 'PENDING_EVALUATION';
 }
@@ -427,7 +438,9 @@ export interface NotificationDeliveryTable extends CreatedUpdatedRow, OwnedRow {
   attempt_count: number;
   available_at: GeneratedTimestamp;
   completed_at: Timestamp | null;
-  event_kind: 'INCIDENT_OPENED' | 'INCIDENT_RECOVERED';
+  cancel_reason: string | null;
+  cancel_requested_at: Timestamp | null;
+  event_kind: 'INCIDENT_CLOSED' | 'INCIDENT_OPENED' | 'INCIDENT_RECOVERED';
   fencing_token: GeneratedBigInt;
   id: GeneratedUuid;
   incident_id: string;
@@ -437,13 +450,34 @@ export interface NotificationDeliveryTable extends CreatedUpdatedRow, OwnedRow {
   lease_expires_at: Timestamp | null;
   lease_owner: string | null;
   max_attempts: number;
+  maintenance_until: Timestamp | null;
   next_attempt_at: Timestamp | null;
   provider_message_id: string | null;
   recipient_address_snapshot: string;
   recipient_id: string;
+  recovery_enabled_snapshot: boolean | null;
+  related_down_delivery_id: string | null;
   sent_at: Timestamp | null;
   state:
-    'CANCELLED' | 'DELIVERY_UNKNOWN' | 'FAILED' | 'PENDING' | 'PROCESSING' | 'RETRY_WAIT' | 'SENT';
+    | 'CANCELLED'
+    | 'DEFERRED_MAINTENANCE'
+    | 'DELIVERY_UNKNOWN'
+    | 'FAILED'
+    | 'PENDING'
+    | 'PROCESSING'
+    | 'RETRY_WAIT'
+    | 'SENT';
+}
+
+export interface NotificationDeliveryAttemptTable {
+  attempt_number: number;
+  delivery_id: string;
+  ended_at: Timestamp | null;
+  fencing_token: BigIntValue;
+  provider_message_id: string | null;
+  result: string | null;
+  result_code: string | null;
+  started_at: Timestamp;
 }
 
 export interface PublicPageTable extends CreatedUpdatedRow, OwnedRow {
@@ -563,6 +597,7 @@ export interface DatabaseSchema {
   'monitoring.rollups_hour': RollupTable;
   'monitoring.rollups_minute': RollupTable;
   'notification.deliveries': NotificationDeliveryTable;
+  'notification.delivery_attempts': NotificationDeliveryAttemptTable;
   'notification.transactional_email_deliveries': TransactionalEmailDeliveryTable;
   'notification.intents': NotificationIntentTable;
   'notification.policies': NotificationPolicyTable;

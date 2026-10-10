@@ -96,7 +96,6 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO notification.policies (
-  id,
   owner_id,
   group_id,
   mode,
@@ -104,21 +103,27 @@ INSERT INTO notification.policies (
   notify_recovery
 )
 VALUES (
-  '00000000-0000-4000-8000-000000000401',
   '00000000-0000-4000-8000-000000000001',
   NULL,
   'ACTIVE',
   true,
   true
 )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (owner_id, group_id) DO UPDATE SET
+  mode = EXCLUDED.mode,
+  notify_down = EXCLUDED.notify_down,
+  notify_recovery = EXCLUDED.notify_recovery,
+  resource_version = notification.policies.resource_version + 1,
+  updated_at = statement_timestamp();
 
 INSERT INTO notification.policy_recipients (owner_id, policy_id, recipient_id)
-VALUES (
-  '00000000-0000-4000-8000-000000000001',
-  '00000000-0000-4000-8000-000000000401',
-  '00000000-0000-4000-8000-000000000301'
-)
+SELECT
+  policy.owner_id,
+  policy.id,
+  '00000000-0000-4000-8000-000000000301'::uuid
+FROM notification.policies AS policy
+WHERE policy.owner_id = '00000000-0000-4000-8000-000000000001'
+  AND policy.group_id IS NULL
 ON CONFLICT (policy_id, recipient_id) DO NOTHING;
 
 INSERT INTO public_status.pages (

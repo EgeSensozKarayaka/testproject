@@ -460,3 +460,11 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - `docs/NOTIFICATIONS.md`; recipient/policy API'si, revision 16 expansion, secret queue reuse, intent/delivery/attempt modeli, başarılı DOWN'a bağlı recovery, non-recovery closure mesajı, iki aşamalı maintenance kontrolü, SMTP retry/unknown sınıflaması, loop/readiness, güvenli cutover ve 17 kabul senaryosunu kesinleştirdi.
 - SMTP standardının exactly-once garantisi olmadığı açıkça korundu: ambiguous sonuç terminal `DELIVERY_UNKNOWN`, kesin geçici hata retry, kalıcı hata FAILED olur. Recovery yalnız `SENT` DOWN lineage'ına bağlanır.
 - Uygulama hızlandırılmış üç dilime ayrıldı: revision 16 + domain/API, worker runtime + cutover ve kapanış kabul paketi. Bu turda production kodu/migration değiştirilmedi; dokümantasyon format kontrolü dışında test gerekmiyor.
+
+### 16:33 — Aşama 11 revision 16 ve policy domain temeli
+
+- Forward-only revision 16, her kullanıcı için güvenli `DISABLED` default policy trigger/backfill'ini ve eksik group `INHERIT` policy reconciliation'ını ekledi. Demo seed sabit policy kimliğine güvenmek yerine gerçek owner-default satırını çözümleyecek şekilde ileri uyumlu yapıldı.
+- Alıcı doğrulama/test mesajları için mevcut AES-256-GCM transactional queue'ya owner+recipient lineage, yeni purpose'lar ve güvenli enqueue/cancel/confirm `security_api` sınırları eklendi. Public confirmation token'ı atomik olarak tüketip recipient'ı doğruluyor ve secret içermeyen audit/realtime kanıtı üretiyor.
+- Incident intent/delivery tabloları template/policy snapshot, maintenance defer, DOWN lineage, recovery snapshot ve cancellation alanlarıyla genişletildi; SMTP deneme kanıtı için `notification.delivery_attempts` eklendi. `NOTIFICATION` destination aktive edilmedi ve incident worker runtime'ı bu dilimde bilinçli olarak kapalı kaldı.
+- Saf notification domain kuralları ACTIVE/DISABLED/INHERIT tutarlılığını, en az bir alıcıyı, `recovery => down` şartını, deterministik recipient set'ini ve merge yapmayan effective-policy çözümünü sabitledi.
+- Notification unit paketi **10/10**, notifications/database strict typecheck'leri ve temiz gerçek PostgreSQL üzerinde migration+seed+RLS paketi **16/16** geçti. İlk test denemesi admin bağlantı değişkeni verilmediği için skip edildi; yerel Compose test bağlantısı açıkça verilerek gerçek koşu tekrarlandı.

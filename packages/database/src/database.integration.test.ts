@@ -108,7 +108,7 @@ databaseSuite('PostgreSQL persistence architecture', () => {
   it('migrates from zero, records checksums, and is idempotent', async () => {
     const first = await runMigrations(pool, { appBuild: 'integration-test' });
     expect(first.currentRevision).toBe(TARGET_SCHEMA_REVISION);
-    expect(first.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+    expect(first.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
 
     const second = await runMigrations(pool, { appBuild: 'integration-test' });
     expect(second).toEqual({ applied: [], currentRevision: TARGET_SCHEMA_REVISION });
@@ -796,7 +796,7 @@ databaseSuite('PostgreSQL persistence architecture', () => {
       NODE_ENV: 'test',
     });
     expect(result.currentRevision).toBe(TARGET_SCHEMA_REVISION);
-    expect(result.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+    expect(result.applied).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
     expect((await pool.query('SELECT id FROM auth.users')).rowCount).toBe(0);
   });
 });
