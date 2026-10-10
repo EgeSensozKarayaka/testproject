@@ -23,9 +23,34 @@ const integrationFiles = [
   ...integrationTestFiles('apps'),
   ...integrationTestFiles('packages'),
 ].sort((left, right) => left.localeCompare(right, 'en'));
-const vitestArgs =
-  mode === 'integration'
-    ? ['exec', 'vitest', 'run', '--passWithNoTests', '--no-file-parallelism', ...integrationFiles]
-    : ['exec', 'vitest', 'run', '--exclude', '**/*.integration.test.ts', '--exclude', 'e2e/**'];
+let vitestArgs;
+if (mode === 'integration') {
+  vitestArgs = [
+    'exec',
+    'vitest',
+    'run',
+    '--passWithNoTests',
+    '--no-file-parallelism',
+    ...integrationFiles,
+  ];
+} else if (mode === 'capacity') {
+  vitestArgs = [
+    'exec',
+    'vitest',
+    'run',
+    '--no-file-parallelism',
+    'apps/monitor-worker/src/capacity-profile.integration.test.ts',
+  ];
+} else {
+  vitestArgs = [
+    'exec',
+    'vitest',
+    'run',
+    '--exclude',
+    '**/*.integration.test.ts',
+    '--exclude',
+    'e2e/**',
+  ];
+}
 
 run(vitestArgs);

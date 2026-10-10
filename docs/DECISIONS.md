@@ -690,3 +690,13 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Process başladıysa ready saymak; loop hatalarını yalnız loglamak; bütün işleri tek sıralı timer'da çalıştırmak; sınırsız graceful wait; doğrudan process exit.
 - **Gerekçe:** Bir yavaş/hedef veya bozuk loop diğerlerini durdurmamalı, orchestrator iş üretmeyen worker'a trafik/kapasite vermemeli ve deployment/restart deterministik sona ermelidir.
 - **Sonuçlar:** Geçici loop hatası readiness'i bir sonraki başarılı iteration'a kadar düşürür fakat liveness'i kapatmaz. Grace sonunda tamamlanmayan işlem için `drained=false` dürüstçe loglanabilir; durable lease/fencing recovery sonraki process'in doğru devam etmesini sağlar. Queue lag readiness sebebi değil metric/alarm konusudur.
+
+## D-075 — Worker kapasitesi katmanlı ve tekrar çalıştırılabilir profille kanıtlanır
+
+- **Tarih:** 2026-10-10 15:11 +06:00
+- **Durum:** Accepted — 20/200/500 gerçek PostgreSQL profiliyle doğrulandı
+- **Bağlam:** Tam dış ağ kullanan benchmark DNS/TLS ve host ağ değişkenliğini scheduler, claim ve persistence maliyetine karıştırır. Yalnız mock queue kullanmak ise asıl PostgreSQL contention, fencing ve transaction maliyetini gizler. Tek bir yerel latency sayısını production SLO ilan etmek de yanıltıcıdır.
+- **Karar:** Kapasite kanıtı production `PostgresJobQueue`, `ProbeDispatcher` ve `PostgresObservationStore` ile izole gerçek PostgreSQL üzerinde çalışır; yalnız probe portu deterministik 5/50 ms `PASS/200` double'ıdır. 20/200/500 profilleri exact correctness, owner fairness, concurrency/pool sınırı ve machine-readable süre/kaynak ölçümlerini birlikte üretir. Aşama 7'nin hanging hedef yanında 50 gerçek socket probe testi ağ concurrency'sinin ayrı tamamlayıcı kanıtıdır. CI eşikleri observed baseline değil gevşek runaway-regression bütçeleridir.
+- **Alternatifler:** Yalnız saf unit benchmark; 500 gerçek internet hedefi; sadece tek 50-check profili; host sonucunu doğrudan production SLO kabul etmek; performans testini CI dışında elle çalıştırmak.
+- **Gerekçe:** Dış değişkenliği azaltırken gerçek DB koordinasyon maliyetini ve ürünün sayıdan bağımsız yolunu ölçmek; sonucu tekrarlanabilir, dürüst ve CI tarafından korunur kılmak.
+- **Sonuçlar:** `pnpm test:capacity` ayrı çalıştırılabilir ve normal integration/CI paketine dahildir. Rapor belirtilen donanım için baseline'dır; gerçek DNS/TLS, timeout ağırlıklı hedefler, process kill ve API eşzamanlı yükü ayrı kanıtlar olarak kalır.

@@ -99,11 +99,14 @@ pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm test:capacity
 pnpm build
 pnpm run ci
 ```
 
 `pnpm run ci`, format, lint, typecheck, unit/integration test ve build kapılarının yerel birleşimidir. `pnpm ci` yazılmamalıdır; pnpm bunu kendi temiz kurulum komutu olarak yorumlar.
+
+`pnpm test:capacity`, gerçek PostgreSQL üzerinde production scheduler→queue→dispatcher→observation yolunu 20/200/500 due check ile profiller. Gerekli test admin bağlantısı ve ölçüm yorumları [monitor kapasite raporunda](docs/MONITOR_CAPACITY_REPORT.md) belgelenmiştir.
 
 OpenAPI sözleşmesinden TypeScript tiplerini ve Fastify runtime şemalarını yeniden üretmek veya drift kontrolü yapmak için:
 
@@ -180,6 +183,6 @@ Migration dosyaları uygulandıktan sonra değiştirilmez; düzeltmeler yeni ile
 
 Aşama 0–8 tamamlanmıştır; Aşama 9 uygulaması devam etmektedir. On dört immutable SQL migration, idempotent seed, Kysely tipleri, composite sahiplik kısıtları, `FORCE RLS`, dar servis rolleri, partition'lar ve ayrı migration container'ına ek olarak gerçek auth akışları, group/check API'si, React yapılandırma yönetimi, güvenli HTTP kontrol motoru ve deterministik sağlık/incident reducer'ı uygulanmıştır. Session token'ları veritabanında yalnız digest olarak, auth e-posta payload'ları AES-256-GCM şifreli tutulur; SMTP işlemi ayrı worker tarafından yürütülür.
 
-Monitor worker owner-fair scheduler, bounded dispatcher, lease recovery ve freshness döngülerini production entrypoint'inde çalıştırır; loop hata durumu readiness'e yansır, graceful shutdown yeni claim'i durdurup aktif işleri bounded sürede drain eder. Compose smoke'unda gerçek 30 saniyelik cadence, `PASS/200`, `UP/FRESH`, restart sonrası run devamlılığı ve duplicate aktif job oluşmaması doğrulanmıştır. Ancak Aşama 9'un 20/200/500 runtime kapasite ve process-kill/lease-recovery kanıtları; bakım reconciliation, incident bildirimleri, history sorguları, SSE, canlı monitoring dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran güvenli yapılandırma yönetimini sağlar; henüz canlı durum paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
+Monitor worker owner-fair scheduler, bounded dispatcher, lease recovery ve freshness döngülerini production entrypoint'inde çalıştırır; loop hata durumu readiness'e yansır, graceful shutdown yeni claim'i durdurup aktif işleri bounded sürede drain eder. Compose smoke'unda gerçek 30 saniyelik cadence, `PASS/200`, `UP/FRESH`, restart sonrası run devamlılığı ve duplicate aktif job oluşmaması doğrulanmıştır. 20/200/500 gerçek PostgreSQL runtime profili 500-check burst'ünü 8.74 saniyede, 57.25 check/s uçtan uca throughput ile tamamlamıştır. Ancak Aşama 9'un process-kill/lease-recovery, iki-worker fencing ve API izolasyonu kanıtları; bakım reconciliation, incident bildirimleri, history sorguları, SSE, canlı monitoring dashboard'u/public durum sayfası ve tahmin algoritması henüz yoktur. Mevcut authenticated ekran güvenli yapılandırma yönetimini sağlar; henüz canlı durum paneli değildir. Local mantıksal restore provası geçti, fakat production backup/PITR ve RPO/RTO hedefleri henüz kurulmuş veya doğrulanmış değildir.
 
 Güncel kapsam ve kanıtlar için [proje durumu](docs/PROJECT_STATUS.md), ayrıntılı araç zinciri için [geliştirme ortamı mimarisi](docs/DEVELOPMENT_ENVIRONMENT.md) belgelerine bakın.

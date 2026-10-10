@@ -1,6 +1,6 @@
 # AI Kullanımı
 
-**Son güncelleme:** 2026-10-10 15:00 +06:00
+**Son güncelleme:** 2026-10-10 15:11 +06:00
 
 ## Araç ve model
 
@@ -32,6 +32,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 14. Aşama 9'un beşinci uygulama diliminde AI probe sonucunu saf reducer'a bağlayan atomik observation adapter'ını uyguladı. Concurrent duplicate writer, manual-intent materialization, PASS/FAIL incident geçişleri, diagnostic/cancellation reddi, rollback ve payload redaction gerçek PostgreSQL üzerinde doğrulandı. Aynı milisaniyedeki hızlı run'ların zero-length segment/interval üretme riski incelemede bulununca canonical run zamanı DB saatinden ve kilitli lineage'dan check başına monoton üretildi; lease geçerliliği ayrı gerçek DB gözlem anıyla korundu.
 15. Aşama 9'un altıncı uygulama diliminde AI owner-fair deadline aday seçimi ve check-first freshness reconciler'ı mevcut observation effect uygulayıcısına bağladı. İki replica idempotency'si, exact-deadline incident suspension'ı ve yeni observation ile kilit sırası yarışı gerçek PostgreSQL üzerinde doğrulandı; iki farklı owner ile global limit öncesi fairness sabitlendi. Yeni migration veya dependency gerekmedi ve production loop erken aktive edilmedi.
 16. Aşama 9'un yedinci uygulama diliminde AI dört bağımsız runtime loop'unu production entrypoint'ine bağladı; loop-aware readiness, mevcut/sonraki ay partition preflight'i ve bounded graceful drain ekledi. Canlı Compose smoke, unit testlerin yakalayamadığı PostgreSQL mikrosaniye eşitliği ile exact-allowlist Docker hostname sıralama hatalarını ortaya çıkardı; iki sorun dar regresyon testleriyle düzeltildi. Restart sonrası gerçek run devamlılığı, `PASS/200`, `UP/FRESH`, sıfır duplicate aktif job ve SIGTERM drain kaydı doğrulandı.
+17. Aşama 9'un sekizinci uygulama diliminde AI 20/200/500 due check'i production queue/dispatcher/persistence kod yolundan geçiren gerçek PostgreSQL kapasite fixture'ı hazırladı. Dış ağ değişkenliği deterministik 5/50 ms probe portuyla ayrıldı; Aşama 7'nin 50 gerçek socket concurrency testi tamamlayıcı kanıt olarak korundu. CPU, RSS, DB connection, active probe, scheduler/dispatch süreleri, p95 claim/execution lag ve throughput makine-okunur kaydedildi; observed baseline ile gevşek CI regresyon bütçesi ayrı belgelendi.
 
 ## Güvenlik ve gizlilik
 
