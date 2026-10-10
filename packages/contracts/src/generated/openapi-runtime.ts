@@ -8851,6 +8851,75 @@ export const openApiOperations = {
             },
           },
         },
+        '422': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     },
   },
@@ -8889,6 +8958,144 @@ export const openApiOperations = {
         required: ['X-CSRF-Token', 'If-Match'],
       },
       response: {
+        '404': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '409': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
         '412': {
           type: 'object',
           additionalProperties: false,
@@ -9078,6 +9285,402 @@ export const openApiOperations = {
             },
           },
         },
+        '404': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '409': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '429': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  sendNotificationRecipientTestEmail: {
+    authentication: 'cookie',
+    csrfRequired: true,
+    idempotencyRequired: true,
+    method: 'POST',
+    path: '/api/v1/notification-recipients/:recipient_id/test-email',
+    preconditionRequired: false,
+    routeSchema: {
+      params: {
+        type: 'object',
+        properties: {
+          recipient_id: {
+            type: 'string',
+            format: 'uuid',
+          },
+        },
+        required: ['recipient_id'],
+        additionalProperties: false,
+      },
+      headers: {
+        type: 'object',
+        properties: {
+          'X-CSRF-Token': {
+            type: 'string',
+            minLength: 20,
+            maxLength: 512,
+          },
+          'Idempotency-Key': {
+            type: 'string',
+            minLength: 8,
+            maxLength: 128,
+            pattern: '^[\\x21-\\x7E]+$',
+          },
+        },
+        required: ['X-CSRF-Token', 'Idempotency-Key'],
+      },
+      response: {
+        '202': {
+          type: 'object',
+          additionalProperties: false,
+          required: ['accepted'],
+          properties: {
+            accepted: {
+              type: 'boolean',
+              const: true,
+            },
+          },
+        },
+        '404': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '409': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
         '429': {
           type: 'object',
           additionalProperties: false,
@@ -9264,6 +9867,11 @@ export const openApiOperations = {
             'notify_recovery',
             'recipient_ids',
             'effective_recipient_ids',
+            'effective_policy_id',
+            'effective_mode',
+            'effective_notify_down',
+            'effective_notify_recovery',
+            'effective_policy_version',
             'resource_version',
           ],
           properties: {
@@ -9309,6 +9917,24 @@ export const openApiOperations = {
                 type: 'string',
                 format: 'uuid',
               },
+            },
+            effective_policy_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            effective_mode: {
+              type: 'string',
+              enum: ['ACTIVE', 'DISABLED'],
+            },
+            effective_notify_down: {
+              type: ['boolean', 'null'],
+            },
+            effective_notify_recovery: {
+              type: ['boolean', 'null'],
+            },
+            effective_policy_version: {
+              type: 'string',
+              pattern: '^[0-9]+$',
             },
             resource_version: {
               type: 'string',
@@ -9384,6 +10010,10 @@ export const openApiOperations = {
                 notify_recovery: {
                   type: 'boolean',
                 },
+                recipient_ids: {
+                  type: 'array',
+                  minItems: 1,
+                },
               },
             },
             else: {
@@ -9395,6 +10025,7 @@ export const openApiOperations = {
                   type: 'null',
                 },
                 recipient_ids: {
+                  type: 'array',
                   maxItems: 0,
                 },
               },
@@ -9415,6 +10046,11 @@ export const openApiOperations = {
             'notify_recovery',
             'recipient_ids',
             'effective_recipient_ids',
+            'effective_policy_id',
+            'effective_mode',
+            'effective_notify_down',
+            'effective_notify_recovery',
+            'effective_policy_version',
             'resource_version',
           ],
           properties: {
@@ -9461,6 +10097,24 @@ export const openApiOperations = {
                 format: 'uuid',
               },
             },
+            effective_policy_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            effective_mode: {
+              type: 'string',
+              enum: ['ACTIVE', 'DISABLED'],
+            },
+            effective_notify_down: {
+              type: ['boolean', 'null'],
+            },
+            effective_notify_recovery: {
+              type: ['boolean', 'null'],
+            },
+            effective_policy_version: {
+              type: 'string',
+              pattern: '^[0-9]+$',
+            },
             resource_version: {
               type: 'string',
               pattern: '^[0-9]+$',
@@ -9468,6 +10122,75 @@ export const openApiOperations = {
           },
         },
         '412': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '422': {
           type: 'object',
           additionalProperties: false,
           required: [
@@ -9640,6 +10363,11 @@ export const openApiOperations = {
             'notify_recovery',
             'recipient_ids',
             'effective_recipient_ids',
+            'effective_policy_id',
+            'effective_mode',
+            'effective_notify_down',
+            'effective_notify_recovery',
+            'effective_policy_version',
             'resource_version',
           ],
           properties: {
@@ -9685,6 +10413,24 @@ export const openApiOperations = {
                 type: 'string',
                 format: 'uuid',
               },
+            },
+            effective_policy_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            effective_mode: {
+              type: 'string',
+              enum: ['ACTIVE', 'DISABLED'],
+            },
+            effective_notify_down: {
+              type: ['boolean', 'null'],
+            },
+            effective_notify_recovery: {
+              type: ['boolean', 'null'],
+            },
+            effective_policy_version: {
+              type: 'string',
+              pattern: '^[0-9]+$',
             },
             resource_version: {
               type: 'string',
@@ -9771,6 +10517,10 @@ export const openApiOperations = {
                 notify_recovery: {
                   type: 'boolean',
                 },
+                recipient_ids: {
+                  type: 'array',
+                  minItems: 1,
+                },
               },
             },
             else: {
@@ -9782,6 +10532,7 @@ export const openApiOperations = {
                   type: 'null',
                 },
                 recipient_ids: {
+                  type: 'array',
                   maxItems: 0,
                 },
               },
@@ -9802,6 +10553,11 @@ export const openApiOperations = {
             'notify_recovery',
             'recipient_ids',
             'effective_recipient_ids',
+            'effective_policy_id',
+            'effective_mode',
+            'effective_notify_down',
+            'effective_notify_recovery',
+            'effective_policy_version',
             'resource_version',
           ],
           properties: {
@@ -9848,13 +10604,169 @@ export const openApiOperations = {
                 format: 'uuid',
               },
             },
+            effective_policy_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            effective_mode: {
+              type: 'string',
+              enum: ['ACTIVE', 'DISABLED'],
+            },
+            effective_notify_down: {
+              type: ['boolean', 'null'],
+            },
+            effective_notify_recovery: {
+              type: ['boolean', 'null'],
+            },
+            effective_policy_version: {
+              type: 'string',
+              pattern: '^[0-9]+$',
+            },
             resource_version: {
               type: 'string',
               pattern: '^[0-9]+$',
             },
           },
         },
+        '404': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
         '412': {
+          type: 'object',
+          additionalProperties: false,
+          required: [
+            'type',
+            'title',
+            'status',
+            'detail',
+            'instance',
+            'code',
+            'request_id',
+            'retryable',
+          ],
+          properties: {
+            type: {
+              type: 'string',
+              format: 'uri',
+            },
+            title: {
+              type: 'string',
+            },
+            status: {
+              type: 'integer',
+              minimum: 400,
+              maximum: 599,
+            },
+            detail: {
+              type: 'string',
+            },
+            instance: {
+              type: 'string',
+            },
+            code: {
+              type: 'string',
+              pattern: '^[a-z][a-z0-9_]*$',
+            },
+            request_id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            retryable: {
+              type: 'boolean',
+            },
+            retry_after_seconds: {
+              type: 'integer',
+              minimum: 0,
+            },
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['pointer', 'code', 'message'],
+                properties: {
+                  pointer: {
+                    type: 'string',
+                  },
+                  code: {
+                    type: 'string',
+                    pattern: '^[a-z][a-z0-9_]*$',
+                  },
+                  message: {
+                    type: 'string',
+                  },
+                },
+              },
+            },
+          },
+        },
+        '422': {
           type: 'object',
           additionalProperties: false,
           required: [

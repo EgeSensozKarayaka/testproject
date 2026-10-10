@@ -40,6 +40,7 @@ const idempotentOperations = new Set([
   'createMaintenanceWindow',
   'createNotificationRecipient',
   'resendNotificationRecipientVerification',
+  'sendNotificationRecipientTestEmail',
   'createPublicPage',
   'publishPublicPage',
   'rotatePublicPageLink',
@@ -259,8 +260,8 @@ const operations = Object.fromEntries(
   ),
 );
 
-if (operationIds.size !== 57) {
-  throw new Error(`Expected 57 OpenAPI operations, found ${operationIds.size}`);
+if (operationIds.size !== 58) {
+  throw new Error(`Expected 58 OpenAPI operations, found ${operationIds.size}`);
 }
 
 for (const [operationId, operation] of Object.entries(operations)) {

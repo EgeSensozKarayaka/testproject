@@ -107,7 +107,7 @@ databaseSuite('group service PostgreSQL boundary', () => {
       audits: '1',
       events: '1',
       groups: '1',
-      policies: '1',
+      policies: '2',
       receipts: '1',
     });
   });

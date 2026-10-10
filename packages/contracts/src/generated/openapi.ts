@@ -463,6 +463,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/notification-recipients/{recipient_id}/test-email': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['sendNotificationRecipientTestEmail'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/notification-recipient-verifications/confirm': {
     parameters: {
       query?: never;
@@ -1034,6 +1050,12 @@ export interface components {
       notify_recovery: boolean | null;
       recipient_ids: components['schemas']['Uuid'][];
       effective_recipient_ids: components['schemas']['Uuid'][];
+      effective_policy_id: components['schemas']['Uuid'];
+      /** @enum {string} */
+      effective_mode: 'ACTIVE' | 'DISABLED';
+      effective_notify_down: boolean | null;
+      effective_notify_recovery: boolean | null;
+      effective_policy_version: components['schemas']['ResourceVersion'];
       resource_version: components['schemas']['ResourceVersion'];
     };
     /** @enum {string} */
@@ -2267,6 +2289,7 @@ export interface operations {
         };
       };
       409: components['responses']['ConflictProblem'];
+      422: components['responses']['ValidationProblem'];
     };
   };
   deleteNotificationRecipient: {
@@ -2290,6 +2313,8 @@ export interface operations {
         };
         content?: never;
       };
+      404: components['responses']['NotFoundProblem'];
+      409: components['responses']['ConflictProblem'];
       412: components['responses']['PreconditionFailed'];
       428: components['responses']['PreconditionRequired'];
     };
@@ -2309,6 +2334,28 @@ export interface operations {
     requestBody?: never;
     responses: {
       202: components['responses']['Accepted'];
+      404: components['responses']['NotFoundProblem'];
+      409: components['responses']['ConflictProblem'];
+      429: components['responses']['RateLimitProblem'];
+    };
+  };
+  sendNotificationRecipientTestEmail: {
+    parameters: {
+      query?: never;
+      header: {
+        'X-CSRF-Token': components['parameters']['CsrfToken'];
+        'Idempotency-Key': components['parameters']['IdempotencyKey'];
+      };
+      path: {
+        recipient_id: components['schemas']['Uuid'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      202: components['responses']['Accepted'];
+      404: components['responses']['NotFoundProblem'];
+      409: components['responses']['ConflictProblem'];
       429: components['responses']['RateLimitProblem'];
     };
   };
@@ -2383,6 +2430,7 @@ export interface operations {
         };
       };
       412: components['responses']['PreconditionFailed'];
+      422: components['responses']['ValidationProblem'];
       428: components['responses']['PreconditionRequired'];
     };
   };
@@ -2437,7 +2485,9 @@ export interface operations {
           'application/json': components['schemas']['NotificationPolicy'];
         };
       };
+      404: components['responses']['NotFoundProblem'];
       412: components['responses']['PreconditionFailed'];
+      422: components['responses']['ValidationProblem'];
       428: components['responses']['PreconditionRequired'];
     };
   };

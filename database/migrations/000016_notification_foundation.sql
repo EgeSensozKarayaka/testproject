@@ -130,12 +130,12 @@ BEGIN
   IF p_owner_id IS DISTINCT FROM security_api.current_owner_id() THEN
     RAISE EXCEPTION 'owner context mismatch' USING ERRCODE = '42501';
   END IF;
-  UPDATE notification.transactional_email_deliveries
+  UPDATE notification.transactional_email_deliveries AS delivery
   SET state = 'CANCELLED', completed_at = statement_timestamp(),
       lease_owner = NULL, lease_expires_at = NULL, updated_at = statement_timestamp(),
       last_result_code = 'recipient_disabled'
   WHERE owner_id = p_owner_id AND recipient_id = p_recipient_id
-    AND state IN ('PENDING', 'PROCESSING', 'RETRY_WAIT');
+    AND state IN ('PENDING', 'RETRY_WAIT');
   GET DIAGNOSTICS v_count = ROW_COUNT;
   RETURN v_count;
 END
@@ -175,6 +175,13 @@ BEGIN
     AND status = 'PENDING_VERIFICATION'
   RETURNING notification.recipients.resource_version INTO v_resource_version;
   IF v_resource_version IS NULL THEN RETURN; END IF;
+
+  UPDATE notification.transactional_email_deliveries AS delivery
+  SET state = 'CANCELLED', completed_at = statement_timestamp(),
+      updated_at = statement_timestamp(), last_result_code = 'recipient_verified'
+  WHERE delivery.owner_id = v_owner_id AND delivery.recipient_id = v_recipient_id
+    AND delivery.purpose = 'VERIFY_NOTIFICATION_RECIPIENT'
+    AND delivery.state IN ('PENDING', 'RETRY_WAIT');
 
   INSERT INTO infra.outbox_events (
     owner_id, event_type, schema_version, aggregate_type, aggregate_id,

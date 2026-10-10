@@ -17,6 +17,7 @@
     "@site-monitor/contracts": "workspace:*",
     "@site-monitor/database": "workspace:*",
     "@site-monitor/domain": "workspace:*",
+    "@site-monitor/notifications": "workspace:*",
     "@site-monitor/observability": "workspace:*",
     "fastify": "5.12.5",
     "pino": "10.4.0"

@@ -1,11 +1,16 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 16:27 +06:00
+**Son güncelleme:** 2026-10-10 16:46 +06:00
 
-**Genel durum:** Aşama 0–10 tamamlandı ve doğrulandı; Aşama 11 nihai mimarisi hazır, uygulama sırada
+**Genel durum:** Aşama 0–10 tamamlandı; Aşama 11 revision/domain ve recipient/policy API dilimi tamamlandı, incident worker/cutover sırada
 
 ## Tamamlanan
 
+- Revision 16 ile her hesap için güvenli default policy trigger/backfill'i, group policy reconciliation'ı, recipient transactional-email lineage'ı, public confirm/enqueue/cancel güvenlik fonksiyonları ve incident delivery/attempt genişletmesi; `NOTIFICATION` destination henüz aktive edilmedi
+- Owner-scoped notification recipient list/create/disable, verification resend/confirm, test-email ve default/group policy get/replace API'si; ETag/If-Match, CSRF/origin/session/rate-limit, idempotency, signed cursor, VERIFIED recipient ve tam override inheritance kuralları
+- Transactional notification worker'da hesap doğrulama/reset akışından ayrı recipient-verification ve token içermeyen test-email şablonları; stale queued verification cancellation davranışı
+- 58-operation OpenAPI contract drift, notification HTTP/domain unit testleri ve transactional template testleri dahil unit kapısı **27 dosyada 194/194**; temiz PostgreSQL notification service **5/5**, revision/database/group odaklı regresyon **29/29** geçti
+- Yerel veritabanı revision 16, güncel API ve notification worker Compose imajları healthy; canlı readiness `ok` ve yeni recipient route auth sınırı `401` ile doğrulandı
 - Aşama 11 için recipient doğrulama, default/group policy, idempotent incident intent'i, recipient delivery lineage'ı, maintenance send-time recheck, SMTP retry/unknown politikası, cutover ve acceptance kapsamını kesinleştiren `docs/NOTIFICATIONS.md`
 - Revision 15 ile maintenance `name → note varchar(1000) NULL` sözleşme düzeltmesi, owner-list indeksi, fiziksel delete/hedef update yasağı ve API/monitor/notifier'ın paylaştığı security-invoker etkin bakım projection fonksiyonu
 - Saf maintenance domain politikası: exact `[start,end)` sınırları, note normalizasyonu, create/edit range doğrulaması, aktif/bitmiş/cancelled mutation kuralları ve direct+current-group overlap union projection'ı
@@ -59,7 +64,7 @@
 - DNS çağrısı yapmayan kısa ömürlü direct TCP/TLS connector; hostname/SNI sertifika doğrulaması, proxy bypass'ı, operator port allowlist'i ve production'da reddedilen exact-origin local simulator istisnası
 - Başarı/body/status, streaming, gecikme/hang, büyük/sıkıştırılmış body, redirect/loop, flaky ve erken bağlantı kapanması fixture'larıyla genişletilmiş hedef simülatörü
 - Aşama 0 gereksinim/kabul kriterleri, Aşama 1 domain/durum makineleri, Aşama 2 monorepo/runtime/CI temeli, Aşama 3 kalıcılık ve Aşama 4 API/event/hata sözleşmeleri
-- PostgreSQL 18.6 üzerinde on beş checksum'lı, immutable ve forward-only migration; schema-aware readiness, ayrı migration container'ı ve idempotent development seed'i
+- PostgreSQL 18.6 üzerinde on altı checksum'lı, immutable ve forward-only migration; schema-aware readiness, ayrı migration container'ı ve idempotent development seed'i
 - Private tablolar için composite sahiplik kısıtları, `FORCE RLS`, transaction-local owner context'i ve dar service rolleri
 - Canonical OpenAPI 3.1'den deterministik TypeScript tipleri ile Fastify runtime şemaları; merkezi RFC 9457 problem yanıtı ve UUIDv7 request korelasyonu
 - 15–128 code-point parola politikası, zxcvbn güç kontrolü, bounded async Argon2id hash/verify ve parametre yükseltme yolu
@@ -140,7 +145,7 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
-- Notification outbox consumer'ı, kalıcı intent reconciliation'ı, recipient/policy yönetimi ve incident e-posta teslimi
+- Notification outbox consumer'ı, kalıcı intent reconciliation'ı, incident e-posta teslimi ve recipient/policy yönetim arayüzü
 - Rollup/retention background işleri, history sorguları ve grafikler
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
 - Predictor analiz algoritması/model lifecycle'ı
@@ -164,4 +169,4 @@
 
 ## Sıradaki İş
 
-Aşama 11'in ilk uygulama diliminde forward-only revision 16, saf notification domain kuralları ve owner-scoped recipient/policy API'si uygulanacaktır.
+Aşama 11'in ikinci uygulama diliminde outbox/intent/delivery worker runtime'ı, incident SMTP şablonları ve güvenli `NOTIFICATION` destination cutover'ı uygulanacaktır.

@@ -12,6 +12,7 @@ import { AuthService } from './auth-service.js';
 import { CheckService } from './check-service.js';
 import { GroupService } from './group-service.js';
 import { MaintenanceService } from './maintenance-service.js';
+import { NotificationService } from './notification-service.js';
 
 const config = loadRuntimeConfig({ defaultPort: 13_000, serviceName: 'api' });
 const logger = createLogger({
@@ -46,6 +47,13 @@ const maintenanceService = new MaintenanceService(database, {
   maintenanceWindowLimit: resourceConfig.maintenanceWindowsPerOwnerLimit,
   securityKey: authConfig.rateLimitKey,
 });
+const notificationService = new NotificationService(database, {
+  emailEncryptionKey: {
+    key: authConfig.emailEncryptionKey,
+    version: authConfig.emailEncryptionKeyVersion,
+  },
+  securityKey: authConfig.rateLimitKey,
+});
 const app = buildApiApplication({
   allowedOrigin: process.env.WEB_ORIGIN ?? 'http://localhost:15173',
   authService,
@@ -54,6 +62,7 @@ const app = buildApiApplication({
   groupService,
   logger,
   maintenanceService,
+  notificationService,
   readiness: async () => isDatabaseReady(database),
   serviceName: config.serviceName,
   version: config.version,

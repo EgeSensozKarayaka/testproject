@@ -5,8 +5,8 @@ import { openApiOperations } from './openapi.js';
 describe('generated OpenAPI runtime contract', () => {
   it('contains every reviewed operation', () => {
     const operationIds = Object.keys(openApiOperations);
-    expect(operationIds).toHaveLength(57);
-    expect(new Set(operationIds).size).toBe(57);
+    expect(operationIds).toHaveLength(58);
+    expect(new Set(operationIds).size).toBe(58);
   });
 
   it('provides runtime request and response schemas', () => {

@@ -13,6 +13,12 @@ import { createLogger } from '@site-monitor/observability';
 import Fastify from 'fastify';
 import nodemailer from 'nodemailer';
 
+import {
+  transactionalEmailContent,
+  type SecretEmailPayload,
+  type TransactionalEmailPurpose,
+} from './email-content.js';
+
 const config = loadRuntimeConfig({ defaultPort: 3012, serviceName: 'notification-worker' });
 const logger = createLogger({
   environment: config.nodeEnv,
@@ -44,23 +50,8 @@ interface ClaimedEmail {
   encryption_tag: Buffer;
   fencing_token: string;
   owner_id: string;
-  purpose: 'RESET_PASSWORD' | 'VERIFY_ACCOUNT_EMAIL';
+  purpose: TransactionalEmailPurpose;
   recipient_address: string;
-}
-
-interface SecretEmailPayload {
-  token: string;
-}
-
-function emailContent(claim: ClaimedEmail, token: string) {
-  const verification = claim.purpose === 'VERIFY_ACCOUNT_EMAIL';
-  const path = verification ? 'verify-email' : 'reset-password';
-  const action = verification ? 'Verify your email' : 'Reset your password';
-  const link = `${authConfig.publicWebUrl}/${path}#token=${encodeURIComponent(token)}`;
-  return {
-    subject: verification ? 'Verify your Site Monitor account' : 'Reset your Site Monitor password',
-    text: `${action}: ${link}\n\nThis link expires in one hour.`,
-  };
 }
 
 async function completeEmail(
@@ -98,7 +89,7 @@ async function deliverOne(): Promise<boolean> {
       },
       [{ key: authConfig.emailEncryptionKey, version: authConfig.emailEncryptionKeyVersion }],
     );
-    const content = emailContent(claim, payload.token);
+    const content = transactionalEmailContent(claim.purpose, payload, authConfig.publicWebUrl);
     const sent = await transport.sendMail({
       from: emailConfig.fromAddress,
       subject: content.subject,

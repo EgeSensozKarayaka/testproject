@@ -1,8 +1,8 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 16:27 +06:00
+**Son güncelleme:** 2026-10-10 16:46 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–10 tamamlandı; Aşama 11 nihai mimarisi uygulamaya hazır
+**Mevcut kilometre taşı:** Aşama 0–10 ve Aşama 11 recipient/policy API dilimi tamamlandı; incident worker/cutover sırada
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
@@ -10,7 +10,7 @@ Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan 
 
 `docs/NOTIFICATIONS.md` tasarımını inceleme/onay sonrasında üç kısa dilimde uygula:
 
-- Revision 16 schema/backfill/trigger, saf policy-lineage kuralları ve recipient/policy API'si
+- [x] Revision 16 schema/backfill/trigger, saf policy kuralları ve recipient/policy API'si
 - Outbox/intent/delivery worker runtime'ı, SMTP adapter/templates ve güvenli destination cutover
 - İki-replica/restart/maintenance/SMTP failure/Mailpit kabul paketi ve tam CI
 

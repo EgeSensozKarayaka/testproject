@@ -14,6 +14,8 @@ import { registerGroupRoutes } from './group-routes.js';
 import type { GroupServicePort } from './group-service.js';
 import { registerMaintenanceRoutes } from './maintenance-routes.js';
 import type { MaintenanceServicePort } from './maintenance-service.js';
+import { registerNotificationRoutes } from './notification-routes.js';
+import type { NotificationServicePort } from './notification-service.js';
 
 export interface ApiApplicationOptions {
   allowedOrigin: string;
@@ -23,6 +25,7 @@ export interface ApiApplicationOptions {
   groupService?: GroupServicePort;
   logger: Logger;
   maintenanceService?: MaintenanceServicePort;
+  notificationService?: NotificationServicePort;
   readiness: () => Promise<boolean>;
   serviceName: string;
   version: string;
@@ -59,7 +62,7 @@ export function buildApiApplication(options: ApiApplicationOptions) {
   void app.register(cookie);
   void app.register(cors, {
     credentials: true,
-    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     origin: options.allowedOrigin,
   });
 
@@ -91,6 +94,14 @@ export function buildApiApplication(options: ApiApplicationOptions) {
         authService: options.authService,
         cookieSecure: options.cookieSecure ?? false,
         maintenanceService: options.maintenanceService,
+      });
+    }
+    if (options.notificationService) {
+      void app.register(registerNotificationRoutes, {
+        allowedOrigin: options.allowedOrigin,
+        authService: options.authService,
+        cookieSecure: options.cookieSecure ?? false,
+        notificationService: options.notificationService,
       });
     }
   }
