@@ -860,3 +860,53 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** Normal CI'da 50,4 milyon raw run; yalnız küçük fixture ile performans iddiası; production'dan alınmış veri dump'ı; hiçbir otomatik bütçe koymamak.
 - **Gerekçe:** Tekrarlanabilirliği ve gerçek month query planını korurken CI maliyetini bounded tutmak; sentetik eşdeğerlik ile raw-ingest iddiasını birbirine karıştırmamak.
 - **Sonuçlar:** Rapor dataset satırı ile eşdeğer raw sample sayısını ayrı gösterir. Ölçümler production SLO değildir; raw ingest monitor kapasite raporunda, history query/housekeeping kapasitesi bu profilde kanıtlanır.
+
+## D-092 — Realtime outbox relay ayrı process'tir, PostgreSQL NOTIFY yalnız wake-up taşır
+
+- **Tarih:** 2026-10-10 19:12 +06:00
+- **Durum:** Accepted — Aşama 13 nihai mimarisi
+- **Bağlam:** Her API replica'nın aynı owner değişikliğini kendi bağlı client'larına ulaştırması gerekirken outbox dispatch tek consumer tarafından tamamlanmalıdır. API'ye global outbox update yetkisi vermek least-privilege sınırını bozar; doğrudan `NOTIFY` payload'ını kalıcı veri saymak ise restart ve bağlantı kaybında doğruluk üretmez.
+- **Karar:** Public API'si olmayan ayrı `realtime-worker`, `REALTIME` dispatch'ini lease/fencing ile tüketir. Dispatch completion ve sabit kanala küçük redacted wake-up `pg_notify` çağrısı aynı transaction'da commit edilir. Her API replica dedicated listener ile broadcast'i alır; source DTO'yu owner-scoped current projection'dan okur.
+- **Alternatifler:** Her API replica'nın aynı outbox'ı ayrı checkpoint ile okuması; Redis/pub-sub eklemek; relay'i API process'ine gömmek.
+- **Gerekçe:** Tek durable dispatch ile çoklu replica fan-out'unu birleştirmek; API rolünü ve event payload'ını genişletmemek.
+- **Sonuçlar:** API geniş outbox yetkisi almaz, çoklu worker ve API replica güvenli çalışır, worker arızası ana sistemi düşürmez. Ek process/container ve listener lifecycle testi gerekir; notification kaybı REST reconciliation ile iyileşir.
+
+## D-093 — SSE kalıcı replay değil, snapshot ile yakınsayan invalidation kanalıdır
+
+- **Tarih:** 2026-10-10 19:12 +06:00
+- **Durum:** Accepted — Aşama 13 nihai mimarisi
+- **Bağlam:** Browser'a durable event replay kurmak per-client offset, retention, yetki değişimi ve silinen kaynak semantiğini büyütür; ürünün ihtiyacı state'i saniyeler içinde yenilemektir.
+- **Karar:** SSE best-effort, tekrarlanabilir/coalesce edilebilir invalidation'dır. Stream önce açılır, `stream.ready` sonrasında görünür REST query snapshot seti alınır ve buffered version'lar uygulanır. Reconnect, resync, foreground ve en geç 60 saniyelik tur REST ile yakınsar.
+- **Alternatifler:** Durable SSE event store/replay; payload'dan client state'i yeniden kurmak; event ile query invalidation ve periyodik REST snapshot.
+- **Gerekçe:** Kalıcı doğruluğu zaten owner-scoped PostgreSQL projection'ında tutmak ve canlı kanal kesintisini ürün state'inden ayırmak.
+- **Sonuçlar:** Kaçırılan event yanlış kalıcı state üretmez ve `Last-Event-ID` yetki/doğruluk anahtarı olmaz. İstemci query cache/snapshot coordinator taşır; kısa süreli push kaybında state polling aralığı kadar gecikebilir.
+
+## D-094 — Subscriber state API replica belleğindedir; limitler replica başına ve edge ile katmanlıdır
+
+- **Tarih:** 2026-10-10 19:12 +06:00
+- **Durum:** Accepted — Aşama 13 nihai mimarisi
+- **Bağlam:** Açık SSE socket'i zaten belirli API process'ine aittir. Dağıtık connection registry için Redis eklemek state doğruluğu sağlamaz ve v1 operasyon kapsamını büyütür.
+- **Karar:** Subscriber hub replica-local ve bounded olur. App session/owner/IP/global admission uygular; deployment-geneli internet limiti reverse proxy/WAF katmanındadır. Sticky session gerekmez.
+- **Alternatifler:** Redis tabanlı global registry; PostgreSQL'de connection lease'leri; API replica içinde bounded hub.
+- **Gerekçe:** Basit, hızlı owner routing ve connection-local backpressure elde etmek; yeni kritik altyapı bağımlılığı eklememek.
+- **Sonuçlar:** Kesin global kullanıcı connection kotası yoktur; replica sayısıyla çarpılabilen üst sınır belgelenir ve capacity testleriyle ayarlanır.
+
+## D-095 — Browser client native EventSource yerine fetch-stream parser kullanır
+
+- **Tarih:** 2026-10-10 19:12 +06:00
+- **Durum:** Accepted — Aşama 13 nihai mimarisi
+- **Bağlam:** Canonical sözleşme heartbeat comment'iyle 45 saniyelik stale tespiti ve 401/404/429'a farklı reconnect davranışı ister. Native `EventSource` comment'leri uygulamaya açmaz ve response hata ayrımını sınırlı verir.
+- **Karar:** Browser transport'u credential'lı fetch stream, AbortController ve bounded parser kullanır. Comment'ler activity sayılır; status/content-type, stale timeout ve full-jitter reconnect uygulama kontrolündedir.
+- **Alternatifler:** Native `EventSource`; heartbeat'i application event'e çevirmek; üçüncü taraf SSE client paketi.
+- **Gerekçe:** Mevcut wire sözleşmesini bozmadan heartbeat ve HTTP hata politikasını otomatik test edebilmek.
+- **Sonuçlar:** Parser chunk/UTF-8/frame edge case'leri için güçlü unit test gerekir; yeni runtime paketi zorunlu değildir.
+
+## D-096 — Public SSE, public snapshot hazır olmadan production'da açılmaz
+
+- **Tarih:** 2026-10-10 19:12 +06:00
+- **Durum:** Accepted — Aşama 13 nihai mimarisi
+- **Bağlam:** OpenAPI public event yolunu rezerve eder fakat public token lookup, allowlist snapshot ve page revision projection'ı Aşama 15 kapsamındadır. Yalnız stream route'u açmak race-free reconciliation ve veri minimizasyonu garantisini bozar.
+- **Karar:** Aşama 13 private runtime'ı ve public-safe transport port/testlerini tamamlar. Production public SSE endpoint'i Aşama 15'te REST snapshot, token lifecycle ve allowlist projection ile aynı dilimde açılır.
+- **Alternatifler:** Aşama 13'te yarım public route; public status domain'ini erkene çekmek; route'u snapshot ile birlikte Aşama 15'e bırakmak.
+- **Gerekçe:** Geçici, doğrulanamayan ve potansiyel veri sızıntısı taşıyan public API oluşturmamak.
+- **Sonuçlar:** Aşama 13 kapanışı private iki-client/replica kabulünü kapsar; public uçtan uca kabul açıkça Aşama 15'e aittir.

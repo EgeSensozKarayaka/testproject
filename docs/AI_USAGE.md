@@ -1,6 +1,6 @@
 # AI Kullanımı
 
-**Son güncelleme:** 2026-10-10 19:02 +06:00
+**Son güncelleme:** 2026-10-10 19:12 +06:00
 
 ## Araç ve model
 
@@ -48,6 +48,7 @@ Proje, Codex desktop uygulamasındaki OpenAI GPT-5 ailesi bir coding agent ile g
 30. Aşama 12 dilim 2'de AI ayrı housekeeping runtime'ını dört bounded loop ve dar SECURITY DEFINER fonksiyonlarıyla uyguladı. Gerçek iki-replica testi farklı rebuild range'lerinin aynı hour bucket'ta unique yarışına girebildiğini buldu; uygulanmış migration değiştirilmeden çözünürlük lane advisory lock'u forward-only revision ile eklendi. Source row cursor'ından ayrı scan horizon'u, sessiz sistemin retention kapısında kalıcı biçimde kilitlenmesini engelledi; restart, DEFAULT guard ve detach grace gerçek PostgreSQL üzerinde doğrulandı.
 31. Aşama 12 dilim 3'te AI canonical OpenAPI ile private history/incident service/routes katmanını uyguladı. İlk tam CI, revision-20 yükseltme fixture'ının daha sonraki migration dosyalarını isimle tek tek sildiği için yeni revision 26'yı yanlışlıkla legacy sete aldığını buldu; fixture gelecekteki revision'ları dinamik filtreleyecek şekilde düzeltildi. API rolüne rebuild queue SELECT'i verilmedi; owner-scoped source horizon/pending-range bilgisi dar fonksiyondan okundu. Tombstone, cross-owner `404`, projection-lag `503`, signed cursor ve incident gap sentezi gerçek PostgreSQL ile doğrulandı.
 32. Aşama 12 kapanışında AI normal CI correctness kapsamından ayrı, açıkça çağrılan history kapasite harness'ı hazırladı. İlk ağır koşu saat sınırındaki mevcut hour bucket ile deterministic dataset'in çakışmasını ve extension search path'e bağlı fingerprint çağrısını yakaladı; fixture idempotent upsert ve built-in SHA-256 ile düzeltildi. Başarılı tekrar 20/200/500 projection throughput'unu, 50,4 milyon raw örneğe eşdeğer 420.000 rollup satırında pruned/indexed month planını ve housekeeper yükünde ayrı API pool ilerlemesini ölçtü.
+33. Aşama 13 mimarisinde AI tek-consumer outbox ile çoklu API replica broadcast'i arasındaki boşluğu, native EventSource'un heartbeat comment görünürlüğü sorununu ve public snapshot olmadan event route açmanın race-free sözleşmeyi bozacağını tespit etti. Tasarım; ayrı least-privilege realtime relay, transactional completion + PostgreSQL wake-up, replica-local owner hub, fetch-stream client, snapshot/polling yakınsaması ve public aktivasyonu Aşama 15'e bağlayan açık sınırla kesinleştirildi.
 
 ## Güvenlik ve gizlilik
 

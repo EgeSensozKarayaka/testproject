@@ -1,11 +1,12 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 19:02 +06:00
+**Son güncelleme:** 2026-10-10 19:12 +06:00
 
-**Genel durum:** Aşama 0–12 tamamlandı; Aşama 13 canlı güncelleme mimarisi sırada
+**Genel durum:** Aşama 0–12 tamamlandı; Aşama 13 canlı güncelleme mimarisi hazır, uygulama sırada
 
 ## Tamamlanan
 
+- Aşama 13 için ayrı least-privilege realtime relay process'i, transactional outbox completion + PostgreSQL wake-up broadcast'i, API replica listener/owner hub'ı, fetch-stream browser client'ı, snapshot reconciliation, backpressure, session yaşam döngüsü, polling fallback ve public Aşama 15 aktivasyon sınırını kesinleştiren `docs/REALTIME.md`
 - Aşama 12 ağır kapasite kapanışı **4/4** geçti: 20/200/500 source discovery + minute→hour rollup, 420.000 hour satırlık/50,4 milyon raw örnek eşdeğeri 35 günlük month fixture'ı, indeksli partition-pruned plan ve API–housekeeper izolasyonu
 - 500-check rollup projection **9,54 sn / 52,41 check/s**; month service sorgusu **25,32 ms**, `EXPLAIN ANALYZE` **4,568 ms**, output **360 bucket** ve tek `rollups_hour_2026` partition'ı; 3.840 bucket housekeeper yükünde 40/40 API isteği, p95 **15,20 ms**, max **15,59 ms**
 - Tekrarlanabilir `pnpm test:history-capacity` komutu, ayrı ağır-profil runner'ı, kök strict TypeScript/lint kapsamı ve metodoloji/bütçe/sınırlamaları içeren `docs/HISTORY_CAPACITY_REPORT.md`
@@ -168,6 +169,7 @@
 
 ## Bilinçli Olarak Henüz Yapılmayan
 
+- Aşama 13 realtime worker, private SSE runtime, browser stream client ve `REALTIME` cutover kodu; bu turda yalnız nihai mimari yazıldı
 - Notification recipient/policy yönetim arayüzü (backend ve worker tamam; yönetim frontend'i Aşama 14 kapsamındadır)
 - History grafikleri ve incident journal yönetim arayüzü (private backend API tamam)
 - SSE canlı güncelleme, monitoring dashboard'u ve public durum sayfası
@@ -192,4 +194,4 @@
 
 ## Sıradaki İş
 
-Aşama 13 canlı güncelleme altyapısının nihai mimarisi hazırlanacaktır: durable snapshot/cursor ile `LISTEN/NOTIFY` wake-up sınırı, authenticated/public SSE sahiplik izolasyonu, heartbeat/reconnect, replica değişimi, connection limitleri ve polling fallback.
+Aşama 13 Dilim 1 uygulanacaktır: Revision 27, dar realtime worker rol/fonksiyonları, lease/fencing relay runtime'ı ve dispatch completion ile aynı transaction'da redacted PostgreSQL wake-up. Production `REALTIME` activation bu dilimde kapalı kalacaktır.

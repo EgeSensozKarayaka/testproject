@@ -396,10 +396,12 @@ Bir iş paketinin tamamlanması, yalnızca kodunun yazıldığı değil; tasarı
 
 - `docs/REALTIME.md`
 
+**Mimari durumu:** 2026-10-10 19:12 +06:00 tarihinde nihai tasarım hazırlandı; uygulama henüz başlamadı. Public-safe transport portları bu aşamada hazırlanır, gerçek public route/snapshot aktivasyonu Aşama 15'te atomik olarak yapılır.
+
 **Uygulama kapsamı:**
 
 - PostgreSQL `LISTEN/NOTIFY`
-- Authenticated ve public SSE kanalları
+- Authenticated SSE kanalı ve Aşama 15'te snapshot ile aktive edilecek public-safe transport portları
 - Event filtreleme ve sahiplik izolasyonu
 - Heartbeat ve yeniden bağlanma
 - Snapshot ile tutarlılık kazanma

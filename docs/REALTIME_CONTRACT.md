@@ -2,7 +2,7 @@
 
 **Aşama:** 4 — API, Event ve Hata Sözleşmeleri
 
-**Durum:** Onaylandı; payload type allowlist'i uygulandı, SSE runtime Aşama 13 kapsamındadır
+**Durum:** Onaylandı; payload type allowlist'i uygulandı, private SSE runtime Aşama 13 ve public runtime Aşama 15 kapsamındadır
 
 **Tarih:** 2026-10-10
 
@@ -27,6 +27,8 @@ WebSocket kullanılmaz; ürünün istemciden sunucuya sürekli çift yönlü mes
 | ------------------------------------------------------- | ---------------------- | ---------------------------------------------------------- |
 | `GET /api/v1/events`                                    | Geçerli session cookie | Yalnız session owner'ına ait private projection event'leri |
 | `GET /api/public/v1/status-pages/{public_token}/events` | Public token           | Yalnız bu sayfanın yayınlanmış allowlist projection'ı      |
+
+Public endpoint canonical sözleşmede rezerve edilmiştir. Production route; public REST snapshot, token lifecycle ve allowlist page revision projection'ıyla birlikte Aşama 15'te aktive edilir. Aşama 13 yalnız shared public-safe transport portlarını hazırlar; snapshot olmadan yarım bir public stream açmaz.
 
 Request:
 
@@ -93,7 +95,7 @@ Race-free client başlangıcı:
 
 1. SSE bağlantısını aç.
 2. `stream.ready` gelene kadar application event'lerini küçük client buffer'ında tut.
-3. Private için `GET /api/v1/dashboard`, public için status-page REST snapshot'ını al.
+3. Private için görünür ekranın owner-scoped REST snapshot setini (`checks`, `groups`, `incidents` ve kullanılan diğer bounded query'ler; `dashboard` varsa convenience projection), public için status-page REST snapshot'ını al.
 4. Snapshot'ın her kaynak/projection version'ını store'a yaz.
 5. Buffer'daki yalnız daha yeni resource version'lı event'leri uygula; eşit/eski event'i at.
 6. Normal event tüketimine geç.

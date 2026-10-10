@@ -550,3 +550,11 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Ayrı iki bağlantılık housekeeper pool'u 3.840 minute bucket işlerken dört bağlantılık API pool'unda 40/40 month sorgusu geçti; yüklü p95 **15,20 ms**, max **15,59 ms** ölçüldü. İlk ağır denemedeki saat-sınırı duplicate fixture'ı idempotent upsert, extension search-path bağımlılığı ise built-in SHA-256 ile düzeltildi.
 - Final `pnpm run ci`; format, 58-operation contract drift, lint, kök harness dahil bütün strict typecheck'ler, **217/217 unit**, **87/87 gerçek PostgreSQL/socket/process integration** ve bütün production build'leriyle geçti. Aynı koşuda 500-check monitor regresyonu **58,87 check/s** ölçtü.
 - Aşama 12 tamamlandı. Metodoloji, bütçeler, ortam ve iddia sınırları `docs/HISTORY_CAPACITY_REPORT.md` içinde kaydedildi; sıradaki çalışma Aşama 13 canlı güncelleme nihai mimarisidir.
+
+### 19:12 — Aşama 13 canlı güncelleme nihai mimarisi
+
+- Mevcut SSE/event sözleşmesi, outbox dispatch modeli, API lifecycle'ı, owner RLS sınırı, OpenAPI dashboard/public yolları ve React veri akışı birlikte incelendi. Tek-consumer outbox ile her API replica'ya broadcast gereksinimi arasındaki eksik runtime katmanı tespit edildi.
+- Ayrı least-privilege `realtime-worker`; lease/fencing ile tek dispatch, aynı transaction'da completion + küçük redacted `pg_notify` wake-up ve her API replica'da dedicated listener/owner hub yaklaşımı seçildi. PostgreSQL notification kalıcı state veya replay kaynağı yapılmadı.
+- Native `EventSource` heartbeat comment'lerini göstermediği ve HTTP hata ayrımı sınırlı olduğu için browser transport'u fetch stream + test edilmiş SSE parser olarak kesinleştirildi. Stream-before-snapshot, buffered invalidation, 60 saniye reconciliation ve 30 saniye polling fallback kuralları korundu.
+- Public snapshot/token projection'ı henüz bulunmadığından yarım public event route'u açılmaması; Aşama 13'te shared public-safe portların, Aşama 15'te REST snapshot ile gerçek public SSE aktivasyonunun yapılması kararlaştırıldı.
+- Uygulama üç dilime ayrıldı: Revision 27/relay çekirdeği; private API listener/SSE projection; browser client/cutover/kapanış. Bu tur yalnız mimari ve karar belgeleridir; production kodu veya `REALTIME` aktivasyonu değiştirilmedi.

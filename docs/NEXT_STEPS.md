@@ -1,19 +1,19 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 19:02 +06:00
+**Son güncelleme:** 2026-10-10 19:12 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–12 tamamlandı; Aşama 13 nihai mimarisi sırada
+**Mevcut kilometre taşı:** Aşama 0–12 tamamlandı; Aşama 13 nihai mimarisi hazır, uygulama sırada
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
-## 1. Sıradaki Çalışma — Aşama 13 Canlı Güncelleme Altyapısı
+## 1. Sıradaki Çalışma — Aşama 13 Dilim 1
 
-`docs/REALTIME_CONTRACT.md` başlangıç sözleşmesine göre:
+[`REALTIME.md`](./REALTIME.md) nihai mimarisine göre:
 
-- PostgreSQL `LISTEN/NOTIFY` yalnız wake-up olacak şekilde durable snapshot/cursor sınırını kesinleştir
-- Authenticated ve ileride public SSE kanalında sahiplik izolasyonu, heartbeat ve reconnect davranışını tanımla
-- Replica değişimi ve kaçırılmış event sonrasında snapshot ile yakınsama kuralını belirle
-- Connection/rate limit, proxy buffering ve polling fallback kabul matrisini oluştur
+- Revision 27'de dar `site_monitor_realtime` rolü ile claim/complete/retry/dead-letter fonksiyonlarını ekle
+- Ayrı realtime worker config/runtime'ını, lease/fencing ve redacted wake-up mapper'ını uygula
+- Dispatch completion ile sabit PostgreSQL `pg_notify` çağrısını aynı transaction'da doğrula
+- Production `REALTIME` activation'ı kapalı tutarak unit ve gerçek PostgreSQL testlerini geçir
 
 Aşama 12 kapanış ölçümleri [history kapasite raporunda](./HISTORY_CAPACITY_REPORT.md) saklanır.
 
