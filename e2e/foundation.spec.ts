@@ -54,9 +54,9 @@ async function verificationToken(
 test('serves the authentication frontend', async ({ page }) => {
   await page.goto('/');
 
-  await expect(page.getByRole('heading', { name: 'Hesabınıza giriş yapın' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Giriş yap' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Yeni hesap' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Log in to your account' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Log in' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Create account' })).toBeVisible();
 });
 
 test('supports two independent browser clients', async ({ browser }) => {
@@ -67,8 +67,8 @@ test('supports two independent browser clients', async ({ browser }) => {
 
   await Promise.all([firstPage.goto('/'), secondPage.goto('/')]);
   await Promise.all([
-    expect(firstPage.getByRole('heading', { name: 'Hesabınıza giriş yapın' })).toBeVisible(),
-    expect(secondPage.getByRole('heading', { name: 'Hesabınıza giriş yapın' })).toBeVisible(),
+    expect(firstPage.getByRole('heading', { name: 'Log in to your account' })).toBeVisible(),
+    expect(secondPage.getByRole('heading', { name: 'Log in to your account' })).toBeVisible(),
   ]);
 
   await Promise.all([firstContext.close(), secondContext.close()]);
@@ -139,22 +139,22 @@ test('registers, verifies through Mailpit, logs in, and logs out', async ({ page
   const password = `Fjord!Mosaic-${suffix}-Reliable`;
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Yeni hesap' }).click();
-  await page.getByLabel('Görünen ad').fill('E2E User');
-  await page.getByLabel('E-posta').fill(email);
-  await page.getByLabel('Parola').fill(password);
-  await page.getByRole('button', { name: 'Hesap oluştur' }).click();
-  await expect(page.getByRole('status')).toContainText('doğrulama bağlantısı');
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await page.getByLabel('Display name').fill('E2E User');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page.getByRole('status')).toContainText('verification link');
 
   const token = await verificationToken(request, email);
   await page.goto(`/verify-email#token=${token}`);
-  await expect(page.getByRole('status')).toContainText('E-posta adresiniz doğrulandı');
+  await expect(page.getByRole('status')).toContainText('Your email address has been verified');
 
   await page.goto('/');
-  await page.getByLabel('E-posta').fill(email);
-  await page.getByLabel('Parola').fill(password);
-  await page.getByRole('button', { name: 'Giriş yap' }).click();
-  await expect(page.getByRole('heading', { name: 'Hoş geldiniz, E2E User' })).toBeVisible();
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page.getByRole('heading', { name: 'Welcome, E2E User' })).toBeVisible();
 
   const api = page.context().request;
   const sessionResponse = await api.get('http://localhost:13000/api/v1/auth/session');
@@ -216,31 +216,31 @@ test('registers, verifies through Mailpit, logs in, and logs out', async ({ page
   expect(message.Text).toContain('This is a test notification.');
   expect(message.HTML).toContain('<p>This is a test notification.');
 
-  await page.getByText('Yeni grup oluştur').click();
-  await page.getByLabel('Grup adı').fill('E2E Services');
-  await page.getByLabel(/Açıklama/).fill('Browser acceptance resources');
-  await page.getByRole('button', { name: 'Grup oluştur' }).click();
+  await page.getByText('Create new group').click();
+  await page.getByLabel('Group name').fill('E2E Services');
+  await page.getByLabel(/Description/).fill('Browser acceptance resources');
+  await page.getByRole('button', { name: 'Create group' }).click();
   await expect(page.getByRole('heading', { name: 'E2E Services' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Kontrol ekle' }).click();
-  await page.getByLabel('Kontrol adı').fill('E2E Homepage');
+  await page.getByRole('button', { name: 'Add check' }).click();
+  await page.getByLabel('Check name').fill('E2E Homepage');
   await page.getByLabel('URL').fill('https://example.com/health');
   await page.locator('select[name="group_id"]').selectOption({ label: 'E2E Services' });
-  await page.getByRole('button', { name: 'Kontrol ekle', exact: true }).last().click();
+  await page.getByRole('button', { name: 'Add check', exact: true }).last().click();
   let checkCard = page.locator('.check-card').filter({ hasText: 'E2E Homepage' });
   await expect(checkCard.getByRole('heading', { name: 'E2E Homepage' })).toBeVisible();
-  const statusOverview = page.getByRole('region', { name: 'Sistem durumu' });
+  const statusOverview = page.getByRole('region', { name: 'System status' });
   await expect(statusOverview).toBeVisible();
-  await expect(statusOverview.getByText('1 kontrol yüklendi')).toBeVisible();
+  await expect(statusOverview.getByText('1 check loaded')).toBeVisible();
   await expect(statusOverview.getByText('E2E Homepage')).toBeVisible();
 
-  const publicPanel = page.getByRole('region', { name: 'Operasyon merkezi' });
-  await expect(publicPanel.getByRole('heading', { name: 'Performans geçmişi' })).toBeVisible();
-  await publicPanel.getByLabel('Sayfa başlığı').fill('E2E Service Status');
-  await publicPanel.getByLabel('Sayfa açıklaması').fill('Public acceptance status');
-  await publicPanel.getByRole('button', { name: 'Tüm kontrollerle yayınla' }).click();
+  const publicPanel = page.getByRole('region', { name: 'Operations center' });
+  await expect(publicPanel.getByRole('heading', { name: 'Performance history' })).toBeVisible();
+  await publicPanel.getByLabel('Page title').fill('E2E Service Status');
+  await publicPanel.getByLabel('Page description').fill('Public acceptance status');
+  await publicPanel.getByRole('button', { name: 'Publish with all checks' }).click();
   const publicLink = publicPanel
-    .getByText('Tek sefer gösterilen bağlantı')
+    .getByText('One-time displayed link')
     .locator('..')
     .getByRole('link');
   await expect(publicLink).toBeVisible();
@@ -253,30 +253,34 @@ test('registers, verifies through Mailpit, logs in, and logs out', async ({ page
   await expect(publicPage.getByText('Public acceptance status')).toBeVisible();
   await publicPage.close();
 
-  await checkCard.getByRole('button', { name: 'Şimdi çalıştır' }).click();
-  await expect(page.getByText('Manuel kontrol kuyruğa alındı.', { exact: true })).toBeVisible();
-  await checkCard.getByRole('button', { name: 'Duraklat' }).click();
+  await checkCard.getByRole('button', { name: 'Run now' }).click();
+  await expect(
+    page.getByText(/Manual run (?:enqueued|coalesced with existing run)\./u),
+  ).toBeVisible();
+  await checkCard.getByRole('button', { name: 'Pause' }).click();
   checkCard = page.locator('.check-card').filter({ hasText: 'E2E Homepage' });
-  await expect(checkCard.getByRole('button', { name: 'Devam ettir' })).toBeVisible();
-  await checkCard.getByRole('button', { name: 'Devam ettir' }).click();
-  await expect(checkCard.getByRole('button', { name: 'Duraklat' })).toBeVisible();
+  await expect(checkCard.getByRole('button', { name: 'Resume' })).toBeVisible();
+  await checkCard.getByRole('button', { name: 'Resume' }).click();
+  await expect(checkCard.getByRole('button', { name: 'Pause' })).toBeVisible();
 
   const secondContext = await page.context().browser()!.newContext();
   const secondPage = await secondContext.newPage();
   await secondPage.goto('/');
-  await secondPage.getByLabel('E-posta').fill(email);
-  await secondPage.getByLabel('Parola').fill(password);
-  await secondPage.getByRole('button', { name: 'Giriş yap' }).click();
-  await expect(secondPage.getByRole('heading', { name: 'Hoş geldiniz, E2E User' })).toBeVisible();
+  await secondPage.getByLabel('Email').fill(email);
+  await secondPage.getByLabel('Password').fill(password);
+  await secondPage.getByRole('button', { name: 'Log in' }).click();
+  await expect(secondPage.getByRole('heading', { name: 'Welcome, E2E User' })).toBeVisible();
   await Promise.all([
-    expect(page.getByLabel('Canlı veri durumu')).toContainText('Canlı güncellemeler etkin'),
-    expect(secondPage.getByLabel('Canlı veri durumu')).toContainText('Canlı güncellemeler etkin'),
+    expect(page.getByLabel('Realtime connection state')).toContainText('Live updates enabled'),
+    expect(secondPage.getByLabel('Realtime connection state')).toContainText(
+      'Live updates enabled',
+    ),
   ]);
 
   const secondCheckCard = secondPage.locator('.check-card').filter({ hasText: 'E2E Homepage' });
-  await secondCheckCard.getByRole('button', { name: 'Düzenle' }).click();
-  await secondPage.getByLabel('Kontrol adı').fill('Updated in second tab');
-  await secondPage.getByRole('button', { name: 'Kontrolü güncelle' }).click();
+  await secondCheckCard.getByRole('button', { name: 'Edit' }).click();
+  await secondPage.getByLabel('Check name').fill('Updated in second tab');
+  await secondPage.getByRole('button', { name: 'Update check' }).click();
   await expect(secondPage.getByRole('heading', { name: 'Updated in second tab' })).toBeVisible();
 
   checkCard = page.locator('.check-card').filter({ hasText: 'Updated in second tab' });
@@ -285,15 +289,15 @@ test('registers, verifies through Mailpit, logs in, and logs out', async ({ page
   });
   await secondContext.close();
 
-  await checkCard.getByRole('button', { name: 'Sil' }).click();
-  await checkCard.getByRole('button', { name: 'Silmeyi onayla' }).click();
+  await checkCard.getByRole('button', { name: 'Delete' }).click();
+  await checkCard.getByRole('button', { name: 'Confirm delete' }).click();
   await expect(page.getByRole('heading', { name: 'Updated in second tab' })).toHaveCount(0);
 
   const groupCard = page.locator('.group-grid .resource-card').filter({ hasText: 'E2E Services' });
-  await groupCard.getByRole('button', { name: 'Sil' }).click();
-  await groupCard.getByRole('button', { name: 'Silmeyi onayla' }).click();
+  await groupCard.getByRole('button', { name: 'Delete' }).click();
+  await groupCard.getByRole('button', { name: 'Confirm delete' }).click();
   await expect(page.getByRole('heading', { name: 'E2E Services' })).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Çıkış yap' }).click();
-  await expect(page.getByRole('heading', { name: 'Hesabınıza giriş yapın' })).toBeVisible();
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await expect(page.getByRole('heading', { name: 'Log in to your account' })).toBeVisible();
 });
