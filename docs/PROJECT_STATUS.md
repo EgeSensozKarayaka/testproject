@@ -1,11 +1,13 @@
 # Proje Durumu
 
-**Son güncelleme:** 2026-10-10 15:42 +06:00
+**Son güncelleme:** 2026-10-10 15:46 +06:00
 
-**Genel durum:** Aşama 0–9 tamamlandı ve doğrulandı; sıradaki çalışma Aşama 10 bakım pencereleri mimarisidir
+**Genel durum:** Aşama 0–9 tamamlandı ve doğrulandı; Aşama 10 bakım pencereleri nihai mimarisi hazır, uygulama henüz başlamadı
 
 ## Tamamlanan
 
+- Aşama 10 için check/group scope, `[start,end)`, overlap, mutation, group membership, incident/notification ayrımı ve restart-safe reconciliation kararlarını içeren `docs/MAINTENANCE_WINDOWS.md`
+- Ayrı job tablosu eklemeden `notification.intents.maintenance_until` deadline'ını doğal bakım bitişi, transactional outbox wake-up'larını erken bitiş/kapsam değişikliği için kullanan D-078 kararı
 - İki gerçek production monitor-worker ve ayrı production API prosesinin aynı PostgreSQL üzerinde eşzamanlı çalıştığı 200-check kabul profili; 200 job/attempt/run/accepted result ve 200 hedef isteği tam eşleşirken iki worker da iş aldı
 - Worker yükü sırasında gerçek session ile 40 authenticated check-list ve 40 readiness isteğinin tamamının başarılı olması; list p95 **32.1 ms**, readiness p95 **18.4 ms**, ayrı proses/pool API izolasyonu
 - Tekrarlama yöntemi, exact correctness tablosu, latency bütçeleri ve replica başına concurrency tavizini içeren `docs/MONITOR_RUNTIME_ISOLATION_REPORT.md`

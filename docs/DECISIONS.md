@@ -720,3 +720,13 @@ Bu belge ürün ve mimariyi etkileyen kabul edilmiş kararları tarih sırasıyl
 - **Alternatifler:** In-process Fastify inject; doğrudan `CheckService.list`; tek worker kapasite profiline readiness eklemek; yalnız pool metriğine bakmak; dış internet hedefi kullanmak.
 - **Gerekçe:** Process, event loop, pool, HTTP/auth/RLS ve iki-replica claim sınırlarını tek deterministik senaryoda kapsamak; dış ağ oynaklığını ölçüme katmadan API starvation ve duplicate execution regresyonlarını görünür kılmak.
 - **Sonuçlar:** Yerel koşuda 200 job/attempt/run/accepted result ve 200 HTTP çağrısı tam eşleşti, iki worker da iş aldı ve attempt numarası 1'i aşmadı. Yük altında 40 API örneğinde readiness p95 18.4 ms, list p95 32.1 ms ölçüldü. Eşikler production SLO değil geniş regresyon bütçeleridir; process-local host limiti iki replica'da beklendiği gibi toplam 8 concurrency üretti.
+
+## D-078 — Bakım bitiş reconciliation'ı notification intent deadline'ını kullanır
+
+- **Tarih:** 2026-10-10 15:46 +06:00
+- **Durum:** Accepted — Aşama 10 nihai mimarisi
+- **Bağlam:** Bakım sonu, pencere değişikliği ve grup üyeliği değişiminde bildirimin unutulmaması gerekir. Bunun için ayrı bir maintenance job tablosu kurmak, mevcut `notification.intents.maintenance_until` kalıcı deadline kuyruğunu tekrarlar ve iki source of truth üretir.
+- **Karar:** Doğal bitiş reconciliation'ı `DEFERRED_MAINTENANCE` intent ve `maintenance_until` indeksiyle yürür. Pencere create/change/cancel ile check/group kapsam değişiklikleri transactional outbox üzerinden erken yeniden değerlendirmeyi uyandırır. Her değerlendirme güncel check, group, window ve incident verisini tekrar okur; event-time suppression alanı karar kaynağı değildir.
+- **Alternatifler:** Ayrı maintenance reconciliation tablosu ve worker; yalnız process timer'ı; her pencere için geleceğe zamanlanmış ve iptal edilmesi gereken outbox job'ı.
+- **Gerekçe:** Restart güvenliğini var olan kalıcı primitive ile sağlamak, pencere uzatma/kısaltma yarışlarında tek truth kullanmak ve Aşama 10–11 arasında gereksiz altyapı oluşturmamak.
+- **Sonuçlar:** Notification worker deadline geldiğinde hâlâ etkin başka pencere varsa intent'i yeniden erteler. Mutation/group-change event'leri erken bitişi geciktirmez. Stage 11 destination aktivasyonunda açık incident ve nonterminal intent backfill'i zorunludur; tarihsel outbox körlemesine e-posta üretmez.

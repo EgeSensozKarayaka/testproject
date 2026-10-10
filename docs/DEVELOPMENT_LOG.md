@@ -413,3 +413,10 @@ Tüm zamanlar UTC+06:00 olarak kaydedilir. Uygulama içindeki kalıcı domain za
 - Worker yükü boyunca ayrı API prosesinden gerçek session cookie ile 40 check-list ve 40 readiness örneği alındı; tamamı `200` döndü ve her list owner'ın 50 check'ini eksiksiz taşıdı. Hedefli koşuda readiness p95 **18.4 ms**, list p95 **32.1 ms**; sağlamlaştırılmış final CI tekrarında sırasıyla **18.1 ms** ve **26.9 ms** ölçüldü. Geniş 1/1.5 saniye p95 ve 3 saniye max eşikleri SLO değil starvation/deadlock regresyon bütçesi olarak belgelendi.
 - D-077 ayrı process/pool kanıt stratejisini kaydetti; `MONITOR_RUNTIME_ISOLATION_REPORT.md` yöntem, exact correctness, ölçümler ve process-local concurrency tavizini içeriyor. README, scheduler mimarisi, plan, AI kullanımı, proje durumu ve sonraki işler Aşama 9 tamamlandı/Aşama 10 mimarisi sırada olacak şekilde güncellendi.
 - Final `pnpm run ci`; format, 57-operation contract drift, lint, bütün workspace strict typecheck'leri, **22 dosyada 165/165 unit**, **8 dosyada 57/57 gerçek PostgreSQL/socket/process integration** ve bütün production build'leriyle geçti. Aşama 9 tamamlandı.
+
+### 15:46 — Aşama 10 bakım pencereleri nihai mimarisi
+
+- `docs/MAINTENANCE_WINDOWS.md` oluşturuldu; check/group scope, UTC `[start,end)`, türetilmiş yaşam döngüsü, overlap union, aktif pencere mutation kuralları, grup üyeliği ve kaynak silme davranışı kesinleştirildi.
+- OpenAPI `note` alanı ile şemadaki eski `name` kolonu arasındaki uyumsuzluk tespit edildi. Revision 15 için veriyi koruyan `name → note varchar(1000) NULL` dönüşümü, liste indeksi ve fiziksel delete yetkisinin kaldırılması planlandı.
+- Ayrı maintenance-job tablosu yerine mevcut `notification.intents` içindeki `DEFERRED_MAINTENANCE + maintenance_until` modelinin restart-safe reconciliation kuyruğu olması kararlaştırıldı. Erken bitiş ve scope değişikliği transactional outbox wake-up'larıyla, doğal bitiş deadline sorgusuyla ele alınacak.
+- Uygulama dört kısa dilime ayrıldı: domain/migration, API, çapraz check/group davranışı ve kapanış kabul kanıtı. Bu turda production kodu veya migration değiştirilmedi; test çalıştırılması gerekmedi.

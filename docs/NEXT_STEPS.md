@@ -1,23 +1,21 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 15:42 +06:00
+**Son güncelleme:** 2026-10-10 15:46 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–9 tamamlandı ve doğrulandı
+**Mevcut kilometre taşı:** Aşama 0–9 tamamlandı; Aşama 10 nihai mimarisi hazır
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
-## 1. Sıradaki Çalışma — Aşama 10
+## 1. Sıradaki Çalışma — Aşama 10 Uygulaması
 
-Bakım pencerelerinin nihai mimarisini `docs/MAINTENANCE_WINDOWS.md` içinde oluştur:
+Onaylanmış `docs/MAINTENANCE_WINDOWS.md` tasarımını şu sırayla uygula:
 
-- Check ve group scope ile sahiplik sınırları
-- UTC ve `[start, end)` semantiği
-- Örtüşen pencerelerin birleşim davranışı
-- Aktif pencereyi uzatma, kısaltma ve silme yarışları
-- Bakım sırasında probe/state/incident akışı ile yalnız notification suppression ayrımı
-- Bakım bitişinde site hâlâ DOWN ise tek bildirim üreten durable reconciliation işi
-- Grup üyeliği değişikliğinin açık incident ve maintenance kapsamına etkisi
-- Migration, API, event/outbox ve zaman kontrollü kabul testleri
+- Revision 15: `name → note`, indeks ve least-privilege grant düzeltmeleri
+- Bakım domain kuralları, ortak projection ve sınır testleri
+- Owner-scoped CRUD API, OpenAPI filtre/hata sözleşmesi, ETag/idempotency/cursor
+- Check/group delete ve grup değişikliğinde maintenance reconciliation event'leri
+- Overlap, restart ve notification-decision PostgreSQL kabul senaryoları
+- Tam CI, durum ve teslim belgelerinin Aşama 10 kapanışıyla güncellenmesi
 
 ## 2. Aşama 9 Kapanış Kanıtları
 
