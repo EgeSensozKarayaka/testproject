@@ -2,7 +2,7 @@
 
 **Aşama:** 9 — Kalıcı Scheduler ve Monitor Worker
 
-**Durum:** Uygulama devam ediyor — temel şema/config/outbox ile materialization/lease adapter dilimleri doğrulandı
+**Durum:** Uygulama devam ediyor — temel şema, materialization/lease ve bounded dispatcher dilimleri doğrulandı; production loop henüz aktif değil
 
 **Tarih:** 2026-10-10 12:33 +06:00
 

@@ -10,6 +10,11 @@ export interface JobCandidate extends CheckCandidate {
   jobId: string;
 }
 
+export interface DispatchCandidate extends JobCandidate {
+  /** Sensitive scheduling input. It must never be logged or emitted. */
+  targetUrl: string | null;
+}
+
 export interface MaterializedJob extends JobCandidate {
   kind: 'MANUAL' | 'SCHEDULED';
   manualMode: 'DIAGNOSTIC' | 'STATEFUL' | null;
@@ -309,11 +314,18 @@ export class PostgresJobQueue {
     });
   }
 
-  async listClaimCandidates(limit: number): Promise<JobCandidate[]> {
+  async listClaimCandidates(limit: number): Promise<DispatchCandidate[]> {
     requireBatchSize(limit);
-    const result = await this.pool.query<{ check_id: string; id: string; owner_id: string }>(
+    const result = await this.pool.query<{
+      check_id: string;
+      id: string;
+      owner_id: string;
+      target_url: string | null;
+    }>(
       `WITH ranked AS (
          SELECT j.id, j.owner_id, j.check_id, j.priority, j.available_at, j.created_at,
+                CASE WHEN jsonb_typeof(j.config_snapshot->'url') = 'string'
+                  THEN j.config_snapshot->>'url' ELSE NULL END AS target_url,
                 row_number() OVER (
                   PARTITION BY j.owner_id
                   ORDER BY j.priority DESC, j.available_at, j.created_at, j.id
@@ -323,7 +335,7 @@ export class PostgresJobQueue {
            AND j.available_at <= statement_timestamp()
            AND j.attempt_count < j.max_attempts
        )
-       SELECT id::text, owner_id::text, check_id::text
+       SELECT id::text, owner_id::text, check_id::text, target_url
        FROM ranked
        ORDER BY owner_rank, priority DESC, available_at, owner_id, id
        LIMIT $1`,
@@ -333,6 +345,7 @@ export class PostgresJobQueue {
       checkId: row.check_id,
       jobId: row.id,
       ownerId: row.owner_id,
+      targetUrl: row.target_url,
     }));
   }
 

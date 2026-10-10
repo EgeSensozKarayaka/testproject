@@ -1,19 +1,19 @@
 # Sonraki Adımlar
 
-**Son güncelleme:** 2026-10-10 13:20 +06:00
+**Son güncelleme:** 2026-10-10 13:30 +06:00
 
-**Mevcut kilometre taşı:** Aşama 0–8 tamamlandı; Aşama 9 materialization ve lease/fencing adapter dilimi doğrulandı
+**Mevcut kilometre taşı:** Aşama 0–8 tamamlandı; Aşama 9 bounded dispatcher ve probe orchestration dilimi doğrulandı
 
 Bu belge teslim sonrası genel fikir listesi değil, mevcut uygulama durumundan sonraki öncelikli çalışma sırasıdır. Ayrıntılı aşama bağımlılıkları `docs/IMPLEMENTATION_PLAN.md` içinde tutulur.
 
 ## 1. Sıradaki Çalışma — Aşama 9
 
-[`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) mimarisinin revision 14, typed config, durable cancellation/manual intent, result pointer, activation-aware outbox, owner-fair due/manual materialization ve claim/lease/heartbeat/fencing adapter dilimleri tamamlandı. Sıradaki küçük uygulama dilimleri:
+[`SCHEDULER_AND_WORKERS.md`](./SCHEDULER_AND_WORKERS.md) mimarisinin revision 14, typed config, durable cancellation/manual intent, result pointer, activation-aware outbox, owner-fair materialization/claim ve global-owner-host bounded probe dispatcher dilimleri tamamlandı. Sıradaki küçük uygulama dilimleri:
 
-1. Global/owner/hostname semaphore'ları, active-task registry ve bounded dispatcher
-2. Cancellation acknowledgement, infrastructure retry/DEAD ve expired-lease recovery
-3. Aşama 7 probe sonucunun Aşama 8 saf transition planına bağlanması
-4. Run, current state, interval, incident, segment, audit ve outbox'ın tek transaction'da kalıcılaştırılması
+1. Cancellation acknowledgement, infrastructure retry/DEAD ve expired-lease recovery
+2. Aşama 7 probe sonucunun Aşama 8 saf transition planına bağlanması
+3. Run, current state, interval, incident, segment, audit ve outbox'ın tek transaction'da kalıcılaştırılması
+4. Result/fault sink'leri tamamlandıktan sonra scheduler/dispatcher production loop aktivasyonu
 5. Deadline tabanlı freshness reconciler ve restart/catch-up davranışı
 6. Graceful shutdown ve loop-lag/readiness gözlemlenebilirliği
 7. Concurrent worker, stale lease, duplicate result, rollback ve 20/200/500 kapasite kanıtları
